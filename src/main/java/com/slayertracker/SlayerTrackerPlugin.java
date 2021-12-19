@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static net.runelite.api.Skill.SLAYER;
 
@@ -43,14 +44,11 @@ public class SlayerTrackerPlugin extends Plugin {
     @Inject
     private ItemManager itemManager;
 
-    private String taskName;
-
+    private Task task;
     private final Set<String> targetNames = new HashSet<>();
     private final Set<NPC> interactors = new HashSet<>();
-
-    private int cachedXp = -1;
-
     private Instant startTime;
+    private int cachedXp = -1;
 
     @Override
     protected void startUp() throws Exception {
@@ -61,10 +59,10 @@ public class SlayerTrackerPlugin extends Plugin {
 
     @Override
     protected void shutDown() throws Exception {
-        taskName = null;
-        startTime = null;
+        task = null;
         targetNames.clear();
         interactors.clear();
+        startTime = null;
         cachedXp = -1;
     }
 
@@ -74,14 +72,15 @@ public class SlayerTrackerPlugin extends Plugin {
         switch (gameStateChanged.getGameState()) {
             case HOPPING:
             case LOGGING_IN:
-                taskName = null;
-                startTime = null;
+                task = null;
                 targetNames.clear();
                 interactors.clear();
+                startTime = null;
                 cachedXp = -1;
                 break;
             case LOGGED_IN:
-                updateTask(getTaskName());
+                updateTaskByName(getSlayerConfigTaskName());
+                // clearConfig(); // Uncomment to clear all config entries on login
                 break;
         }
     }
@@ -99,7 +98,7 @@ public class SlayerTrackerPlugin extends Plugin {
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (event.getGroup().equals(SlayerConfig.GROUP_NAME) && event.getKey().equals(SlayerConfig.TASK_NAME_KEY)) {
-            updateTask(event.getNewValue());
+            updateTaskByName(event.getNewValue());
         }
     }
 
@@ -116,11 +115,11 @@ public class SlayerTrackerPlugin extends Plugin {
             ha += itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
         }
 
-        int oldGe = getTaskGe(taskName);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + taskName, oldGe + ge);
+        int oldGe = getTaskGe(task);
+        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, oldGe + ge);
 
-        int oldHa = getTaskHa(taskName);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + taskName, oldHa + ha);
+        int oldHa = getTaskHa(task);
+        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, oldHa + ha);
     }
 
     @Subscribe
@@ -136,8 +135,8 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         // Monster KC in config ++
-        int oldKc = getTaskKc(taskName);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + taskName, ++oldKc);
+        int oldKc = getTaskKc(task);
+        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, ++oldKc);
 
         // Update combat duration, even though
         // still in combat with task.
@@ -169,8 +168,8 @@ public class SlayerTrackerPlugin extends Plugin {
         final int delta = slayerExp - cachedXp;
         cachedXp = slayerExp;
 
-        int oldXp = getTaskXp(taskName);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + taskName, oldXp + delta);
+        int oldXp = getTaskXp(task);
+        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, oldXp + delta);
     }
 
     // TODO
@@ -235,7 +234,7 @@ public class SlayerTrackerPlugin extends Plugin {
         // Remove an Interactor from the set if:
         //
         // Interactor no longer exists in the client, OR
-        // Players interaction is not pointed toward it, AND
+        // Player's interaction is not pointed toward it, AND
         // it's not interacting OR its interaction is not pointed toward the player
         interactors.removeIf(interactor ->
                 !client.getNpcs().contains(interactor)
@@ -251,12 +250,12 @@ public class SlayerTrackerPlugin extends Plugin {
     public void stopTiming() {
         Duration duration = Duration.between(startTime, Instant.now());
         startTime = null;
-        Duration newTime = duration.plus(getTaskDuration(taskName));
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + taskName, newTime.toString());
+        Duration newTime = duration.plus(getTaskDuration(task));
+        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task, newTime.toString());
     }
 
-    private void updateTask(String taskName) {
-        this.taskName = taskName;
+    private void updateTaskByName(String taskName) {
+        task = Task.getTask(taskName);
 
         // If no task exists, clear targetNames and return.
         if (taskName.equals("")) {
@@ -265,23 +264,20 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         // Add Task's secondary target names, as lower case
-        Arrays.stream(Task.getTask(taskName).getTargetNames())
+        Arrays.stream(task.getTargetNames())
                 .map(String::toLowerCase)
                 .forEach(targetNames::add);
         // Add Task's primary name, as singular
         targetNames.add(taskName.replaceAll("s$", ""));
     }
 
-    private void removeTask(String taskName) {
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + taskName);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + taskName);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + taskName);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + taskName);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + taskName);
+    private String getSlayerConfigTaskName() {
+        String taskName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
+        return taskName == null ? "" : taskName.toLowerCase();
     }
 
-    public Duration getTaskDuration(String taskName) {
-        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + taskName);
+    public Duration getTaskDuration(Task task) {
+        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
         if (durationString != null) {
             return Duration.parse(durationString);
         } else {
@@ -289,28 +285,23 @@ public class SlayerTrackerPlugin extends Plugin {
         }
     }
 
-    private String getTaskName() {
-        String taskName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
-        return taskName == null ? "" : taskName.toLowerCase();
-    }
-
-    public int getTaskKc(String taskName) {
-        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + taskName, int.class);
+    public int getTaskKc(Task task) {
+        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, int.class);
         return kc == null ? 0 : kc;
     }
 
-    private int getTaskXp(String taskName) {
-        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + taskName, int.class);
+    private int getTaskXp(Task task) {
+        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, int.class);
         return xp == null ? 0 : xp;
     }
 
-    private int getTaskGe(String taskName) {
-        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + taskName, int.class);
+    private int getTaskGe(Task task) {
+        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, int.class);
         return ge == null ? 0 : ge;
     }
 
-    private int getTaskHa(String taskName) {
-        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + taskName, int.class);
+    private int getTaskHa(Task task) {
+        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, int.class);
         return ha == null ? 0 : ha;
     }
 
@@ -318,34 +309,55 @@ public class SlayerTrackerPlugin extends Plugin {
     private void onCommandExecuted(CommandExecuted commandExecuted) {
         switch (commandExecuted.getCommand()) {
             case "ttt":
-                if (commandExecuted.getArguments().length < 1) {
-                    logInfo(taskName);
+                if (commandExecuted.getArguments().length == 0) {
+                    logInfo(task);
                 } else {
-                    logInfo(String.join(" ", commandExecuted.getArguments()).toLowerCase());
+                    logInfo(Task.getTask(commandExecuted.getArguments()[0]));
                 }
                 break;
             case "ddd":
-                removeTask(String.join(" ", commandExecuted.getArguments()).toLowerCase());
+                if (commandExecuted.getArguments().length == 0) {
+                    removeTask(task);
+                } else {
+                    removeTask(Task.getTask(commandExecuted.getArguments()[0]));
+                }
                 break;
         }
     }
 
-    private void logInfo(String taskName) {
-        log.info("tn: " + taskName);
-        log.info("tm: " + getTaskDuration(taskName));
-        log.info("kc: " + getTaskKc(taskName));
-        log.info("xp: " + getTaskXp(taskName));
-        log.info("ge: " + getTaskGe(taskName));
-        log.info("ha: " + getTaskHa(taskName));
-        float hours = getTaskDuration(taskName).getSeconds() / 3600f;
-        int kcPerHour = Math.round(getTaskKc(taskName) / hours);
-        int xpPerHour = Math.round(getTaskXp(taskName) / hours);
-        int gePerHour = Math.round(getTaskGe(taskName) / hours);
-        int haPerHour = Math.round(getTaskHa(taskName) / hours);
+    private void logInfo(Task task) {
+        log.info("tn: " + task.getName());
+        log.info("tm: " + getTaskDuration(task));
+        log.info("kc: " + getTaskKc(task));
+        log.info("xp: " + getTaskXp(task));
+        log.info("ge: " + getTaskGe(task));
+        log.info("ha: " + getTaskHa(task));
+        float hours = getTaskDuration(task).getSeconds() / 3600f;
+        int kcPerHour = Math.round(getTaskKc(task) / hours);
+        int xpPerHour = Math.round(getTaskXp(task) / hours);
+        int gePerHour = Math.round(getTaskGe(task) / hours);
+        int haPerHour = Math.round(getTaskHa(task) / hours);
         log.info("kc/h: " + kcPerHour);
         log.info("xp/h: " + xpPerHour);
         log.info("ge/h: " + gePerHour);
         log.info("ha/h: " + haPerHour);
+    }
+
+    private void clearConfig() {
+        log.warn("CLEARING ALL CONFIG ENTRIES");
+        for (String key : configManager.getConfigurationKeys("slayertracker")) {
+            String[] splitString = key.split("\\.");
+            configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length-1]);
+            configManager.unsetConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length-1]);
+        }
+    }
+
+    private void removeTask(Task task) {
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task);
     }
 
     @Provides
