@@ -4,16 +4,15 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("slayertracker")
-public interface SlayerTrackerConfig extends Config
-{
-	@ConfigItem(
-		keyName = "greeting",
-		name = "Welcome Greeting",
-		description = "The message to show to the user when they login"
-	)
-	default String greeting()
-	{
-		return "Hello";
-	}
+@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
+public interface SlayerTrackerConfig extends Config {
+    String GROUP_NAME = "slayertracker";
+
+    // Key names for stored task values
+    String KC_KEY = "kc_";
+    String TIME_KEY = "time_";
+    String XP_KEY = "xp_";
+    String HA_KEY = "ha_";
+    String GE_KEY = "ge_";
+    String TRACKED_TASKS_KEY = "tracked_tasks";
 }
