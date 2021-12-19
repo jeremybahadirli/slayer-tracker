@@ -81,7 +81,7 @@ public class SlayerTrackerPlugin extends Plugin {
                 cachedXp = -1;
                 break;
             case LOGGED_IN:
-                updateTask();
+                updateTask(getTaskName());
                 break;
         }
     }
@@ -99,7 +99,7 @@ public class SlayerTrackerPlugin extends Plugin {
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (event.getGroup().equals(SlayerConfig.GROUP_NAME) && event.getKey().equals(SlayerConfig.TASK_NAME_KEY)) {
-            updateTask();
+            updateTask(event.getNewValue());
         }
     }
 
@@ -115,7 +115,6 @@ public class SlayerTrackerPlugin extends Plugin {
             ge += itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity();
             ha += itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
         }
-
 
         int oldGe = getTaskGe(taskName);
         configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + taskName, oldGe + ge);
@@ -176,22 +175,8 @@ public class SlayerTrackerPlugin extends Plugin {
 
     // TODO
     // Config File
-    // slayertracker.kc_[taskName]=[killCount]
-    // slayertracker.time_[taskName]=[combatTime]
-    // xp/hr = kc * wiki.getXP(taskName) / combatTime
-    // gp/hr = kc * wiki.getGP(taskName) / combatTime
-
-    // TODO
-    // Figure out xp/gp tracking
-
-    // TODO
     // Side Panel (ugh)
 
-    // TODO
-    // Verify targetNames works for Tzharr task. Names not found in Task.java
-    //
-    // Determine best place to run updateTask()
-    // Perhaps onConfigChanged() and on login
     @Subscribe
     public void onInteractingChanged(InteractingChanged event) {
         final Actor source = event.getSource();
@@ -270,14 +255,8 @@ public class SlayerTrackerPlugin extends Plugin {
         configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + taskName, newTime.toString());
     }
 
-    private void updateTask() {
-        // If task is still the same, return
-        if (taskName == getTaskName()) {
-            return;
-        }
-
-        // Get task name and amount from Slayer Plugin config
-        taskName = getTaskName();
+    private void updateTask(String taskName) {
+        this.taskName = taskName;
 
         // If no task exists, clear targetNames and return.
         if (taskName.equals("")) {
@@ -285,11 +264,11 @@ public class SlayerTrackerPlugin extends Plugin {
             return;
         }
 
-        // Add all target names for that task to targetNames, as lower case
+        // Add Task's secondary target names, as lower case
         Arrays.stream(Task.getTask(taskName).getTargetNames())
                 .map(String::toLowerCase)
                 .forEach(targetNames::add);
-        // Remove trailing s from all target names to make singular
+        // Add Task's primary name, as singular
         targetNames.add(taskName.replaceAll("s$", ""));
     }
 
