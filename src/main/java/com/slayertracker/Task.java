@@ -36,7 +36,7 @@ import java.util.Map;
 @Getter
 enum Task {
     //<editor-fold desc="Enums">
-    ABERRANT_SPECTRES("Aberrant spectres", ItemID.ABERRANT_SPECTRE, "Spectre"),
+    ABERRANT_SPECTRES("Aberrant spectres", new SubTask[]{SubTask.ABERRANT_SPECTRE, SubTask.DEVIANT_SPECTRE}, ItemID.ABERRANT_SPECTRE, "Spectre"),
     ABYSSAL_DEMONS("Abyssal demons", ItemID.ABYSSAL_DEMON),
     ABYSSAL_SIRE("Abyssal Sire", ItemID.ABYSSAL_ORPHAN),
     ADAMANT_DRAGONS("Adamant dragons", ItemID.ADAMANT_DRAGON_MASK),
@@ -86,7 +86,7 @@ enum Task {
     ELVES("Elves", ItemID.ELF, "Elf", "Iorwerth Warrior", "Iorwerth Archer"),
     ENTS("Ents", ItemID.NICE_TREE, "Ent"),
     FEVER_SPIDERS("Fever spiders", ItemID.FEVER_SPIDER),
-    FIRE_GIANTS("Fire giants", ItemID.FIRE_BATTLESTAFF),
+    FIRE_GIANTS("Fire giants", new SubTask[]{SubTask.FIRE_GIANT_WEAK, SubTask.FIRE_GIANT_STRONG}, ItemID.FIRE_BATTLESTAFF),
     FLESH_CRAWLERS("Fleshcrawlers", ItemID.ENSOULED_SCORPION_HEAD, "Flesh crawler"),
     FOSSIL_ISLAND_WYVERNS("Fossil island wyverns", ItemID.FOSSIL_ISLAND_WYVERN, "Ancient wyvern", "Long-tailed wyvern", "Spitting wyvern", "Taloned wyvern"),
     GARGOYLES("Gargoyles", ItemID.GARGOYLE),
@@ -111,7 +111,7 @@ enum Task {
     JAD("TzTok-Jad", ItemID.TZREKJAD),
     JELLIES("Jellies", ItemID.JELLY, "Jelly"),
     JUNGLE_HORROR("Jungle horrors", ItemID.ENSOULED_HORROR_HEAD),
-    KALPHITE("Kalphite", ItemID.KALPHITE_SOLDIER),
+    KALPHITE("Kalphite", new SubTask[]{SubTask.KALPHITE_WORKER, SubTask.KALPHITE_SOLDIER, SubTask.KALPHITE_GUARDIAN, SubTask.KALPHITE_QUEEN}, ItemID.KALPHITE_SOLDIER),
     KALPHITE_QUEEN("Kalphite Queen", ItemID.KALPHITE_PRINCESS),
     KILLERWATTS("Killerwatts", ItemID.KILLERWATT),
     KING_BLACK_DRAGON("King Black Dragon", ItemID.PRINCE_BLACK_DRAGON),
@@ -186,6 +186,7 @@ enum Task {
     private final String name;
     private final int itemSpriteId;
     private final String[] targetNames;
+    private final SubTask[] subTasks;
 
     static {
         ImmutableMap.Builder<String, Task> builder = new ImmutableMap.Builder<>();
@@ -202,6 +203,15 @@ enum Task {
         this.name = name;
         this.itemSpriteId = itemSpriteId;
         this.targetNames = targetNames;
+        this.subTasks = new SubTask[0];
+    }
+
+    Task(String name, SubTask[] subTasks, int itemSpriteId, String... targetNames) {
+        Preconditions.checkArgument(itemSpriteId >= 0);
+        this.name = name;
+        this.itemSpriteId = itemSpriteId;
+        this.targetNames = targetNames;
+        this.subTasks = subTasks;
     }
 
     @Nullable
