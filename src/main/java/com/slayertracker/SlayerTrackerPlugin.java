@@ -20,10 +20,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.*;
 
 import static net.runelite.api.Skill.SLAYER;
 
@@ -46,12 +43,14 @@ public class SlayerTrackerPlugin extends Plugin {
 
     private Task task;
     private final Set<String> targetNames = new HashSet<>();
-    private final Set<NPC> interactors = new HashSet<>();
-    private Instant startTime;
+    private final HashMap<Enum<?>, HashSet<NPC>> subTaskToInteractorSet = new HashMap<>();
+    private final HashMap<Enum<?>, Instant> subTaskToInteractionStartTime = new HashMap<>();
     private int cachedXp = -1;
 
     @Override
     protected void startUp() throws Exception {
+        // When plugin is started while already logged in,
+        // cache the current Slayer xp
         if (client.getGameState() == GameState.LOGGED_IN) {
             cachedXp = client.getSkillExperience(SLAYER);
         }
@@ -61,8 +60,8 @@ public class SlayerTrackerPlugin extends Plugin {
     protected void shutDown() throws Exception {
         task = null;
         targetNames.clear();
-        interactors.clear();
-        startTime = null;
+        subTaskToInteractorSet.clear();
+        subTaskToInteractionStartTime.clear();
         cachedXp = -1;
     }
 
@@ -71,16 +70,18 @@ public class SlayerTrackerPlugin extends Plugin {
 
         switch (gameStateChanged.getGameState()) {
             case HOPPING:
+                log.info("HOPPING");
             case LOGGING_IN:
                 task = null;
                 targetNames.clear();
-                interactors.clear();
-                startTime = null;
+                subTaskToInteractorSet.clear();
+                subTaskToInteractionStartTime.clear();
                 cachedXp = -1;
+                log.info("LOGGING_IN");
                 break;
             case LOGGED_IN:
-                updateTaskByName(getSlayerConfigTaskName());
-                // clearConfig(); // Uncomment to clear all config entries on login
+                updateTaskByName(getSlayerConfigTaskName()); // TODO try moving to LOGGING_IN because this repeats
+                log.info("LOGGED_IN");
                 break;
         }
     }
@@ -88,10 +89,20 @@ public class SlayerTrackerPlugin extends Plugin {
     @Subscribe
     public void onGameTick(GameTick event) {
         updateInteractors();
-        if (startTime == null && !interactors.isEmpty()) {
-            startTiming();
-        } else if (startTime != null && interactors.isEmpty()) {
-            stopTiming();
+        // TODO Perhaps we can move this out of onGameTick now
+        // TODO to when these HashMaps are originally manipulated
+        for (Enum<?> subTask : subTaskToInteractorSet.keySet()) {
+            if (!subTaskToInteractionStartTime.containsKey(subTask)) {
+                startTiming(subTask);
+            }
+        }
+
+        for (Iterator<Enum<?>> iterator = subTaskToInteractionStartTime.keySet().iterator(); iterator.hasNext();) {
+            Enum<?> subTask = iterator.next();
+            if (!subTaskToInteractorSet.containsKey(subTask)) {
+                recordTime(subTask);
+                iterator.remove();
+            }
         }
     }
 
@@ -104,8 +115,9 @@ public class SlayerTrackerPlugin extends Plugin {
 
     @Subscribe
     private void onNpcLootReceived(NpcLootReceived npcLootReceived) {
-        if (!isTask(npcLootReceived.getNpc())) {
-            return;
+        NPC npc = npcLootReceived.getNpc();
+        if (!isTask(npc)) {    // Must use isTask instead of interactors.contains() because npc
+            return;            // is removed from interactors by the time loot drops
         }
 
         int ge = 0;
@@ -115,35 +127,37 @@ public class SlayerTrackerPlugin extends Plugin {
             ha += itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
         }
 
-        int oldGe = getTaskGe(task);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, oldGe + ge);
+        setTaskGe(task, getTaskGe(task) + ge);
+        setTaskHa(task, getTaskHa(task) + ha);
 
-        int oldHa = getTaskHa(task);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, oldHa + ha);
+        // Only proceed if npc is a subTask
+        SubTask subTask = getSubTask(npc);
+        if (subTask == null) {
+            return;
+        }
+
+        setTaskGe(subTask, getTaskGe(subTask) + ge);
+        setTaskHa(subTask, getTaskHa(subTask) + ha);
     }
 
     @Subscribe
     public void onActorDeath(ActorDeath actorDeath) {
+        // Only proceed if dead actor was an NPC
         Actor actor = actorDeath.getActor();
         if (!(actor instanceof NPC)) {
             return;
         }
 
         NPC npc = (NPC) actor;
-        if (!interactors.contains(npc)) {
-            return;
-        }
-
-        // Monster KC in config ++
-        int oldKc = getTaskKc(task);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, ++oldKc);
-
-        // Update combat duration, even though
-        // still in combat with task.
-        interactors.remove(npc);
-        if (!interactors.isEmpty()) {
-            stopTiming();
-            startTiming();
+        for (Enum<?> key : subTaskToInteractorSet.keySet()) {
+            if (subTaskToInteractorSet.get(key).contains(npc)) {
+                setTaskKc(key, getTaskKc(key) + 1);
+                subTaskToInteractorSet.get(key).remove(npc);
+                if (!subTaskToInteractorSet.get(key).isEmpty()) {
+                    recordTime(key);
+                    startTiming(key);
+                }
+            }
         }
     }
 
@@ -168,8 +182,7 @@ public class SlayerTrackerPlugin extends Plugin {
         final int delta = slayerExp - cachedXp;
         cachedXp = slayerExp;
 
-        int oldXp = getTaskXp(task);
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, oldXp + delta);
+        setTaskXp(task, getTaskXp(task) + delta);
     }
 
     // TODO
@@ -182,7 +195,7 @@ public class SlayerTrackerPlugin extends Plugin {
         final Actor target = event.getTarget();
         final NPC npc;
 
-        // Determine whether this is a Player-NPC interaction.
+        // Determine whether this is a Player-NPC interaction
         // Assign the source or target as appropriate to npc
         if (source == client.getLocalPlayer() && target instanceof NPC) {
             npc = (NPC) target;
@@ -192,11 +205,28 @@ public class SlayerTrackerPlugin extends Plugin {
             return;
         }
 
-        // If npc is on task, add to the set of task
-        // npcs interacting with the Player
-        if (isTask(npc)) {
-            interactors.add(npc);
+        // Only proceed if npc is on task
+        if (!isTask(npc)) {
+            return;
         }
+
+        // If it doesn't exist, create a set of interactors for the task, than add the npc
+        if (!subTaskToInteractorSet.containsKey(task)) {
+            subTaskToInteractorSet.put(task, new HashSet<>());
+        }
+        subTaskToInteractorSet.get(task).add(npc);
+
+        // Only proceed if npc is also a subtask
+        SubTask subTask = getSubTask(npc);
+        if (subTask == null) {
+            return;
+        }
+
+        // Same as above, but for subtask
+        if (!subTaskToInteractorSet.containsKey(subTask)) {
+            subTaskToInteractorSet.put(subTask, new HashSet<>());
+        }
+        subTaskToInteractorSet.get(subTask).add(npc);
     }
 
     private boolean isTask(NPC npc) {
@@ -205,7 +235,6 @@ public class SlayerTrackerPlugin extends Plugin {
             return false;
         }
 
-        // Verify NPC is still valid
         final NPCComposition composition = npc.getTransformedComposition();
         if (composition == null) {
             return false;
@@ -230,38 +259,69 @@ public class SlayerTrackerPlugin extends Plugin {
         return false;
     }
 
+    private SubTask getSubTask(NPC npc) {
+        if (task == null) {
+            return null;
+        }
+
+        final NPCComposition composition = npc.getTransformedComposition();
+        if (composition == null) {
+            return null;
+        }
+
+        for (SubTask subTask : task.getSubTasks()) {
+            for (int lvl : subTask.getCombatLevels()) {             // Find subtask with matching combat level
+                if (npc.getCombatLevel() == lvl) {
+                    return subTask;
+                }
+            }
+            for (String targetName : subTask.getTargetNames()) {    // Find subtask with matching name
+                if (npc.getName().equals(targetName)) {
+                    return subTask;
+                }
+            }
+        }
+
+        return null;
+    }
+
     private void updateInteractors() {
         // Remove an Interactor from the set if:
         //
         // Interactor no longer exists in the client, OR
         // Player's interaction is not pointed toward it, AND
         // it's not interacting OR its interaction is not pointed toward the player
-        interactors.removeIf(interactor ->
-                !client.getNpcs().contains(interactor)
-                        || interactor != client.getLocalPlayer().getInteracting()
-                        && (interactor.getInteracting() == null || !interactor.getInteracting().equals(client.getLocalPlayer()))
-        );
+        for (Enum<?> key : subTaskToInteractorSet.keySet()) {
+            subTaskToInteractorSet.get(key).removeIf(interactor ->
+                    !client.getNpcs().contains(interactor)
+                            || interactor != client.getLocalPlayer().getInteracting()
+                            && (interactor.getInteracting() == null || !interactor.getInteracting().equals(client.getLocalPlayer()))
+            );
+        }
+        // Remove empty interactor sets from the dictionary if empty
+        subTaskToInteractorSet.values().removeIf(HashSet::isEmpty);
     }
 
-    public void startTiming() {
-        startTime = Instant.now();
+    public void startTiming(Enum<?> task) {
+        subTaskToInteractionStartTime.put(task, Instant.now());
+        log.info("START: " + task);
     }
 
-    public void stopTiming() {
-        Duration duration = Duration.between(startTime, Instant.now());
-        startTime = null;
-        Duration newTime = duration.plus(getTaskDuration(task));
-        configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task, newTime.toString());
+    public void recordTime(Enum<?> task) {
+        Duration duration = Duration.between(subTaskToInteractionStartTime.get(task), Instant.now());
+        setTaskDuration(task, getTaskDuration(task).plus(duration));
+        log.info("STOP: " + task);
     }
 
     private void updateTaskByName(String taskName) {
-        task = Task.getTask(taskName);
-
-        // If no task exists, clear targetNames and return.
         if (taskName.equals("")) {
+            task = null;
             targetNames.clear();
+            subTaskToInteractorSet.clear();
             return;
         }
+
+        task = Task.getTask(taskName);
 
         // Add Task's secondary target names, as lower case
         Arrays.stream(task.getTargetNames())
@@ -274,35 +334,6 @@ public class SlayerTrackerPlugin extends Plugin {
     private String getSlayerConfigTaskName() {
         String taskName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
         return taskName == null ? "" : taskName.toLowerCase();
-    }
-
-    public Duration getTaskDuration(Task task) {
-        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
-        if (durationString != null) {
-            return Duration.parse(durationString);
-        } else {
-            return Duration.ZERO;
-        }
-    }
-
-    public int getTaskKc(Task task) {
-        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, int.class);
-        return kc == null ? 0 : kc;
-    }
-
-    private int getTaskXp(Task task) {
-        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, int.class);
-        return xp == null ? 0 : xp;
-    }
-
-    private int getTaskGe(Task task) {
-        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, int.class);
-        return ge == null ? 0 : ge;
-    }
-
-    private int getTaskHa(Task task) {
-        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, int.class);
-        return ha == null ? 0 : ha;
     }
 
     @Subscribe
@@ -322,42 +353,109 @@ public class SlayerTrackerPlugin extends Plugin {
                     removeTask(Task.getTask(commandExecuted.getArguments()[0]));
                 }
                 break;
+            case "XXX":
+                clearConfig();
+                break;
+            case "i":
+                log.info(String.valueOf(subTaskToInteractorSet));
+                break;
         }
     }
 
     private void logInfo(Task task) {
-        log.info("tn: " + task.getName());
+        float hours = getTaskDuration(task).getSeconds() / 3600f;
+        log.info("");
+        log.info("nm: " + task);
         log.info("tm: " + getTaskDuration(task));
         log.info("kc: " + getTaskKc(task));
         log.info("xp: " + getTaskXp(task));
         log.info("ge: " + getTaskGe(task));
         log.info("ha: " + getTaskHa(task));
-        float hours = getTaskDuration(task).getSeconds() / 3600f;
-        int kcPerHour = Math.round(getTaskKc(task) / hours);
-        int xpPerHour = Math.round(getTaskXp(task) / hours);
-        int gePerHour = Math.round(getTaskGe(task) / hours);
-        int haPerHour = Math.round(getTaskHa(task) / hours);
-        log.info("kc/h: " + kcPerHour);
-        log.info("xp/h: " + xpPerHour);
-        log.info("ge/h: " + gePerHour);
-        log.info("ha/h: " + haPerHour);
+        log.info("kc/h: " + Math.round(getTaskKc(task) / hours));
+        log.info("xp/h: " + Math.round(getTaskXp(task) / hours));
+        log.info("ge/h: " + Math.round(getTaskGe(task) / hours));
+        log.info("ha/h: " + Math.round(getTaskHa(task) / hours));
+        log.info(String.valueOf(subTaskToInteractorSet));
+        log.info(String.valueOf(subTaskToInteractionStartTime));
     }
 
     private void clearConfig() {
         log.warn("CLEARING ALL CONFIG ENTRIES");
         for (String key : configManager.getConfigurationKeys("slayertracker")) {
             String[] splitString = key.split("\\.");
-            configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length-1]);
-            configManager.unsetConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length-1]);
+            configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length - 1]);
+            configManager.unsetConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length - 1]);
         }
     }
 
     private void removeTask(Task task) {
+        log.warn("REMOVING TASK: " + task);
         configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
         configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task);
         configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task);
         configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task);
         configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task);
+    }
+
+    // GETTERS AND SETTERS FOR CONFIG FILE
+
+    public Duration getTaskDuration(Enum<?> task) {
+        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
+        if (durationString != null) {
+            return Duration.parse(durationString);
+        } else {
+            return Duration.ZERO;
+        }
+    }
+
+    public void setTaskDuration(Enum<?> task, Duration duration) {
+        if (task != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task, duration.toString());
+        }
+    }
+
+    public int getTaskKc(Enum<?> task) {
+        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, int.class);
+        return kc == null ? 0 : kc;
+    }
+
+    public void setTaskKc(Enum<?> task, int kc) {
+        if (task != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, kc);
+        }
+    }
+
+    private int getTaskXp(Enum<?> task) {
+        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, int.class);
+        return xp == null ? 0 : xp;
+    }
+
+    public void setTaskXp(Enum<?> task, int xp) {
+        if (task != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, xp);
+        }
+    }
+
+    private int getTaskGe(Enum<?> task) {
+        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, int.class);
+        return ge == null ? 0 : ge;
+    }
+
+    private void setTaskGe(Enum<?> task, int ge) {
+        if (task != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, ge);
+        }
+    }
+
+    private int getTaskHa(Enum<?> task) {
+        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, int.class);
+        return ha == null ? 0 : ha;
+    }
+
+    private void setTaskHa(Enum<?> task, int ha) {
+        if (task != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, ha);
+        }
     }
 
     @Provides
