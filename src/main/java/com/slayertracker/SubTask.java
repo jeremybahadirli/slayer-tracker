@@ -48,21 +48,9 @@ enum SubTask {
     TZHAAR_HUR("Tzhaar-Hur");
     //</editor-fold>
 
-//    private static final Map<String, SubTask> targets;
-
     private final String displayName;
     private final String[] targetNames;
     private final int[] combatLevels;
-
-//    static {
-//        ImmutableMap.Builder<String, SubTask> builder = new ImmutableMap.Builder<>();
-//
-//        for (SubTask target : values()) {
-//            builder.put(target.getName().toLowerCase(), target);
-//        }
-//
-//        targets = builder.build();
-//    }
 
     SubTask(String displayName) {
         this.displayName = displayName;
@@ -81,9 +69,4 @@ enum SubTask {
         this.targetNames = new String[]{displayName};
         this.combatLevels = combatLevels;
     }
-
-//    @Nullable
-//    static SubTask getTarget(String targetName) {
-//        return targets.get(targetName.toLowerCase());
-//    }
 }
