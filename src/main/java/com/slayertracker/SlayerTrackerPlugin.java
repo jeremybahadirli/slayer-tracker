@@ -13,6 +13,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
+import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.slayer.SlayerConfig;
@@ -41,10 +42,14 @@ public class SlayerTrackerPlugin extends Plugin {
     @Inject
     private ItemManager itemManager;
 
+    @Inject
+    private NPCManager npcManager;
+
     private Task task;
     private final Set<String> targetNames = new HashSet<>();
     private final HashMap<Enum<?>, HashSet<NPC>> subTaskToInteractorSet = new HashMap<>();
     private final HashMap<Enum<?>, Instant> subTaskToInteractionStartTime = new HashMap<>();
+    private final Set<NPC> xpNpcQueue = new HashSet<>();
     private int cachedXp = -1;
 
     @Override
@@ -70,18 +75,15 @@ public class SlayerTrackerPlugin extends Plugin {
 
         switch (gameStateChanged.getGameState()) {
             case HOPPING:
-                log.info("HOPPING");
             case LOGGING_IN:
                 task = null;
                 targetNames.clear();
                 subTaskToInteractorSet.clear();
                 subTaskToInteractionStartTime.clear();
                 cachedXp = -1;
-                log.info("LOGGING_IN");
                 break;
             case LOGGED_IN:
                 updateTaskByName(getSlayerConfigTaskName()); // TODO try moving to LOGGING_IN because this repeats
-                log.info("LOGGED_IN");
                 break;
         }
     }
@@ -97,7 +99,7 @@ public class SlayerTrackerPlugin extends Plugin {
             }
         }
 
-        for (Iterator<Enum<?>> iterator = subTaskToInteractionStartTime.keySet().iterator(); iterator.hasNext();) {
+        for (Iterator<Enum<?>> iterator = subTaskToInteractionStartTime.keySet().iterator(); iterator.hasNext(); ) {
             Enum<?> subTask = iterator.next();
             if (!subTaskToInteractorSet.containsKey(subTask)) {
                 recordTime(subTask);
@@ -149,12 +151,13 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         NPC npc = (NPC) actor;
-        for (Enum<?> key : subTaskToInteractorSet.keySet()) {
-            if (subTaskToInteractorSet.get(key).contains(npc)) {
-                setTaskKc(key, getTaskKc(key) + 1);
-                subTaskToInteractorSet.get(key).remove(npc);
-                if (!subTaskToInteractorSet.get(key).isEmpty()) {
-                    recordTime(key);
+        for (Enum<?> key : subTaskToInteractorSet.keySet()) {       // Iterate over interactor sets, ie FIRE_GIANTS, FIRE_GIANT_WEAK
+            if (subTaskToInteractorSet.get(key).contains(npc)) {    // If an interactor set contains the dead npc:
+                xpNpcQueue.add(npc);                                // Add it to the set of npcs to share next xp drop
+                setTaskKc(key, getTaskKc(key) + 1);                 // Increment kc for that interactor set
+                subTaskToInteractorSet.get(key).remove(npc);        // Remove npc from interactor set
+                if (!subTaskToInteractorSet.get(key).isEmpty()) {   // If interactor set hasn't emptied,
+                    recordTime(key);                                // Log kill time, and continue timing
                     startTiming(key);
                 }
             }
@@ -182,7 +185,34 @@ public class SlayerTrackerPlugin extends Plugin {
         final int delta = slayerExp - cachedXp;
         cachedXp = slayerExp;
 
-        setTaskXp(task, getTaskXp(task) + delta);
+        divideXp(delta, xpNpcQueue);
+    }
+
+    // Recursively allocate xp to each killed monster in the queue
+    // this will allow for safe rounding to whole xp amounts
+    private void divideXp(int delta, Set<NPC> xpNpcQueue) {
+        if (xpNpcQueue.isEmpty()) {
+            return;
+        }
+
+        int hpTotal = 0;
+        for (NPC npc : xpNpcQueue) {
+            hpTotal += npcManager.getHealth(npc.getId());
+        }
+
+        NPC npc = xpNpcQueue.iterator().next();
+        int xpShare = delta * npcManager.getHealth(npc.getId()) / hpTotal;
+
+        setTaskXp(task, getTaskXp(task) + xpShare);
+
+        SubTask subTask = getSubTask(npc);
+        if (subTask != null) {
+            setTaskXp(subTask, getTaskXp(subTask) + xpShare);
+        }
+
+        delta -= xpShare;
+        xpNpcQueue.remove(npc);
+        divideXp(delta, xpNpcQueue);
     }
 
     // TODO
@@ -281,7 +311,6 @@ public class SlayerTrackerPlugin extends Plugin {
                 }
             }
         }
-
         return null;
     }
 
@@ -304,13 +333,11 @@ public class SlayerTrackerPlugin extends Plugin {
 
     public void startTiming(Enum<?> task) {
         subTaskToInteractionStartTime.put(task, Instant.now());
-        log.info("START: " + task);
     }
 
     public void recordTime(Enum<?> task) {
         Duration duration = Duration.between(subTaskToInteractionStartTime.get(task), Instant.now());
         setTaskDuration(task, getTaskDuration(task).plus(duration));
-        log.info("STOP: " + task);
     }
 
     private void updateTaskByName(String taskName) {
@@ -359,10 +386,19 @@ public class SlayerTrackerPlugin extends Plugin {
             case "i":
                 log.info(String.valueOf(subTaskToInteractorSet));
                 break;
+            case "s":
+                log.info(String.valueOf(xpNpcQueue));
         }
     }
 
-    private void logInfo(Task task) {
+    private void logInfo(Enum<?> task) {
+        try {
+            for (SubTask subTask : ((Task) task).getSubTasks()) {
+                logInfo(subTask);
+            }
+        } catch (ClassCastException e) {
+        }
+
         float hours = getTaskDuration(task).getSeconds() / 3600f;
         log.info("");
         log.info("nm: " + task);
