@@ -65,6 +65,12 @@ public class SlayerTrackerPlugin extends Plugin {
     private final Set<NPC> xpShareInteractors = new HashSet<>();
     private int cachedXp = -1;
 
+    private final Predicate<NPC> isNotInteracting = interactor ->
+            !client.getNpcs().contains(interactor)
+                    || interactor != client.getLocalPlayer().getInteracting()
+                    && (interactor.getInteracting() == null
+                    || !interactor.getInteracting().equals(client.getLocalPlayer()));
+
     @Override
     protected void startUp() {
         if (client.getGameState() == GameState.LOGGED_IN) {
@@ -114,13 +120,7 @@ public class SlayerTrackerPlugin extends Plugin {
         }
     }
 
-    private final Predicate<NPC> isNotInteracting = interactor ->
-            !client.getNpcs().contains(interactor)
-                    || interactor != client.getLocalPlayer().getInteracting()
-                    && (interactor.getInteracting() == null
-                    || !interactor.getInteracting().equals(client.getLocalPlayer()));
-
-    @Subscribe
+   @Subscribe
     public void onGameTick(GameTick event) {
         if (assignment == null) {
             return;
