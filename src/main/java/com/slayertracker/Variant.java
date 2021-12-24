@@ -28,7 +28,7 @@ package com.slayertracker;
 import lombok.Getter;
 
 @Getter
-enum SubTask {
+enum Variant {
     //<editor-fold desc="Enums">
     // Aberrant spectres
     ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
@@ -41,6 +41,9 @@ enum SubTask {
     KALPHITE_SOLDIER("Soldier", "Kalphite Soldier"),
     KALPHITE_GUARDIAN("Guardian", "Kalphite Guardian"),
     KALPHITE_QUEEN("Queen", "Kalphite Queen"),
+    // Trolls
+    ICE_TROLL("Ice troll", "Ice troll runt", "Ice troll grunt", "Ice troll male", "Ice troll female"),
+    MOUNTAIN_TROLL("Mountain troll"),
     // Tzhaar
     TZHAAR_KET("Tzhaar-Ket"),
     TZHAAR_XIL("Tzhaar-Xil"),
@@ -52,21 +55,21 @@ enum SubTask {
     private final String[] targetNames;
     private final int[] combatLevels;
 
-    SubTask(String displayName) {
-        this.displayName = displayName;
-        this.targetNames = new String[]{displayName};
+    Variant(String displayAndTargetName) {
+        this.displayName = displayAndTargetName;
+        this.targetNames = new String[]{displayAndTargetName};
         this.combatLevels = new int[0];
     }
 
-    SubTask(String displayName, String... targetNames) {
+    Variant(String displayName, String... targetNames) {
         this.displayName = displayName;
         this.targetNames = targetNames;
         this.combatLevels = new int[0];
     }
 
-    SubTask(String displayName, int... combatLevels) {
+    Variant(String displayName, int... combatLevels) {
         this.displayName = displayName;
-        this.targetNames = new String[]{displayName};
+        this.targetNames = new String[]{};
         this.combatLevels = combatLevels;
     }
 }

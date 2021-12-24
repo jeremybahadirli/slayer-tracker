@@ -29,14 +29,17 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import lombok.Getter;
 import net.runelite.api.ItemID;
+import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 
-import javax.annotation.Nullable;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Getter
-enum Task {
+enum Assignment {
     //<editor-fold desc="Enums">
-    ABERRANT_SPECTRES("Aberrant spectres", new SubTask[]{SubTask.ABERRANT_SPECTRE, SubTask.DEVIANT_SPECTRE}, ItemID.ABERRANT_SPECTRE, "Spectre"),
+    ABERRANT_SPECTRES("Aberrant spectres", new Variant[]{Variant.ABERRANT_SPECTRE, Variant.DEVIANT_SPECTRE}, ItemID.ABERRANT_SPECTRE, "Spectre"),
     ABYSSAL_DEMONS("Abyssal demons", ItemID.ABYSSAL_DEMON),
     ABYSSAL_SIRE("Abyssal Sire", ItemID.ABYSSAL_ORPHAN),
     ADAMANT_DRAGONS("Adamant dragons", ItemID.ADAMANT_DRAGON_MASK),
@@ -86,7 +89,7 @@ enum Task {
     ELVES("Elves", ItemID.ELF, "Elf", "Iorwerth Warrior", "Iorwerth Archer"),
     ENTS("Ents", ItemID.NICE_TREE, "Ent"),
     FEVER_SPIDERS("Fever spiders", ItemID.FEVER_SPIDER),
-    FIRE_GIANTS("Fire giants", new SubTask[]{SubTask.FIRE_GIANT_WEAK, SubTask.FIRE_GIANT_STRONG}, ItemID.FIRE_BATTLESTAFF),
+    FIRE_GIANTS("Fire giants", new Variant[]{Variant.FIRE_GIANT_WEAK, Variant.FIRE_GIANT_STRONG}, ItemID.FIRE_BATTLESTAFF),
     FLESH_CRAWLERS("Fleshcrawlers", ItemID.ENSOULED_SCORPION_HEAD, "Flesh crawler"),
     FOSSIL_ISLAND_WYVERNS("Fossil island wyverns", ItemID.FOSSIL_ISLAND_WYVERN, "Ancient wyvern", "Long-tailed wyvern", "Spitting wyvern", "Taloned wyvern"),
     GARGOYLES("Gargoyles", ItemID.GARGOYLE),
@@ -111,7 +114,7 @@ enum Task {
     JAD("TzTok-Jad", ItemID.TZREKJAD),
     JELLIES("Jellies", ItemID.JELLY, "Jelly"),
     JUNGLE_HORROR("Jungle horrors", ItemID.ENSOULED_HORROR_HEAD),
-    KALPHITE("Kalphite", new SubTask[]{SubTask.KALPHITE_WORKER, SubTask.KALPHITE_SOLDIER, SubTask.KALPHITE_GUARDIAN, SubTask.KALPHITE_QUEEN}, ItemID.KALPHITE_SOLDIER),
+    KALPHITE("Kalphite", new Variant[]{Variant.KALPHITE_WORKER, Variant.KALPHITE_SOLDIER, Variant.KALPHITE_GUARDIAN, Variant.KALPHITE_QUEEN}, ItemID.KALPHITE_SOLDIER),
     KALPHITE_QUEEN("Kalphite Queen", ItemID.KALPHITE_PRINCESS),
     KILLERWATTS("Killerwatts", ItemID.KILLERWATT),
     KING_BLACK_DRAGON("King Black Dragon", ItemID.PRINCE_BLACK_DRAGON),
@@ -162,7 +165,7 @@ enum Task {
     TEMPLE_SPIDERS("Temple Spiders", ItemID.RED_SPIDERS_EGGS),
     TERROR_DOGS("Terror dogs", ItemID.TERROR_DOG),
     THERMONUCLEAR_SMOKE_DEVIL("Thermonuclear Smoke Devil", ItemID.PET_SMOKE_DEVIL),
-    TROLLS("Trolls", ItemID.TROLL_GUARD, "Dad", "Arrg"),
+    TROLLS("Trolls", new Variant[]{Variant.ICE_TROLL, Variant.MOUNTAIN_TROLL}, ItemID.TROLL_GUARD, "Dad", "Arrg"),
     TUROTH("Turoth", ItemID.TUROTH),
     TZHAAR("Tzhaar", ItemID.ENSOULED_TZHAAR_HEAD),
     UNDEAD_DRUIDS("Undead Druids", ItemID.MASK_OF_RANUL),
@@ -181,41 +184,58 @@ enum Task {
     ZULRAH("Zulrah", ItemID.PET_SNAKELING);
     //</editor-fold>
 
-    private static final Map<String, Task> tasks;
+    private static final Map<String, Assignment> assignment;
 
     private final String name;
     private final int itemSpriteId;
-    private final String[] targetNames;
-    private final SubTask[] subTasks;
+    private final Set<String> targetNames;
+    private final Variant[] variants;
 
     static {
-        ImmutableMap.Builder<String, Task> builder = new ImmutableMap.Builder<>();
+        ImmutableMap.Builder<String, Assignment> builder = new ImmutableMap.Builder<>();
 
-        for (Task task : values()) {
-            builder.put(task.getName().toLowerCase(), task);
+        for (Assignment assignment : values()) {
+            builder.put(assignment.getName().toLowerCase(), assignment);
         }
 
-        tasks = builder.build();
+        assignment = builder.build();
     }
 
-    Task(String name, int itemSpriteId, String... targetNames) {
+    Assignment(String name, int itemSpriteId, String... targetNames) {
+        this(name, new Variant[]{}, itemSpriteId, targetNames);
+    }
+
+    Assignment(String name, Variant[] variants, int itemSpriteId, String... targetNames) {
         Preconditions.checkArgument(itemSpriteId >= 0);
         this.name = name;
         this.itemSpriteId = itemSpriteId;
-        this.targetNames = targetNames;
-        this.subTasks = new SubTask[0];
+        this.targetNames = Stream.concat(
+                        Arrays.stream(targetNames),
+                        Stream.of(name.replaceAll("s$", ""))
+                )
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+        this.variants = variants;
     }
 
-    Task(String name, SubTask[] subTasks, int itemSpriteId, String... targetNames) {
-        Preconditions.checkArgument(itemSpriteId >= 0);
-        this.name = name;
-        this.itemSpriteId = itemSpriteId;
-        this.targetNames = targetNames;
-        this.subTasks = subTasks;
+    static Optional<Assignment> getAssignmentByName(String name) {
+        String nameLowerCase = name.toLowerCase();
+        if (assignment.containsKey(nameLowerCase)) {
+            return Optional.of(assignment.get(nameLowerCase));
+        } else {
+            return Optional.empty();
+        }
     }
 
-    @Nullable
-    static Task getTask(String taskName) {
-        return tasks.get(taskName.toLowerCase());
+    Optional<Variant> getVariantMatchingNpc(NPC npc) {
+        final NPCComposition composition = npc.getTransformedComposition();
+        if (composition == null) {
+            return Optional.empty();
+        }
+
+        return Arrays.stream(this.getVariants()).filter(variant ->
+                        Arrays.stream(variant.getCombatLevels()).anyMatch(lvl -> lvl == npc.getCombatLevel())
+                                || Arrays.stream(variant.getTargetNames()).anyMatch(name -> name.equals(npc.getName())))
+                .findAny();
     }
 }

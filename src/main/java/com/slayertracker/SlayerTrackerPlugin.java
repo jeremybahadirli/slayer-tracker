@@ -12,16 +12,21 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemStack;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.slayer.SlayerConfig;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.MutablePair;
 
+import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Predicate;
 
 import static net.runelite.api.Skill.SLAYER;
 
@@ -30,11 +35,9 @@ import static net.runelite.api.Skill.SLAYER;
         name = "Slayer Tracker"
 )
 public class SlayerTrackerPlugin extends Plugin {
+    //<editor-fold desc="Injectors">
     @Inject
     private Client client;
-
-    @Inject
-    private SlayerTrackerConfig config;
 
     @Inject
     private ConfigManager configManager;
@@ -45,398 +48,333 @@ public class SlayerTrackerPlugin extends Plugin {
     @Inject
     private NPCManager npcManager;
 
-    private Task task;
-    private final Set<String> targetNames = new HashSet<>();
-    private final HashMap<Enum<?>, HashSet<NPC>> subTaskToInteractorSet = new HashMap<>();
-    private final HashMap<Enum<?>, Instant> subTaskToInteractionStartTime = new HashMap<>();
-    private final Set<NPC> xpNpcQueue = new HashSet<>();
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    //</editor-fold>
+
+    // *TERMINOLOGY*
+    // Assignment: The assignment given by a Slayer Master, ie "Trolls", "Fire giants"
+    // Variant: A subset of the Assignment which is commonly fought as a group, ie "Ice trolls", "Fire giant (level-104/109)"
+    // Record: General term for either of the above as it's tracked by the plugin
+    // Target Name: The exact in-game name of an NPC in an Assignment/Variant, ie "Ice troll male", "Ice troll female"
+    // Interactor: An individual on-assignment NPC which is interacting with the player
+
+    private Assignment assignment;
+    private final HashMap<Enum<?>, MutablePair<Set<NPC>, Instant>> recordToInteractorsAndTime = new HashMap<>();
+    private final Set<NPC> xpShareInteractors = new HashSet<>();
     private int cachedXp = -1;
 
     @Override
-    protected void startUp() throws Exception {
-        // When plugin is started while already logged in,
-        // cache the current Slayer xp
+    protected void startUp() {
         if (client.getGameState() == GameState.LOGGED_IN) {
             cachedXp = client.getSkillExperience(SLAYER);
         }
+
+        SlayerTrackerPanel panel = new SlayerTrackerPanel(itemManager);
+        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "slayer_icon.png");
+
+        NavigationButton navButton = NavigationButton.builder()
+                .panel(panel)
+                .tooltip("Slayer Tracker")
+                .icon(icon)
+                .priority(90)
+                .build();
+
+        clientToolbar.addNavigation(navButton);
     }
 
     @Override
-    protected void shutDown() throws Exception {
-        task = null;
-        targetNames.clear();
-        subTaskToInteractorSet.clear();
-        subTaskToInteractionStartTime.clear();
+    protected void shutDown() {
+        clearAssignmentAndRecords();
+        xpShareInteractors.clear();
         cachedXp = -1;
     }
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged) {
-
         switch (gameStateChanged.getGameState()) {
             case HOPPING:
             case LOGGING_IN:
-                task = null;
-                targetNames.clear();
-                subTaskToInteractorSet.clear();
-                subTaskToInteractionStartTime.clear();
+                clearAssignmentAndRecords();
+                Assignment.getAssignmentByName(getSlayerConfigAssignmentName()).ifPresent(
+                        assignment -> this.assignment = assignment);
+                xpShareInteractors.clear();
                 cachedXp = -1;
                 break;
-            case LOGGED_IN:
-                updateTaskByName(getSlayerConfigTaskName()); // TODO try moving to LOGGING_IN because this repeats
-                break;
-        }
-    }
-
-    @Subscribe
-    public void onGameTick(GameTick event) {
-        updateInteractors();
-        // TODO Perhaps we can move this out of onGameTick now
-        // TODO to when these HashMaps are originally manipulated
-        for (Enum<?> subTask : subTaskToInteractorSet.keySet()) {
-            if (!subTaskToInteractionStartTime.containsKey(subTask)) {
-                startTiming(subTask);
-            }
-        }
-
-        for (Iterator<Enum<?>> iterator = subTaskToInteractionStartTime.keySet().iterator(); iterator.hasNext(); ) {
-            Enum<?> subTask = iterator.next();
-            if (!subTaskToInteractorSet.containsKey(subTask)) {
-                recordTime(subTask);
-                iterator.remove();
-            }
         }
     }
 
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (event.getGroup().equals(SlayerConfig.GROUP_NAME) && event.getKey().equals(SlayerConfig.TASK_NAME_KEY)) {
-            updateTaskByName(event.getNewValue());
+            clearAssignmentAndRecords();
+            Assignment.getAssignmentByName(getSlayerConfigAssignmentName()).ifPresent(
+                    assignment -> this.assignment = assignment);
         }
     }
 
+    private final Predicate<NPC> isNotInteracting = interactor ->
+            !client.getNpcs().contains(interactor)
+                    || interactor != client.getLocalPlayer().getInteracting()
+                    && (interactor.getInteracting() == null
+                    || !interactor.getInteracting().equals(client.getLocalPlayer()));
+
     @Subscribe
-    private void onNpcLootReceived(NpcLootReceived npcLootReceived) {
-        NPC npc = npcLootReceived.getNpc();
-        if (!isTask(npc)) {    // Must use isTask instead of interactors.contains() because npc
-            return;            // is removed from interactors by the time loot drops
-        }
-
-        int ge = 0;
-        int ha = 0;
-        for (ItemStack itemStack : npcLootReceived.getItems()) {
-            ge += itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity();
-            ha += itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
-        }
-
-        setTaskGe(task, getTaskGe(task) + ge);
-        setTaskHa(task, getTaskHa(task) + ha);
-
-        // Only proceed if npc is a subTask
-        SubTask subTask = getSubTask(npc);
-        if (subTask == null) {
+    public void onGameTick(GameTick event) {
+        if (assignment == null) {
             return;
         }
 
-        setTaskGe(subTask, getTaskGe(subTask) + ge);
-        setTaskHa(subTask, getTaskHa(subTask) + ha);
+        final Instant now = Instant.now();
+        recordToInteractorsAndTime.forEach((record, interactorsAndTime) ->
+                interactorsAndTime.left.stream()
+                        .filter(isNotInteracting)
+                        .forEach(interactor -> {
+                            setRecordDuration(record, getRecordDuration(record).plus(Duration.between(interactorsAndTime.right, now)));
+                            interactorsAndTime.right = now;
+                        })
+        );
+
+        recordToInteractorsAndTime.values().forEach(interactorsAndTime ->
+                interactorsAndTime.left.removeIf(isNotInteracting));
+
+        recordToInteractorsAndTime.values().removeIf(interactorsAndTime -> interactorsAndTime.left.isEmpty());
+    }
+
+    @Subscribe
+    public void onInteractingChanged(InteractingChanged event) {
+        if (assignment == null) {
+            return;
+        }
+
+        // Determine whether this is a Player-NPC interaction
+        // Assign the source or target as appropriate to npc
+        final NPC npc;
+        if (event.getSource() == client.getLocalPlayer() && event.getTarget() instanceof NPC) {
+            npc = (NPC) event.getTarget();
+        } else if (event.getSource() instanceof NPC && event.getTarget() == client.getLocalPlayer()) {
+            npc = (NPC) event.getSource();
+        } else {
+            return;
+        }
+
+        if (!isOnAssignment(assignment, npc)) {
+            return;
+        }
+
+        // If it doesn't exist, create a record for the Assignment, and add the npc
+        recordToInteractorsAndTime.putIfAbsent(assignment, new MutablePair<>(new HashSet<>(), Instant.now()));
+        recordToInteractorsAndTime.get(assignment).left.add(npc);
+
+        // Do the same if Variant exists
+        assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+            recordToInteractorsAndTime.putIfAbsent(variant, new MutablePair<>(new HashSet<>(), Instant.now()));
+            recordToInteractorsAndTime.get(variant).left.add(npc);
+        });
     }
 
     @Subscribe
     public void onActorDeath(ActorDeath actorDeath) {
-        // Only proceed if dead actor was an NPC
+        if (assignment == null) {
+            return;
+        }
+
         Actor actor = actorDeath.getActor();
         if (!(actor instanceof NPC)) {
             return;
         }
 
         NPC npc = (NPC) actor;
-        for (Enum<?> key : subTaskToInteractorSet.keySet()) {       // Iterate over interactor sets, ie FIRE_GIANTS, FIRE_GIANT_WEAK
-            if (subTaskToInteractorSet.get(key).contains(npc)) {    // If an interactor set contains the dead npc:
-                xpNpcQueue.add(npc);                                // Add it to the set of npcs to share next xp drop
-                setTaskKc(key, getTaskKc(key) + 1);                 // Increment kc for that interactor set
-                subTaskToInteractorSet.get(key).remove(npc);        // Remove npc from interactor set
-                if (!subTaskToInteractorSet.get(key).isEmpty()) {   // If interactor set hasn't emptied,
-                    recordTime(key);                                // Log kill time, and continue timing
-                    startTiming(key);
-                }
+
+        recordToInteractorsAndTime.forEach((record, interactorsAndTime) -> {
+            if (interactorsAndTime.left.stream().anyMatch(interactor -> interactor.equals(npc))) {
+                xpShareInteractors.add(npc);
+                setRecordKc(record, getRecordKc(record) + 1);
             }
+        });
+    }
+
+    @Subscribe
+    private void onNpcLootReceived(NpcLootReceived npcLootReceived) {
+        if (assignment == null) {
+            return;
         }
+
+        NPC npc = npcLootReceived.getNpc();
+        if (!isOnAssignment(assignment, npc)) {
+            return;
+        }
+
+        final int ge = npcLootReceived.getItems().stream().mapToInt(itemStack ->
+                        itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
+                .sum();
+
+        final int ha = npcLootReceived.getItems().stream().mapToInt(itemStack ->
+                        itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity())
+                .sum();
+
+        setRecordGe(assignment, getRecordGe(assignment) + ge);
+        setRecordHa(assignment, getRecordHa(assignment) + ha);
+
+        assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+            setRecordGe(variant, getRecordGe(variant) + ge);
+            setRecordHa(variant, getRecordHa(variant) + ha);
+        });
     }
 
     @Subscribe
     private void onStatChanged(StatChanged statChanged) {
-        if (statChanged.getSkill() != SLAYER) {
+        if (assignment == null || statChanged.getSkill() != SLAYER) {
             return;
         }
 
-        int slayerExp = statChanged.getXp();
-
-        if (slayerExp <= cachedXp) {
+        int newSlayerXp = statChanged.getXp();
+        if (newSlayerXp <= cachedXp) {
             return;
         }
 
         if (cachedXp == -1) {
             // this is the initial xp sent on login
-            cachedXp = slayerExp;
+            cachedXp = newSlayerXp;
             return;
         }
 
-        final int delta = slayerExp - cachedXp;
-        cachedXp = slayerExp;
+        final int slayerXpDrop = newSlayerXp - cachedXp;
+        cachedXp = newSlayerXp;
 
-        divideXp(delta, xpNpcQueue);
+        divideXp(assignment, slayerXpDrop, xpShareInteractors);
     }
 
     // Recursively allocate xp to each killed monster in the queue
     // this will allow for safe rounding to whole xp amounts
-    private void divideXp(int delta, Set<NPC> xpNpcQueue) {
-        if (xpNpcQueue.isEmpty()) {
+    private void divideXp(Assignment assignment, int slayerXpDrop, Set<NPC> xpShareInteractors) {
+        if (xpShareInteractors.isEmpty()) {
             return;
         }
 
-        int hpTotal = 0;
-        for (NPC npc : xpNpcQueue) {
-            hpTotal += npcManager.getHealth(npc.getId());
-        }
+        final int hpTotal = xpShareInteractors.stream().mapToInt(npc ->
+                        npcManager.getHealth(npc.getId()))
+                .sum();
 
-        NPC npc = xpNpcQueue.iterator().next();
-        int xpShare = delta * npcManager.getHealth(npc.getId()) / hpTotal;
+        NPC npc = xpShareInteractors.iterator().next();
+        final int thisNpcsXpShare = slayerXpDrop * npcManager.getHealth(npc.getId()) / hpTotal;
 
-        setTaskXp(task, getTaskXp(task) + xpShare);
+        setRecordXp(assignment, getRecordXp(assignment) + thisNpcsXpShare);
 
-        SubTask subTask = getSubTask(npc);
-        if (subTask != null) {
-            setTaskXp(subTask, getTaskXp(subTask) + xpShare);
-        }
+        assignment.getVariantMatchingNpc(npc).ifPresent(variant ->
+                setRecordXp(variant, getRecordXp(variant) + thisNpcsXpShare)
+        );
 
-        delta -= xpShare;
-        xpNpcQueue.remove(npc);
-        divideXp(delta, xpNpcQueue);
+        slayerXpDrop -= thisNpcsXpShare;
+        xpShareInteractors.remove(npc);
+        divideXp(assignment, slayerXpDrop, xpShareInteractors);
     }
 
     // TODO
     // Config File
     // Side Panel (ugh)
+    // Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
 
-    @Subscribe
-    public void onInteractingChanged(InteractingChanged event) {
-        final Actor source = event.getSource();
-        final Actor target = event.getTarget();
-        final NPC npc;
-
-        // Determine whether this is a Player-NPC interaction
-        // Assign the source or target as appropriate to npc
-        if (source == client.getLocalPlayer() && target instanceof NPC) {
-            npc = (NPC) target;
-        } else if (source instanceof NPC && target == client.getLocalPlayer()) {
-            npc = (NPC) source;
-        } else {
-            return;
-        }
-
-        // Only proceed if npc is on task
-        if (!isTask(npc)) {
-            return;
-        }
-
-        // If it doesn't exist, create a set of interactors for the task, than add the npc
-        if (!subTaskToInteractorSet.containsKey(task)) {
-            subTaskToInteractorSet.put(task, new HashSet<>());
-        }
-        subTaskToInteractorSet.get(task).add(npc);
-
-        // Only proceed if npc is also a subtask
-        SubTask subTask = getSubTask(npc);
-        if (subTask == null) {
-            return;
-        }
-
-        // Same as above, but for subtask
-        if (!subTaskToInteractorSet.containsKey(subTask)) {
-            subTaskToInteractorSet.put(subTask, new HashSet<>());
-        }
-        subTaskToInteractorSet.get(subTask).add(npc);
-    }
-
-    private boolean isTask(NPC npc) {
-        // If targetNames is empty, no slayer task is assigned
-        if (targetNames.isEmpty()) {
-            return false;
-        }
-
+    private static boolean isOnAssignment(Assignment assignment, NPC npc) {
         final NPCComposition composition = npc.getTransformedComposition();
         if (composition == null) {
             return false;
         }
 
         // Format non-breaking space, convert to lower case for comparison
-        final String name = composition.getName()
+        final String npcNameFormatted = composition.getName()
                 .replace('\u00A0', ' ')
                 .toLowerCase();
 
-        // Iterate over names of monsters on current task
-        // If names match
-        for (String target : targetNames) {
-            if (name.contains(target)) {
-                if (ArrayUtils.contains(composition.getActions(), "Attack")
-                        // Pick action is for zygomite-fungi
-                        || ArrayUtils.contains(composition.getActions(), "Pick")) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return assignment.getTargetNames().stream().anyMatch(npcNameFormatted::contains)
+                && (ArrayUtils.contains(composition.getActions(), "Attack")
+                || ArrayUtils.contains(composition.getActions(), "Pick"));
     }
 
-    private SubTask getSubTask(NPC npc) {
-        if (task == null) {
-            return null;
-        }
-
-        final NPCComposition composition = npc.getTransformedComposition();
-        if (composition == null) {
-            return null;
-        }
-
-        for (SubTask subTask : task.getSubTasks()) {
-            for (int lvl : subTask.getCombatLevels()) {             // Find subtask with matching combat level
-                if (npc.getCombatLevel() == lvl) {
-                    return subTask;
-                }
-            }
-            for (String targetName : subTask.getTargetNames()) {    // Find subtask with matching name
-                if (npc.getName().equals(targetName)) {
-                    return subTask;
-                }
-            }
-        }
-        return null;
-    }
-
-    private void updateInteractors() {
-        // Remove an Interactor from the set if:
-        //
-        // Interactor no longer exists in the client, OR
-        // Player's interaction is not pointed toward it, AND
-        // it's not interacting OR its interaction is not pointed toward the player
-        for (Enum<?> key : subTaskToInteractorSet.keySet()) {
-            subTaskToInteractorSet.get(key).removeIf(interactor ->
-                    !client.getNpcs().contains(interactor)
-                            || interactor != client.getLocalPlayer().getInteracting()
-                            && (interactor.getInteracting() == null || !interactor.getInteracting().equals(client.getLocalPlayer()))
-            );
-        }
-        // Remove empty interactor sets from the dictionary if empty
-        subTaskToInteractorSet.values().removeIf(HashSet::isEmpty);
-    }
-
-    public void startTiming(Enum<?> task) {
-        subTaskToInteractionStartTime.put(task, Instant.now());
-    }
-
-    public void recordTime(Enum<?> task) {
-        Duration duration = Duration.between(subTaskToInteractionStartTime.get(task), Instant.now());
-        setTaskDuration(task, getTaskDuration(task).plus(duration));
-    }
-
-    private void updateTaskByName(String taskName) {
-        if (taskName.equals("")) {
-            task = null;
-            targetNames.clear();
-            subTaskToInteractorSet.clear();
-            return;
-        }
-
-        task = Task.getTask(taskName);
-
-        // Add Task's secondary target names, as lower case
-        Arrays.stream(task.getTargetNames())
-                .map(String::toLowerCase)
-                .forEach(targetNames::add);
-        // Add Task's primary name, as singular
-        targetNames.add(taskName.replaceAll("s$", ""));
-    }
-
-    private String getSlayerConfigTaskName() {
-        String taskName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
-        return taskName == null ? "" : taskName.toLowerCase();
-    }
-
+    //<editor-fold desc="Debug">
     @Subscribe
     private void onCommandExecuted(CommandExecuted commandExecuted) {
         switch (commandExecuted.getCommand()) {
             case "ttt":
                 if (commandExecuted.getArguments().length == 0) {
-                    logInfo(task);
+                    logInfo(assignment);
                 } else {
-                    logInfo(Task.getTask(commandExecuted.getArguments()[0]));
+                    Assignment.getAssignmentByName(commandExecuted.getArguments()[0]).ifPresent(this::logInfo);
                 }
                 break;
             case "ddd":
                 if (commandExecuted.getArguments().length == 0) {
-                    removeTask(task);
+                    removeRecord(assignment);
                 } else {
-                    removeTask(Task.getTask(commandExecuted.getArguments()[0]));
+                    Assignment.getAssignmentByName(commandExecuted.getArguments()[0]).ifPresent(this::removeRecord);
                 }
                 break;
             case "XXX":
                 clearConfig();
                 break;
             case "i":
-                log.info(String.valueOf(subTaskToInteractorSet));
+                log.info(String.valueOf(recordToInteractorsAndTime));
                 break;
             case "s":
-                log.info(String.valueOf(xpNpcQueue));
+                log.info(String.valueOf(xpShareInteractors));
         }
     }
 
-    private void logInfo(Enum<?> task) {
+    private void logInfo(Enum<?> record) {
         try {
-            for (SubTask subTask : ((Task) task).getSubTasks()) {
-                logInfo(subTask);
-            }
-        } catch (ClassCastException e) {
+            Arrays.stream(((Assignment) record).getVariants()).forEach(this::logInfo);
+        } catch (ClassCastException ignored) {
         }
 
-        float hours = getTaskDuration(task).getSeconds() / 3600f;
+        float hours = getRecordDuration(record).getSeconds() / 3600f;
         log.info("");
-        log.info("nm: " + task);
-        log.info("tm: " + getTaskDuration(task));
-        log.info("kc: " + getTaskKc(task));
-        log.info("xp: " + getTaskXp(task));
-        log.info("ge: " + getTaskGe(task));
-        log.info("ha: " + getTaskHa(task));
-        log.info("kc/h: " + Math.round(getTaskKc(task) / hours));
-        log.info("xp/h: " + Math.round(getTaskXp(task) / hours));
-        log.info("ge/h: " + Math.round(getTaskGe(task) / hours));
-        log.info("ha/h: " + Math.round(getTaskHa(task) / hours));
-        log.info(String.valueOf(subTaskToInteractorSet));
-        log.info(String.valueOf(subTaskToInteractionStartTime));
+        log.info("nm: " + record);
+        log.info("tm: " + getRecordDuration(record));
+        log.info("kc: " + getRecordKc(record));
+        log.info("xp: " + getRecordXp(record));
+        log.info("ge: " + getRecordGe(record));
+        log.info("ha: " + getRecordHa(record));
+        log.info("kc/h: " + Math.round(getRecordKc(record) / hours));
+        log.info("xp/h: " + Math.round(getRecordXp(record) / hours));
+        log.info("ge/h: " + Math.round(getRecordGe(record) / hours));
+        log.info("ha/h: " + Math.round(getRecordHa(record) / hours));
+        log.info(String.valueOf(recordToInteractorsAndTime));
+    }
+    //</editor-fold>
+
+    private void clearAssignmentAndRecords() {
+        assignment = null;
+        recordToInteractorsAndTime.clear();
     }
 
     private void clearConfig() {
         log.warn("CLEARING ALL CONFIG ENTRIES");
-        for (String key : configManager.getConfigurationKeys("slayertracker")) {
+
+        configManager.getConfigurationKeys("slayertracker").forEach(key -> {
             String[] splitString = key.split("\\.");
             configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length - 1]);
             configManager.unsetConfiguration(SlayerTrackerConfig.GROUP_NAME, splitString[splitString.length - 1]);
-        }
+        });
     }
 
-    private void removeTask(Task task) {
-        log.warn("REMOVING TASK: " + task);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task);
-        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task);
+    private void removeRecord(Enum<?> record) {
+        log.warn("REMOVING RECORD: " + record);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + record);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + record);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + record);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + record);
+        configManager.unsetRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + record);
     }
 
-    // GETTERS AND SETTERS FOR CONFIG FILE
+    //<editor-fold desc="Config Getters/Setters">
+    private String getSlayerConfigAssignmentName() {
+        String assignmentName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
+        return assignmentName == null ? "" : assignmentName.toLowerCase();
+    }
 
-    public Duration getTaskDuration(Enum<?> task) {
-        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task);
+    public Duration getRecordDuration(Enum<?> record) {
+        String durationString = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + record);
         if (durationString != null) {
             return Duration.parse(durationString);
         } else {
@@ -444,55 +382,56 @@ public class SlayerTrackerPlugin extends Plugin {
         }
     }
 
-    public void setTaskDuration(Enum<?> task, Duration duration) {
-        if (task != null) {
-            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + task, duration.toString());
+    public void setRecordDuration(Enum<?> record, Duration duration) {
+        if (record != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.TIME_KEY + record, duration.toString());
         }
     }
 
-    public int getTaskKc(Enum<?> task) {
-        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, int.class);
+    public int getRecordKc(Enum<?> record) {
+        Integer kc = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + record, int.class);
         return kc == null ? 0 : kc;
     }
 
-    public void setTaskKc(Enum<?> task, int kc) {
-        if (task != null) {
-            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + task, kc);
+    public void setRecordKc(Enum<?> record, int kc) {
+        if (record != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.KC_KEY + record, kc);
         }
     }
 
-    private int getTaskXp(Enum<?> task) {
-        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, int.class);
+    private int getRecordXp(Enum<?> record) {
+        Integer xp = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + record, int.class);
         return xp == null ? 0 : xp;
     }
 
-    public void setTaskXp(Enum<?> task, int xp) {
-        if (task != null) {
-            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + task, xp);
+    public void setRecordXp(Enum<?> record, int xp) {
+        if (record != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.XP_KEY + record, xp);
         }
     }
 
-    private int getTaskGe(Enum<?> task) {
-        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, int.class);
+    private int getRecordGe(Enum<?> record) {
+        Integer ge = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + record, int.class);
         return ge == null ? 0 : ge;
     }
 
-    private void setTaskGe(Enum<?> task, int ge) {
-        if (task != null) {
-            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + task, ge);
+    private void setRecordGe(Enum<?> record, int ge) {
+        if (record != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.GE_KEY + record, ge);
         }
     }
 
-    private int getTaskHa(Enum<?> task) {
-        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, int.class);
+    private int getRecordHa(Enum<?> record) {
+        Integer ha = configManager.getRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + record, int.class);
         return ha == null ? 0 : ha;
     }
 
-    private void setTaskHa(Enum<?> task, int ha) {
-        if (task != null) {
-            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + task, ha);
+    private void setRecordHa(Enum<?> record, int ha) {
+        if (record != null) {
+            configManager.setRSProfileConfiguration(SlayerTrackerConfig.GROUP_NAME, SlayerTrackerConfig.HA_KEY + record, ha);
         }
     }
+    //</editor-fold>
 
     @Provides
     SlayerTrackerConfig provideConfig(ConfigManager configManager) {
