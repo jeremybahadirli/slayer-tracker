@@ -98,8 +98,8 @@ public class SlayerTrackerPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onGameStateChanged(GameStateChanged gameStateChanged) {
-        switch (gameStateChanged.getGameState()) {
+    public void onGameStateChanged(GameStateChanged event) {
+        switch (event.getGameState()) {
             case HOPPING:
             case LOGGING_IN:
                 clearAssignmentAndRecords();
@@ -175,12 +175,12 @@ public class SlayerTrackerPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onActorDeath(ActorDeath actorDeath) {
+    public void onActorDeath(ActorDeath event) {
         if (assignment == null) {
             return;
         }
 
-        Actor actor = actorDeath.getActor();
+        Actor actor = event.getActor();
         if (!(actor instanceof NPC)) {
             return;
         }
@@ -196,21 +196,21 @@ public class SlayerTrackerPlugin extends Plugin {
     }
 
     @Subscribe
-    private void onNpcLootReceived(NpcLootReceived npcLootReceived) {
+    private void onNpcLootReceived(NpcLootReceived event) {
         if (assignment == null) {
             return;
         }
 
-        NPC npc = npcLootReceived.getNpc();
+        NPC npc = event.getNpc();
         if (!isOnAssignment(assignment, npc)) {
             return;
         }
 
-        final int ge = npcLootReceived.getItems().stream().mapToInt(itemStack ->
+        final int ge = event.getItems().stream().mapToInt(itemStack ->
                         itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
                 .sum();
 
-        final int ha = npcLootReceived.getItems().stream().mapToInt(itemStack ->
+        final int ha = event.getItems().stream().mapToInt(itemStack ->
                         itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity())
                 .sum();
 
@@ -224,12 +224,12 @@ public class SlayerTrackerPlugin extends Plugin {
     }
 
     @Subscribe
-    private void onStatChanged(StatChanged statChanged) {
-        if (assignment == null || statChanged.getSkill() != SLAYER) {
+    private void onStatChanged(StatChanged event) {
+        if (assignment == null || event.getSkill() != SLAYER) {
             return;
         }
 
-        int newSlayerXp = statChanged.getXp();
+        int newSlayerXp = event.getXp();
         if (newSlayerXp <= cachedXp) {
             return;
         }
@@ -294,20 +294,20 @@ public class SlayerTrackerPlugin extends Plugin {
 
     //<editor-fold desc="Debug">
     @Subscribe
-    private void onCommandExecuted(CommandExecuted commandExecuted) {
-        switch (commandExecuted.getCommand()) {
+    private void onCommandExecuted(CommandExecuted event) {
+        switch (event.getCommand()) {
             case "ttt":
-                if (commandExecuted.getArguments().length == 0) {
+                if (event.getArguments().length == 0) {
                     logInfo(assignment);
                 } else {
-                    Assignment.getAssignmentByName(commandExecuted.getArguments()[0]).ifPresent(this::logInfo);
+                    Assignment.getAssignmentByName(event.getArguments()[0]).ifPresent(this::logInfo);
                 }
                 break;
             case "ddd":
-                if (commandExecuted.getArguments().length == 0) {
+                if (event.getArguments().length == 0) {
                     removeRecord(assignment);
                 } else {
-                    Assignment.getAssignmentByName(commandExecuted.getArguments()[0]).ifPresent(this::removeRecord);
+                    Assignment.getAssignmentByName(event.getArguments()[0]).ifPresent(this::removeRecord);
                 }
                 break;
             case "XXX":
