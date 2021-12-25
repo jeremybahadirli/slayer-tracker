@@ -120,7 +120,7 @@ public class SlayerTrackerPlugin extends Plugin {
         }
     }
 
-   @Subscribe
+    @Subscribe
     public void onGameTick(GameTick event) {
         if (assignment == null) {
             return;
@@ -163,13 +163,14 @@ public class SlayerTrackerPlugin extends Plugin {
             return;
         }
 
+        final Instant now = Instant.now();
         // If it doesn't exist, create a record for the Assignment, and add the npc
-        recordToInteractorsAndTime.putIfAbsent(assignment, new MutablePair<>(new HashSet<>(), Instant.now()));
+        recordToInteractorsAndTime.putIfAbsent(assignment, new MutablePair<>(new HashSet<>(), now));
         recordToInteractorsAndTime.get(assignment).left.add(npc);
 
         // Do the same if Variant exists
         assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-            recordToInteractorsAndTime.putIfAbsent(variant, new MutablePair<>(new HashSet<>(), Instant.now()));
+            recordToInteractorsAndTime.putIfAbsent(variant, new MutablePair<>(new HashSet<>(), now));
             recordToInteractorsAndTime.get(variant).left.add(npc);
         });
     }
@@ -275,6 +276,8 @@ public class SlayerTrackerPlugin extends Plugin {
     // Config File
     // Side Panel (ugh)
     // Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
+    // Add all Variants (Category:Slayer monster)
+    // Write time record on shutdown
 
     private static boolean isOnAssignment(Assignment assignment, NPC npc) {
         final NPCComposition composition = npc.getTransformedComposition();
@@ -297,6 +300,7 @@ public class SlayerTrackerPlugin extends Plugin {
     private void onCommandExecuted(CommandExecuted event) {
         switch (event.getCommand()) {
             case "ttt":
+                // Print record to log - "::ttt" or "::ttt TROLLS"
                 if (event.getArguments().length == 0) {
                     logInfo(assignment);
                 } else {
@@ -304,24 +308,21 @@ public class SlayerTrackerPlugin extends Plugin {
                 }
                 break;
             case "ddd":
-                if (event.getArguments().length == 0) {
-                    removeRecord(assignment);
-                } else {
-                    Assignment.getAssignmentByName(event.getArguments()[0]).ifPresent(this::removeRecord);
-                }
+                // Delete record - "::ddd FIRE_GIANT_WEAK"
+                Assignment.getAssignmentByName(event.getArguments()[0]).ifPresent(this::removeRecord);
                 break;
             case "XXX":
+                // Delete all records - "::XXX"
                 clearConfig();
                 break;
-            case "i":
-                log.info(String.valueOf(recordToInteractorsAndTime));
-                break;
-            case "s":
-                log.info(String.valueOf(xpShareInteractors));
         }
     }
 
     private void logInfo(Enum<?> record) {
+        if (record == null) {
+            return;
+        }
+
         try {
             Arrays.stream(((Assignment) record).getVariants()).forEach(this::logInfo);
         } catch (ClassCastException ignored) {
@@ -340,6 +341,7 @@ public class SlayerTrackerPlugin extends Plugin {
         log.info("ge/h: " + Math.round(getRecordGe(record) / hours));
         log.info("ha/h: " + Math.round(getRecordHa(record) / hours));
         log.info(String.valueOf(recordToInteractorsAndTime));
+        log.info(String.valueOf(xpShareInteractors));
     }
     //</editor-fold>
 
