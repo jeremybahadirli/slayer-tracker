@@ -78,7 +78,7 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         SlayerTrackerPanel panel = new SlayerTrackerPanel(itemManager);
-        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "slayer_icon.png");
+        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
 
         NavigationButton navButton = NavigationButton.builder()
                 .panel(panel)
