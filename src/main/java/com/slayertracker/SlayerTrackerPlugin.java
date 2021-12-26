@@ -26,6 +26,8 @@ import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import static net.runelite.api.Skill.SLAYER;
@@ -50,7 +52,6 @@ public class SlayerTrackerPlugin extends Plugin {
 
     @Inject
     private ClientToolbar clientToolbar;
-
     //</editor-fold>
 
     // *TERMINOLOGY*
@@ -64,12 +65,6 @@ public class SlayerTrackerPlugin extends Plugin {
     private final HashMap<Enum<?>, MutablePair<Set<NPC>, Instant>> recordToInteractorsAndTime = new HashMap<>();
     private final Set<NPC> xpShareInteractors = new HashSet<>();
     private int cachedXp = -1;
-
-    private final Predicate<NPC> isNotInteracting = interactor ->
-            !client.getNpcs().contains(interactor)
-                    || interactor != client.getLocalPlayer().getInteracting()
-                    && (interactor.getInteracting() == null
-                    || !interactor.getInteracting().equals(client.getLocalPlayer()));
 
     @Override
     protected void startUp() {
@@ -104,7 +99,8 @@ public class SlayerTrackerPlugin extends Plugin {
             case LOGGING_IN:
                 clearAssignmentAndRecords();
                 Assignment.getAssignmentByName(getSlayerConfigAssignmentName()).ifPresent(
-                        assignment -> this.assignment = assignment);
+                        assignment -> this.assignment = assignment
+                );
                 xpShareInteractors.clear();
                 cachedXp = -1;
                 break;
@@ -119,6 +115,12 @@ public class SlayerTrackerPlugin extends Plugin {
                     assignment -> this.assignment = assignment);
         }
     }
+
+    private final Predicate<NPC> isNotInteracting = interactor ->
+            !client.getNpcs().contains(interactor)
+                    || interactor != client.getLocalPlayer().getInteracting()
+                    && (interactor.getInteracting() == null
+                    || !interactor.getInteracting().equals(client.getLocalPlayer()));
 
     @Subscribe
     public void onGameTick(GameTick event) {
@@ -159,7 +161,7 @@ public class SlayerTrackerPlugin extends Plugin {
             return;
         }
 
-        if (!isOnAssignment(assignment, npc)) {
+        if (!isOnAssignment.test(assignment, npc)) {
             return;
         }
 
@@ -203,7 +205,7 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         NPC npc = event.getNpc();
-        if (!isOnAssignment(assignment, npc)) {
+        if (!isOnAssignment.test(assignment, npc)) {
             return;
         }
 
@@ -247,6 +249,10 @@ public class SlayerTrackerPlugin extends Plugin {
         divideXp(assignment, slayerXpDrop, xpShareInteractors);
     }
 
+    private final BiFunction<Assignment, NPC, Integer> getSlayerXp = (assignment, npc) ->
+            assignment.getVariantMatchingNpc(npc).map(variant -> variant.getSlayerXp())
+                    .orElse(npcManager.getHealth(npc.getId()));
+
     // Recursively allocate xp to each killed monster in the queue
     // this will allow for safe rounding to whole xp amounts
     private void divideXp(Assignment assignment, int slayerXpDrop, Set<NPC> xpShareInteractors) {
@@ -255,12 +261,13 @@ public class SlayerTrackerPlugin extends Plugin {
         }
 
         final int hpTotal = xpShareInteractors.stream().mapToInt(npc ->
-                        npcManager.getHealth(npc.getId()))
-                .sum();
+                getSlayerXp.apply(assignment, npc)
+        ).sum();
 
         NPC npc = xpShareInteractors.iterator().next();
-        final int thisNpcsXpShare = slayerXpDrop * npcManager.getHealth(npc.getId()) / hpTotal;
+        final int thisNpcsXpShare = slayerXpDrop * getSlayerXp.apply(assignment, npc) / hpTotal;
 
+        log.info("NPC: " + npc + " Share: " + thisNpcsXpShare + " Drop: " + slayerXpDrop);
         setRecordXp(assignment, getRecordXp(assignment) + thisNpcsXpShare);
 
         assignment.getVariantMatchingNpc(npc).ifPresent(variant ->
@@ -278,14 +285,15 @@ public class SlayerTrackerPlugin extends Plugin {
     // Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
     // Add all Variants (Category:Slayer monster)
     // Write time record on shutdown
+    // Figure out Boss tasks ie Jad, due to FC monster KC
+    // -Perhaps don't display KC for any record
 
-    private static boolean isOnAssignment(Assignment assignment, NPC npc) {
+    private final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) -> {
         final NPCComposition composition = npc.getTransformedComposition();
         if (composition == null) {
             return false;
         }
 
-        // Format non-breaking space, convert to lower case for comparison
         final String npcNameFormatted = composition.getName()
                 .replace('\u00A0', ' ')
                 .toLowerCase();
@@ -293,7 +301,7 @@ public class SlayerTrackerPlugin extends Plugin {
         return assignment.getTargetNames().stream().anyMatch(npcNameFormatted::contains)
                 && (ArrayUtils.contains(composition.getActions(), "Attack")
                 || ArrayUtils.contains(composition.getActions(), "Pick"));
-    }
+    };
 
     //<editor-fold desc="Debug">
     @Subscribe
