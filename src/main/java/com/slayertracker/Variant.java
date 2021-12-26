@@ -1,28 +1,3 @@
-/*
- * Copyright (c) 2017, Tyler <https://github.com/tylerthardy>
- * Copyright (c) 2018, Shaun Dreclin <shaundreclin@gmail.com>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 package com.slayertracker;
 
 import lombok.Getter;
@@ -34,8 +9,8 @@ enum Variant {
     ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
     DEVIANT_SPECTRE("Deviant spectre", "Deviant spectre", "Repugnant spectre"),
     // Fire giants
-    FIRE_GIANT_WEAK("Level-86", 86),
-    FIRE_GIANT_STRONG("Level-104/109", 104, 109),
+    FIRE_GIANT_WEAK("Level-86", new int[]{86}),
+    FIRE_GIANT_STRONG("Level-104/109", new int[]{104, 109}),
     // Kalphite
     KALPHITE_WORKER("Worker", "Kalphite Worker"),
     KALPHITE_SOLDIER("Soldier", "Kalphite Soldier"),
@@ -48,28 +23,57 @@ enum Variant {
     TZHAAR_KET("Tzhaar-Ket"),
     TZHAAR_XIL("Tzhaar-Xil"),
     TZHAAR_MEJ("Tzhaar-Mej"),
-    TZHAAR_HUR("Tzhaar-Hur");
+    TZHAAR_HUR("Tzhaar-Hur"),
+
+    SUQAH_NORM("Suqah"),
+
+    JAD("Jad",25250,"TzTok-Jad"); // PLACEHOLDER must add to Assignment
     //</editor-fold>
 
-    private final String displayName;
+    private final String name;
     private final String[] targetNames;
     private final int[] combatLevels;
+    private final int slayerXp;
 
-    Variant(String displayAndTargetName) {
-        this.displayName = displayAndTargetName;
-        this.targetNames = new String[]{displayAndTargetName};
+    Variant(String nameAndTargetName) {
+        this.name = nameAndTargetName;
+        this.targetNames = new String[]{nameAndTargetName};
         this.combatLevels = new int[0];
+        this.slayerXp = -1;
     }
 
-    Variant(String displayName, String... targetNames) {
-        this.displayName = displayName;
+    Variant(String name, String... targetNames) {
+        this.name = name;
         this.targetNames = targetNames;
         this.combatLevels = new int[0];
+        this.slayerXp = -1;
     }
 
-    Variant(String displayName, int... combatLevels) {
-        this.displayName = displayName;
+    Variant(String name, int[] combatLevels) {
+        this.name = name;
         this.targetNames = new String[]{};
         this.combatLevels = combatLevels;
+        this.slayerXp = -1;
+    }
+
+    Variant(String displayAndTargetName, int slayerXp) {
+        this.name = displayAndTargetName;
+        this.targetNames = new String[]{displayAndTargetName};
+        this.combatLevels = new int[0];
+        this.slayerXp = slayerXp;
+    }
+
+    Variant(String name, int slayerXp, String... targetNames) {
+        this.name = name;
+        this.targetNames = targetNames;
+        this.combatLevels = new int[0];
+        this.slayerXp = slayerXp;
+    }
+
+    Variant(String name, int slayerXp, int[] combatLevels) {
+        this.name = name;
+        this.targetNames = new String[]{};
+        this.combatLevels = combatLevels;
+        this.slayerXp = slayerXp;
     }
 }
