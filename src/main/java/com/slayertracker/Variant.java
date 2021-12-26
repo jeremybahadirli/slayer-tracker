@@ -24,10 +24,9 @@ enum Variant {
     TZHAAR_XIL("Tzhaar-Xil"),
     TZHAAR_MEJ("Tzhaar-Mej"),
     TZHAAR_HUR("Tzhaar-Hur"),
-
-    SUQAH_NORM("Suqah"),
-
-    JAD("Jad",25250,"TzTok-Jad"); // PLACEHOLDER must add to Assignment
+    // Jad
+    JAD("Jad", 25250, "TzTok-Jad"), // PLACEHOLDER must add to Assignment
+    FIGHT_CAVE_OTHERS("Other", "Tz-Kih", "Tz-Kek", "Tok-Xil", "Yt-MekKok", "Ket-Zek", "Yt-HurKot");
     //</editor-fold>
 
     private final String name;

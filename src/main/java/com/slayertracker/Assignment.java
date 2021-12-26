@@ -111,7 +111,7 @@ enum Assignment {
     ICE_WARRIORS("Ice warriors", ItemID.MITHRIL_FULL_HELM_T, "Icelord"),
     INFERNAL_MAGES("Infernal mages", ItemID.INFERNAL_MAGE, "Malevolent mage"),
     IRON_DRAGONS("Iron dragons", ItemID.IRON_DRAGON_MASK),
-    JAD("TzTok-Jad", ItemID.TZREKJAD),
+    JAD("TzTok-Jad", new Variant[]{Variant.JAD, Variant.FIGHT_CAVE_OTHERS}, ItemID.TZREKJAD),
     JELLIES("Jellies", ItemID.JELLY, "Jelly"),
     JUNGLE_HORROR("Jungle horrors", ItemID.ENSOULED_HORROR_HEAD),
     KALPHITE("Kalphite", new Variant[]{Variant.KALPHITE_WORKER, Variant.KALPHITE_SOLDIER, Variant.KALPHITE_GUARDIAN, Variant.KALPHITE_QUEEN}, ItemID.KALPHITE_SOLDIER),
