@@ -285,23 +285,18 @@ public class SlayerTrackerPlugin extends Plugin {
     // Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
     // Add all Variants (Category:Slayer monster)
     // Write time record on shutdown
-    // Figure out Boss tasks ie Jad, due to FC monster KC
-    // -Perhaps don't display KC for any record
 
-    private final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) -> {
-        final NPCComposition composition = npc.getTransformedComposition();
-        if (composition == null) {
-            return false;
-        }
-
-        final String npcNameFormatted = composition.getName()
-                .replace('\u00A0', ' ')
-                .toLowerCase();
-
-        return assignment.getTargetNames().stream().anyMatch(npcNameFormatted::contains)
-                && (ArrayUtils.contains(composition.getActions(), "Attack")
-                || ArrayUtils.contains(composition.getActions(), "Pick"));
-    };
+    // isOnAssignment returns true if:
+    // Formatted NPC name contains any of the Assignment's target names
+    // AND the NPC has an Attack OR Pick option.
+    private final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->
+            assignment.getTargetNames().stream()
+                    .anyMatch(npc.getTransformedComposition()
+                            .getName()
+                            .replace('\u00A0', ' ')
+                            .toLowerCase()::contains)
+                    && (ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Attack")
+                    || ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Pick"));
 
     //<editor-fold desc="Debug">
     @Subscribe
