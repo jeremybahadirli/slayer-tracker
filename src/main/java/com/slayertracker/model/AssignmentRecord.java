@@ -8,8 +8,6 @@ import java.util.HashMap;
 
 @Getter
 public class AssignmentRecord extends Record {
-    public static final String RECORD_KEY = "a-";
-
     @Expose
     private Assignment type;
     @Expose

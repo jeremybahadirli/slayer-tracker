@@ -7,8 +7,6 @@ import java.beans.PropertyChangeListener;
 
 @Getter
 public class VariantRecord extends Record {
-    public static final String RECORD_KEY = "v-";
-
     @Expose
     private Variant type;
 
