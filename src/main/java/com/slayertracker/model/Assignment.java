@@ -219,6 +219,10 @@ public enum Assignment {
     }
 
     public static Optional<Assignment> getAssignmentByName(String name) {
+        if (name == null) {
+            return Optional.empty();
+        } // TODO test thid
+
         String nameLowerCase = name.toLowerCase();
         if (assignment.containsKey(nameLowerCase)) {
             return Optional.of(assignment.get(nameLowerCase));

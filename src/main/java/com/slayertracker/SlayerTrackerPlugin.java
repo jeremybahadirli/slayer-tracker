@@ -5,10 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
-
-import javax.inject.Inject;
-import javax.swing.*;
-
 import com.slayertracker.model.*;
 import com.slayertracker.view.SlayerTrackerPanel;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +27,8 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
+import javax.inject.Inject;
+import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -40,68 +38,84 @@ import java.io.FileWriter;
 import java.io.Writer;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.*;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static net.runelite.api.Skill.SLAYER;
+
+// TERMINOLOGY
+// Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
+// Variant: A subset of the Assignment which is commonly fought as a group, ie "Ice trolls", "Fire giant (level-104/109)"
+// Record: Either of the above as it's tracked by the plugin
+// Target Name: The exact in-game name of an NPC in an Assignment/Variant, ie "Ice troll male", "Ice troll female"
+// Interactor: An individual on-assignment NPC which is interacting with the player
+
+// TODO
+// Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
+// Add all Variants (Category:Slayer monster)
+
+// For each task,
+// Add task weight for each master
+// Add config entry to choose master
+// record LastTask - Banshees 100
+// if currentTask != lastTask,
+// re-average in currentTask to slayer task average length
+// lastTask = currentTask
+
+// - TASK(time, xgp, weight) - All calculations based thereon
+// - goodness = xgp / time
+// - order all tasks by goodness, select only top good tasks allowing for point surplus
+// - Block highest weighted below cutoff
+// - Skip all others below cutoff
+
+// Do some test calculations on the above to get xgp/time gain calibrated
 
 @Slf4j
 @PluginDescriptor(
         name = "Slayer Tracker"
 )
 public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListener {
-    //<editor-fold desc="Injectors">
     @Inject
     private Client client;
-
     @Inject
     private ClientThread clientThread;
-
     @Inject
     private ConfigManager configManager;
-
     @Inject
     private ItemManager itemManager;
-
     @Inject
     private NPCManager npcManager;
-
     @Inject
     private ClientToolbar clientToolbar;
-
     @Inject
     private ScheduledExecutorService executor;
-    //</editor-fold>
-
-    // *TERMINOLOGY*
-    // Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
-    // Variant: A subset of the Assignment which is commonly fought as a group, ie "Ice trolls", "Fire giant (level-104/109)"
-    // Record: Either of the above as it's tracked by the plugin
-    // Target Name: The exact in-game name of an NPC in an Assignment/Variant, ie "Ice troll male", "Ice troll female"
-    // Interactor: An individual on-assignment NPC which is interacting with the player
 
     public static final String DATA_FOLDER_NAME = "slayer-tracker";
     public static final String DATA_FILE_NAME = "data.json";
     public static final File DATA_FOLDER;
-
-    private Assignment currentAssignment;
-    private HashMap<Assignment, AssignmentRecord> assignmentRecords = new HashMap<>();
-    private final Set<NPC> xpShareInteractors = new HashSet<>();
-    private int cachedXp = -1;
-
-    public static Gson gson;
 
     static {
         DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
         DATA_FOLDER.mkdirs();
     }
 
+    public static Gson gson;
+
+    private Assignment currentAssignment;
+    private HashMap<Assignment, AssignmentRecord> assignmentRecords;
+    private final Set<NPC> xpShareInteractors = new HashSet<>();
+    private int cachedXp = -1;
+
     private SlayerTrackerPanel panel;
 
     @Override
     protected void startUp() {
-        // Typically on game launch, prior to logging in
+        // Create gson instance for data serialization
 
         gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
@@ -109,122 +123,74 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 .registerTypeAdapter(VariantRecord.class, (InstanceCreator<Record>) type -> new VariantRecord(this))
                 .create();
 
+        // If already logged in on plugin startup, store current Slayer xp for xp drop calculation
+        // If not logged in, Player will receive xp drop on login, so we will store it then
         if (client.getGameState() == GameState.LOGGED_IN) {
             cachedXp = client.getSkillExperience(SLAYER);
         }
 
+        // Create side panel
         panel = new SlayerTrackerPanel(itemManager);
-        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
 
+        // Create button for side panel
+        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
         NavigationButton navButton = NavigationButton.builder()
                 .panel(panel)
                 .tooltip("Slayer Tracker")
                 .icon(icon)
                 .priority(5)
                 .build();
-
         clientToolbar.addNavigation(navButton);
     }
 
     @Override
     protected void shutDown() {
         saveAssignmentRecordsToDisk();
-
-        currentAssignment = null;
-        xpShareInteractors.clear();
-        cachedXp = -1;
     }
 
     @Subscribe
     public void onClientShutdown(ClientShutdown event) {
+        // Ask client to allow us to save our data to disk before shutting down.
+        // On MacOS, currently a bug where Cmd-Q will hard quit
+        // while Red close button will soft quit like we want
         event.waitFor(executor.submit(this::saveAssignmentRecordsToDisk));
-    }
-
-    private void loadAssignmentRecordsFromDisk() {
-        try {
-            // Ensure directory exists, then define data file
-            DATA_FOLDER.mkdirs();
-            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
-
-            // If data file doesn't exist, create it
-            if (!dataFile.exists()) {
-                Writer writer = new FileWriter(dataFile);
-                writer.write("");
-                writer.close();
-            }
-
-            // Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
-            assignmentRecords = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>() {}.getType());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        updatePanel();
-    }
-
-    private void saveAssignmentRecordsToDisk() {
-        try {
-            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
-            Writer writer = new FileWriter(dataFile);
-            gson.toJson(assignmentRecords, writer);
-            writer.flush();
-            writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged event) {
         switch (event.getGameState()) {
-            case HOPPING:
-                log.info("HOPPING");
-
-                // Save data to config
-                saveAssignmentRecordsToDisk();
-                xpShareInteractors.clear();
-
-                updatePanel();
-                break;
-            case LOGGED_IN:
-                log.info("LOGGED_IN (DOING NOTHING)");
-                break;
             case LOGGING_IN:
-                log.info("LOGGING_IN");
-
-                // Set assignment from Slayer plugin config file
-                Assignment.getAssignmentByName(getSlayerConfigAssignmentName()).ifPresent(assignment ->
-                        this.currentAssignment = assignment);
-
+                // Set current assignment from Slayer Plugin config file
+                Assignment.getAssignmentByName(
+                                configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
+                        .ifPresent(assignment -> this.currentAssignment = assignment);
                 loadAssignmentRecordsFromDisk();
-
-                // Build side panel
                 updatePanel();
                 break;
             case LOGIN_SCREEN:
-                log.info("LOGIN SCREEN");
-
-                // Clear data as if first boot
-                xpShareInteractors.clear();
-                cachedXp = -1;
-
-                updatePanel();
+                // If assignment records is not null, this is
+                // upon logout, rather than client startup
+                if (assignmentRecords != null) {
+                    saveAssignmentRecordsToDisk();
+                    assignmentRecords.clear();
+                    xpShareInteractors.clear();
+                    cachedXp = -1;
+                    updatePanel();
+                }
                 break;
         }
     }
 
-    private void updatePanel() {
-        clientThread.invokeLater(() ->
-                SwingUtilities.invokeLater(() ->
-                        panel.build(assignmentRecords)));
-    }
-
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
+        // If Slayer Plugin task changes
         if (event.getGroup().equals(SlayerConfig.GROUP_NAME) && event.getKey().equals(SlayerConfig.TASK_NAME_KEY)) {
+            // Set current assignment to null, or the new value if it is valid
             currentAssignment = null;
-            Assignment.getAssignmentByName(getSlayerConfigAssignmentName()).ifPresent(assignment ->
+            Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
                     this.currentAssignment = assignment);
 
+            // Clear interactors and start times for all records
             assignmentRecords.values().forEach(assignmentRecord -> {
                 assignmentRecord.getInteractors().clear();
                 assignmentRecord.setStartInstant(null);
@@ -430,36 +396,71 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         divideXp(slayerXpDrop, xpShareInteractors);
     }
 
-    // TODO
-    // Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
-    // Add all Variants (Category:Slayer monster)
+    private void updatePanel() {
+        // Ensures itemManager is available before building
+        clientThread.invokeLater(() ->
+                SwingUtilities.invokeLater(() ->
+                        panel.build(assignmentRecords)));
+    }
 
-    // For each task,
-    // Add task weight for each master
-    // Add config entry to choose master
-    // record LastTask - Banshees 100
-    // if currentTask != lastTask,
-    // re-average in currentTask to slayer task average length
-    // lastTask = currentTask
+    private void loadAssignmentRecordsFromDisk() {
+        try {
+            // Ensure directory exists, then define data file
+            DATA_FOLDER.mkdirs();
+            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
 
-    // - TASK(time, xgp, weight) - All calculations based thereon
-    // - goodness = xgp / time
-    // - order all tasks by goodness, select only top good tasks allowing for point surplus
-    // - Block highest weighted below cutoff
-    // - Skip all others below cutoff
+            // If data file doesn't exist, create it
+            if (!dataFile.exists()) {
+                Writer writer = new FileWriter(dataFile);
+                writer.write("{}");
+                writer.close();
+            }
 
-    // Do some test calculations on the above to get xgp/time gain calibrated
+            // Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
+            assignmentRecords = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>() {
+            }.getType());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        updatePanel();
+    }
 
-    // True if formatted NPC name contains any of the Assignment's target names,
-    // AND NPC has an Attack OR Pick action
+    private void saveAssignmentRecordsToDisk() {
+        try {
+            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
+            Writer writer = new FileWriter(dataFile);
+            gson.toJson(assignmentRecords, writer);
+            writer.flush();
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private static final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->
-            assignment.getTargetNames().stream()
-                    .anyMatch(npc.getTransformedComposition()
-                            .getName()
-                            .replace('\u00A0', ' ')
-                            .toLowerCase()::contains)
+            // True if formatted NPC name contains any of the Assignment's target names,
+            // AND NPC has an Attack OR Pick action
+            assignment.getTargetNames().stream().anyMatch(
+                    npc.getTransformedComposition().getName().replace('\u00A0', ' ').toLowerCase()::contains)
                     && (ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Attack")
                     || ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Pick"));
+
+    private void clearData() {
+        log.warn("CLEARING ALL DATA");
+        assignmentRecords.clear();
+        updatePanel();
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        clientThread.invokeLater(() ->
+                SwingUtilities.invokeLater(() ->
+                        panel.build(assignmentRecords)));
+    }
+
+    ////////////////////////////
+    // DEBUG+BOILERPLATE ONLY //
+    ////////////////////////////
 
     @Subscribe
     private void onCommandExecuted(CommandExecuted event) {
@@ -495,24 +496,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         });
         log.info("XP SHARE INTERACTORS");
         log.info(String.valueOf(xpShareInteractors));
-    }
-
-    private void clearData() {
-        log.warn("CLEARING ALL DATA");
-        assignmentRecords.clear();
-        updatePanel();
-    }
-
-    private String getSlayerConfigAssignmentName() {
-        String assignmentName = configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY);
-        return assignmentName == null ? "" : assignmentName.toLowerCase();
-    }
-
-    @Override
-    public void propertyChange(PropertyChangeEvent evt) {
-        clientThread.invokeLater(() ->
-                SwingUtilities.invokeLater(() ->
-                        panel.build(assignmentRecords)));
     }
 
     @Provides
