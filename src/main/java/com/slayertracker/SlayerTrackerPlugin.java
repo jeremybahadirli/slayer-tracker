@@ -123,7 +123,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
                 .registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
-                .registerTypeAdapter(VariantRecord.class, (InstanceCreator<Record>) type -> new VariantRecord(this))
+                .registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
                 .create();
 
         // If already logged in on plugin startup, store current Slayer xp for xp drop calculation
