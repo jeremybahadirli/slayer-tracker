@@ -248,7 +248,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                     .forEach(interactor -> {
                         assignmentRecord.addToHours(Duration.between(assignmentRecord.getStartInstant(), now));
                         assignmentRecord.setStartInstant(now);
-                        log.info(assignmentRecord + "-DR: " + assignmentRecord.getHours());
                     });
 
             assignmentRecord.getVariantRecords().values().forEach(variantRecord ->
@@ -257,7 +256,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                             .forEach(interactor -> {
                                 variantRecord.addToHours(Duration.between(variantRecord.getStartInstant(), now));
                                 variantRecord.setStartInstant(now);
-                                log.info(variantRecord + "-DR: " + variantRecord.getHours());
                             }));
         });
 
