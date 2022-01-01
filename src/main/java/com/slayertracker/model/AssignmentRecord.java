@@ -9,14 +9,7 @@ import java.util.HashMap;
 @Getter
 public class AssignmentRecord extends Record {
     @Expose
-    private Assignment type;
-    @Expose
-    private final HashMap<Variant, VariantRecord> variantRecords = new HashMap<>();
-
-    public AssignmentRecord(Assignment type, PropertyChangeListener pcl) {
-        super(pcl);
-        this.type = type;
-    }
+    private final HashMap<Variant, Record> variantRecords = new HashMap<>();
 
     public AssignmentRecord(PropertyChangeListener pcl) {
         super(pcl);

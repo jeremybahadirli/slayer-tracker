@@ -5,7 +5,10 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
-import com.slayertracker.model.*;
+import com.slayertracker.model.Assignment;
+import com.slayertracker.model.AssignmentRecord;
+import com.slayertracker.model.Record;
+import com.slayertracker.model.Variant;
 import com.slayertracker.view.SlayerTrackerPanel;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -265,7 +268,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         final Instant now = Instant.now();
 
         // If Assignment Record for this npc doesn't exist, create one
-        assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(currentAssignment, this));
+        assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
         AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
         // If this was the first interactor in the record, set start instant to now
         if (assignmentRecord.getInteractors().isEmpty()) {
@@ -276,8 +279,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
         // Do the same as above for the Variant, if one exists
         currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-            assignmentRecord.getVariantRecords().putIfAbsent(variant, new VariantRecord(variant, this));
-            VariantRecord variantRecord = assignmentRecord.getVariantRecords().get(variant);
+            assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record(this));
+            Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
             if (variantRecord.getInteractors().isEmpty()) {
                 variantRecord.setStartInstant(now);
             }
