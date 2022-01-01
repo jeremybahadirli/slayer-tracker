@@ -231,7 +231,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     private final Predicate<NPC> isNotInteracting = interactor ->
             !client.getNpcs().contains(interactor)
-                    || interactor != client.getLocalPlayer().getInteracting()
+                    || !client.getLocalPlayer().getInteracting().equals(interactor)
                     && (interactor.getInteracting() == null
                     || !interactor.getInteracting().equals(client.getLocalPlayer()));
 
@@ -424,7 +424,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
     }
 
     private void updatePanel() {
-        // Ensures itemManager is available before building
+        // Ensure itemManager is available before building
         clientThread.invokeLater(() ->
                 SwingUtilities.invokeLater(() ->
                         panel.build(assignmentRecords)));
@@ -480,9 +480,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        clientThread.invokeLater(() ->
-                SwingUtilities.invokeLater(() ->
-                        panel.build(assignmentRecords)));
+        updatePanel();
     }
 
     ////////////////////////////
