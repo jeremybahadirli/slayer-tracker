@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
+package com.slayertracker.model;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Getter
-enum Assignment {
+public enum Assignment {
     //<editor-fold desc="Enums">
     ABERRANT_SPECTRES("Aberrant spectres", new Variant[]{Variant.ABERRANT_SPECTRE, Variant.DEVIANT_SPECTRE}, ItemID.ABERRANT_SPECTRE, "Spectre"),
     ABYSSAL_DEMONS("Abyssal demons", ItemID.ABYSSAL_DEMON),
@@ -83,7 +83,7 @@ enum Assignment {
     DERANGED_ARCHAEOLOGIST("Deranged Archaeologist", ItemID.ARCHAEOLOGISTS_DIARY),
     DOGS("Dogs", ItemID.GUARD_DOG, "Jackal"),
     DRAKES("Drakes", ItemID.DRAKE),
-    DUST_DEVILS("Dust devils", ItemID.DUST_DEVIL, "Choke devil"),
+    DUST_DEVILS("Dust devils", new Variant[]{Variant.DUST_DEVIL_WEAK, Variant.DUST_DEVIL_STRONG}, ItemID.DUST_DEVIL, "Choke devil"),
     DWARVES("Dwarves", ItemID.DWARVEN_HELMET, "Dwarf", "Black Guard"),
     EARTH_WARRIORS("Earth warriors", ItemID.BRONZE_FULL_HELM_T),
     ELVES("Elves", ItemID.ELF, "Elf", "Iorwerth Warrior", "Iorwerth Archer"),
@@ -218,7 +218,7 @@ enum Assignment {
         this.variants = variants;
     }
 
-    static Optional<Assignment> getAssignmentByName(String name) {
+    public static Optional<Assignment> getAssignmentByName(String name) {
         String nameLowerCase = name.toLowerCase();
         if (assignment.containsKey(nameLowerCase)) {
             return Optional.of(assignment.get(nameLowerCase));
@@ -227,7 +227,7 @@ enum Assignment {
         }
     }
 
-    Optional<Variant> getVariantMatchingNpc(NPC npc) {
+    public Optional<Variant> getVariantMatchingNpc(NPC npc) {
         final NPCComposition composition = npc.getTransformedComposition();
         if (composition == null) {
             return Optional.empty();

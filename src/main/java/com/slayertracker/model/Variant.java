@@ -1,16 +1,22 @@
-package com.slayertracker;
+package com.slayertracker.model;
 
 import lombok.Getter;
 
 @Getter
-enum Variant {
+public enum Variant {
     //<editor-fold desc="Enums">
     // Aberrant spectres
     ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
     DEVIANT_SPECTRE("Deviant spectre", "Deviant spectre", "Repugnant spectre"),
+    // Dust devils
+    DUST_DEVIL_WEAK("Smoke Dungeon", new int[]{93}),
+    DUST_DEVIL_STRONG("Catacombs of Kourend", new int[]{110}),
     // Fire giants
-    FIRE_GIANT_WEAK("Level-86", new int[]{86}),
-    FIRE_GIANT_STRONG("Level-104/109", new int[]{104, 109}),
+    FIRE_GIANT_WEAK("level-86", new int[]{86}),
+    FIRE_GIANT_STRONG("Catacombs fo Kourend", new int[]{104, 109}),
+    // Jad
+    JAD("Jad", 25250, "TzTok-Jad"), // PLACEHOLDER must add to Assignment
+    FIGHT_CAVE_OTHERS("Other", "Tz-Kih", "Tz-Kek", "Tok-Xil", "Yt-MekKok", "Ket-Zek", "Yt-HurKot"),
     // Kalphite
     KALPHITE_WORKER("Worker", "Kalphite Worker"),
     KALPHITE_SOLDIER("Soldier", "Kalphite Soldier"),
@@ -23,10 +29,7 @@ enum Variant {
     TZHAAR_KET("Tzhaar-Ket"),
     TZHAAR_XIL("Tzhaar-Xil"),
     TZHAAR_MEJ("Tzhaar-Mej"),
-    TZHAAR_HUR("Tzhaar-Hur"),
-    // Jad
-    JAD("Jad", 25250, "TzTok-Jad"), // PLACEHOLDER must add to Assignment
-    FIGHT_CAVE_OTHERS("Other", "Tz-Kih", "Tz-Kek", "Tok-Xil", "Yt-MekKok", "Ket-Zek", "Yt-HurKot");
+    TZHAAR_HUR("Tzhaar-Hur");
     //</editor-fold>
 
     private final String name;
