@@ -32,6 +32,10 @@ public enum Variant {
     // Aberrant spectres
     ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
     DEVIANT_SPECTRE("Deviant spectre", "Deviant spectre", "Repugnant spectre"),
+    // Bloodvelds
+    BLOODVELD_WEAK("(level-76)", new int[]{76}),
+    BLOODVELD_STRONG("God Wars Dungeon (level-81)", new int[]{81}),
+    MUTATED_BLOODVELD("Mutated Bloodveld", "Mutated Bloodveld"),
     // Dust devils
     DUST_DEVIL_WEAK("Smoke Dungeon", new int[]{93}),
     DUST_DEVIL_STRONG("Catacombs of Kourend", new int[]{110}),
@@ -49,6 +53,9 @@ public enum Variant {
     // Trolls
     ICE_TROLL("Ice troll", "Ice troll runt", "Ice troll grunt", "Ice troll male", "Ice troll female"),
     MOUNTAIN_TROLL("Mountain troll"),
+    // Turoth
+    TUROTH_SMALL("Small", new int[]{83, 85}),
+    TUROTH_LARGE("Large", new int[]{87, 89}),
     // Tzhaar
     TZHAAR_KET("Tzhaar-Ket"),
     TZHAAR_XIL("Tzhaar-Xil"),
