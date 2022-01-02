@@ -83,7 +83,8 @@ import static net.runelite.api.Skill.SLAYER;
 // Interactor: An individual on-assignment NPC which is interacting with the player
 
 // TODO
-// Test Logging Out and Final Monster on task getting XP - perhaps don't clear xpInteractorQueue
+// Test logging out during interaction
+// Last kill of task - kc and xp are counted but gp is not.
 // Add all Variants (Category:Slayer monster)
 
 // For each task,
@@ -123,15 +124,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
     private ScheduledExecutorService executor;
 
     public static final String DATA_FOLDER_NAME = "slayer-tracker";
-    public static final String DATA_FILE_NAME = "data.json";
-    public static final File DATA_FOLDER;
-
-    static {
-        DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
-        DATA_FOLDER.mkdirs();
-    }
-
-    public static Gson gson;
+    public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
+    private String dataFileName;
+    private Gson gson;
 
     private Assignment currentAssignment;
     private HashMap<Assignment, AssignmentRecord> assignmentRecords;
@@ -142,8 +137,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     @Override
     protected void startUp() {
-        // Create gson instance for data serialization
 
+        // Create data folder on disk if it doesn't exist
+        DATA_FOLDER.mkdirs();
+
+        // Create gson instance for data serialization.
+        // Type adapters register SlayerTrackerPlugin as
+        // a property change listener for records loaded from disk
         gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
                 .registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
@@ -160,7 +160,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         panel = new SlayerTrackerPanel(itemManager);
 
         // Create button for side panel
-        final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
+        BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
         NavigationButton navButton = NavigationButton.builder()
                 .panel(panel)
                 .tooltip("Slayer Tracker")
@@ -172,15 +172,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     @Override
     protected void shutDown() {
-        saveAssignmentRecordsToDisk();
+        saveRecordsToDisk();
     }
 
     @Subscribe
     public void onClientShutdown(ClientShutdown event) {
         // Ask client to allow us to save our data to disk before shutting down.
-        // On MacOS, currently a bug where Cmd-Q will hard quit
-        // while Red close button will soft quit like we want
-        event.waitFor(executor.submit(this::saveAssignmentRecordsToDisk));
+        event.waitFor(executor.submit(this::saveRecordsToDisk));
     }
 
     @Subscribe
@@ -191,18 +189,20 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 Assignment.getAssignmentByName(
                                 configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
                         .ifPresent(assignment -> this.currentAssignment = assignment);
-                loadAssignmentRecordsFromDisk();
+                // Set data file name before loading the records
+                // This will be remembered for saving after logout as well
+                dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
+                loadRecordsFromDisk();
                 updatePanel();
                 break;
             case LOGIN_SCREEN:
                 // If assignment records is not null, this is
                 // upon logout, rather than client startup
                 if (assignmentRecords != null) {
-                    saveAssignmentRecordsToDisk();
-                    assignmentRecords.clear();
+                    saveRecordsToDisk();
+                    assignmentRecords = null;
                     xpShareInteractors.clear();
                     cachedXp = -1;
-                    updatePanel();
                 }
                 break;
         }
@@ -231,7 +231,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     private final Predicate<NPC> isNotInteracting = interactor ->
             !client.getNpcs().contains(interactor)
-                    || !client.getLocalPlayer().getInteracting().equals(interactor)
+                    || client.getLocalPlayer().getInteracting() != interactor // For null case, != rather than !.equals
                     && (interactor.getInteracting() == null
                     || !interactor.getInteracting().equals(client.getLocalPlayer()));
 
@@ -351,7 +351,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 .sum();
 
         final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
-                    // Since coins have 0 HA value, use 1 * the coin item stack quantity
+                    // Since coins have 0 HA value, use (1*) the coin item stack quantity
                     if (itemStack.getId() == ItemID.COINS_995) {
                         return itemStack.getQuantity();
                     } else {
@@ -382,7 +382,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         }
 
         if (cachedXp == -1) {
-            // this is the initial xp sent on login
+            // This xp drop is the initial xp sent on login
             cachedXp = newSlayerXp;
             return;
         }
@@ -399,9 +399,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
             currentAssignment.getVariantMatchingNpc(npc).map(Variant::getSlayerXp)
                     .orElse(npcManager.getHealth(npc.getId()));
 
-    // Recursively allocate xp to each killed monster in the queue
-    // this will allow for safe rounding to whole xp amounts
     private void divideXp(int slayerXpDrop, Set<NPC> xpShareInteractors) {
+        // Recursively allocate xp to each killed monster in the queue
+        // this will allow for safe rounding to whole xp amounts
+
         if (xpShareInteractors.isEmpty()) {
             return;
         }
@@ -428,11 +429,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                         panel.build(assignmentRecords)));
     }
 
-    private void loadAssignmentRecordsFromDisk() {
+    private void loadRecordsFromDisk() {
         try {
             // Ensure directory exists, then define data file
-            DATA_FOLDER.mkdirs();
-            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
+            File dataFile = new File(DATA_FOLDER, dataFileName);
 
             // If data file doesn't exist, create it
             if (!dataFile.exists()) {
@@ -450,10 +450,14 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         updatePanel();
     }
 
-    private void saveAssignmentRecordsToDisk() {
+    private void saveRecordsToDisk() {
+        if (assignmentRecords == null) {
+            return;
+        }
         try {
-            File dataFile = new File(DATA_FOLDER, DATA_FILE_NAME);
+            File dataFile = new File(DATA_FOLDER, dataFileName);
             Writer writer = new FileWriter(dataFile);
+            log.info("SAVING DATA TO DISK");
             gson.toJson(assignmentRecords, writer);
             writer.flush();
             writer.close();
@@ -493,7 +497,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 logInfo();
                 break;
             case "ppp":
-                saveAssignmentRecordsToDisk();
                 break;
             case "XXX":
                 // Delete all records - "::XXX"
