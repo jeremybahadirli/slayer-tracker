@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,34 +22,49 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.view;
+package com.slayertracker.records;
 
-import javax.swing.*;
-import java.awt.*;
+import com.slayertracker.groups.Group;
 
-public class AssignmentRecordPanel extends RecordPanel {
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
-    AssignmentRecordPanel(
-            String name,
-            String kc,
-            String xp,
-            String gp,
-            String kcRate,
-            String xpRate,
-            String gpRate,
-            ImageIcon icon) {
+public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R> {
+    private final PropertyChangeSupport support;
 
-        super(name, kc, xp, gp, kcRate, xpRate, gpRate);
+    public RecordMap() {
+        super();
+        support = new PropertyChangeSupport(this);
+    }
 
-        GridBagConstraints c = new GridBagConstraints();
+    public void addPcl(PropertyChangeListener pcl) {
+        support.addPropertyChangeListener(pcl);
+    }
 
-        // Icon
-        JLabel iconLabel = new JLabel();
-        iconLabel.setIcon(icon);
-        c.gridheight = 3;
-        c.gridx = 0;
-        c.gridy = 1;
-        c.weightx = 0.2;
-        add(iconLabel, c);
+    @Override
+    public R put(G group, R record) {
+        support.firePropertyChange("records", null, group);
+        return super.put(group, record);
+    }
+
+    @Override
+    public void putAll(Map<? extends G, ? extends R> m) {
+        super.putAll(m);
+        support.firePropertyChange("records", false, true);
+    }
+
+    @Override
+    public R remove(Object group) {
+        support.firePropertyChange("records", group, null);
+        return super.remove(group);
+    }
+
+    @Override
+    public void clear() {
+        support.firePropertyChange("records", this.keySet(), Collections.EMPTY_SET);
+        super.clear();
     }
 }

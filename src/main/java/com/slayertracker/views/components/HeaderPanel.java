@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,20 +22,20 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.model;
+package com.slayertracker.views.components;
 
-import com.google.gson.annotations.Expose;
-import lombok.Getter;
+import net.runelite.client.ui.ColorScheme;
 
-import java.beans.PropertyChangeListener;
-import java.util.HashMap;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
 
-@Getter
-public class AssignmentRecord extends Record {
-    @Expose
-    private final HashMap<Variant, Record> variantRecords = new HashMap<>();
+public class HeaderPanel extends JPanel {
 
-    public AssignmentRecord(PropertyChangeListener pcl) {
-        super(pcl);
+    public HeaderPanel(String name) {
+        setLayout(new BorderLayout());
+        setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
+        setBorder(new EmptyBorder(4, 4, 4, 4));
+        add(new JLabel(name));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,31 +22,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.view;
+package com.slayertracker.records;
 
-import javax.swing.*;
-import java.awt.*;
+import com.google.gson.annotations.Expose;
+import com.slayertracker.groups.Variant;
+import lombok.Getter;
 
-public class VariantRecordPanel extends RecordPanel {
+import java.beans.PropertyChangeListener;
 
-    VariantRecordPanel(
-            String name,
-            String kc,
-            String xp,
-            String gp,
-            String kcRate,
-            String xpRate,
-            String gpRate) {
+@Getter
+public class AssignmentRecord extends Record {
+    @Expose
+    private final RecordMap<Variant, Record> variantRecords = new RecordMap<>();
 
-        super(name, kc, xp, gp, kcRate, xpRate, gpRate);
-
-        GridBagConstraints c = new GridBagConstraints();
-
-        // Space in place of icon
-        c.gridx = 0;
-        c.gridy = 1;
-        c.gridheight = 3;
-        c.weightx = 0.2;
-        add(Box.createHorizontalGlue(), c);
+    public AssignmentRecord(PropertyChangeListener pcl) {
+        super(pcl);
+        variantRecords.addPcl(pcl);
     }
 }

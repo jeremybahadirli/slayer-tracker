@@ -22,26 +22,29 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
+package com.slayertracker.views;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+import com.slayertracker.SlayerTrackerConfig;
+import com.slayertracker.groups.Assignment;
+import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.RecordMap;
+import lombok.Getter;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.PluginPanel;
 
-@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
-public interface SlayerTrackerConfig extends Config {
-    String GROUP_NAME = "slayertracker";
+@Getter
+public class SlayerTrackerPanel extends PluginPanel {
 
-    @ConfigItem(
-            keyName = "lootUnit",
-            name = "Loot Unit",
-            description = "Display loot value as Grand Exchange or High Alchemy price."
-    )
-    default SlayerTrackerLootUnit lootUnit() {
-        return SlayerTrackerLootUnit.GRAND_EXCHANGE;
-    }
+    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+    private final AssignmentListPanel assignmentListPanel;
 
-    enum SlayerTrackerLootUnit {
-        GRAND_EXCHANGE, HIGH_ALCHEMY
+    public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+                              SlayerTrackerConfig slayerTrackerConfig,
+                              ItemManager itemManager) {
+
+        this.assignmentRecords = assignmentRecords;
+        this.assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
+
+        add(assignmentListPanel);
     }
 }

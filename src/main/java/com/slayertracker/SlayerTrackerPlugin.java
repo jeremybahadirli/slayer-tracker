@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,16 +29,17 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
-import com.slayertracker.model.Assignment;
-import com.slayertracker.model.AssignmentRecord;
-import com.slayertracker.model.Record;
-import com.slayertracker.model.Variant;
-import com.slayertracker.view.SlayerTrackerPanel;
+import com.slayertracker.controller.Controller;
+import com.slayertracker.groups.Assignment;
+import com.slayertracker.groups.Variant;
+import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.Record;
+import com.slayertracker.records.RecordMap;
+import com.slayertracker.views.SlayerTrackerPanel;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.*;
 import net.runelite.client.RuneLite;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ClientShutdown;
@@ -55,17 +56,13 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.Writer;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -77,10 +74,13 @@ import static net.runelite.api.Skill.SLAYER;
 
 // TERMINOLOGY
 // Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
-// Variant: A subset of the Assignment which is commonly fought as a group, ie "Ice trolls", "Fire giant (level-104/109)"
-// Record: Either of the above as it's tracked by the plugin
-// Target Name: The exact in-game name of an NPC in an Assignment/Variant, ie "Ice troll male", "Ice troll female"
-// Interactor: An individual on-assignment NPC which is interacting with the player
+// Variant: A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)"
+// Group: A group of monsters that is tracked together by the plugin. Both of the above are Groups
+//        "Trolls" Assignment is a Group encompassing all trolls
+//        "Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles
+// Record: The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group
+// Target Name: The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female"
+// Interactor: An individual on-assignment monster which is interacting with the player
 
 // TODO
 // Test logging out during interaction
@@ -107,13 +107,13 @@ import static net.runelite.api.Skill.SLAYER;
 @PluginDescriptor(
         name = "Slayer Tracker"
 )
-public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListener {
+public class SlayerTrackerPlugin extends Plugin {
     @Inject
     private Client client;
     @Inject
-    private ClientThread clientThread;
-    @Inject
     private ConfigManager configManager;
+    @Inject
+    private SlayerTrackerConfig config;
     @Inject
     private ItemManager itemManager;
     @Inject
@@ -129,25 +129,39 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
     private Gson gson;
 
     private Assignment currentAssignment;
-    private HashMap<Assignment, AssignmentRecord> assignmentRecords;
+    private static final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>();
     private final Set<NPC> xpShareInteractors = new HashSet<>();
     private int cachedXp = -1;
 
-    private SlayerTrackerPanel panel;
+    private Controller controller;
 
     @Override
     protected void startUp() {
+        // Create side panel and controller
+        SlayerTrackerPanel slayerTrackerPanel = new SlayerTrackerPanel(assignmentRecords, config, itemManager);
+        controller = new Controller(assignmentRecords, slayerTrackerPanel);
+        assignmentRecords.addPcl(controller);
+
+        // Create button for side panel
+        BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
+        NavigationButton navButton = NavigationButton.builder()
+                .panel(slayerTrackerPanel)
+                .tooltip("Slayer Tracker")
+                .icon(icon)
+                .priority(5)
+                .build();
+        clientToolbar.addNavigation(navButton);
 
         // Create data folder on disk if it doesn't exist
         DATA_FOLDER.mkdirs();
 
-        // Create gson instance for data serialization.
+        // Create gson instance for groups serialization.
         // Type adapters register SlayerTrackerPlugin as
         // a property change listener for records loaded from disk
         gson = new GsonBuilder()
                 .excludeFieldsWithoutExposeAnnotation()
-                .registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
-                .registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
+                .registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(controller))
+                .registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(controller))
                 .create();
 
         // If already logged in on plugin startup, store current Slayer xp for xp drop calculation
@@ -155,19 +169,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         if (client.getGameState() == GameState.LOGGED_IN) {
             cachedXp = client.getSkillExperience(SLAYER);
         }
-
-        // Create side panel
-        panel = new SlayerTrackerPanel(itemManager);
-
-        // Create button for side panel
-        BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
-        NavigationButton navButton = NavigationButton.builder()
-                .panel(panel)
-                .tooltip("Slayer Tracker")
-                .icon(icon)
-                .priority(5)
-                .build();
-        clientToolbar.addNavigation(navButton);
     }
 
     @Override
@@ -177,7 +178,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
     @Subscribe
     public void onClientShutdown(ClientShutdown event) {
-        // Ask client to allow us to save our data to disk before shutting down.
+        // Ask client to allow us to save our groups to disk before shutting down.
         event.waitFor(executor.submit(this::saveRecordsToDisk));
     }
 
@@ -189,21 +190,19 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 Assignment.getAssignmentByName(
                                 configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
                         .ifPresent(assignment -> this.currentAssignment = assignment);
-                // Set data file name before loading the records
+                // Set groups file name before loading the records
                 // This will be remembered for saving after logout as well
                 dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
                 loadRecordsFromDisk();
-                updatePanel();
                 break;
             case LOGIN_SCREEN:
                 // If assignment records is not null, this is
                 // upon logout, rather than client startup
-                if (assignmentRecords != null) {
+                if (!assignmentRecords.isEmpty()) {
                     saveRecordsToDisk();
-                    assignmentRecords = null;
-                    xpShareInteractors.clear();
-                    cachedXp = -1;
                 }
+                xpShareInteractors.clear();
+                cachedXp = -1;
                 break;
         }
     }
@@ -290,7 +289,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         final Instant now = Instant.now();
 
         // If Assignment Record for this npc doesn't exist, create one
-        assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
+        assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(controller));
         AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
         // If this was the first interactor in the record, set start instant to now
         if (assignmentRecord.getInteractors().isEmpty()) {
@@ -301,7 +300,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
         // Do the same as above for the Variant, if one exists
         currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-            assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record(this));
+            assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record(controller));
             Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
             if (variantRecord.getInteractors().isEmpty()) {
                 variantRecord.setStartInstant(now);
@@ -422,38 +421,29 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
         divideXp(slayerXpDrop, xpShareInteractors);
     }
 
-    private void updatePanel() {
-        // Ensure itemManager is available before building
-        clientThread.invokeLater(() ->
-                SwingUtilities.invokeLater(() ->
-                        panel.build(assignmentRecords)));
-    }
-
     private void loadRecordsFromDisk() {
         try {
-            // Ensure directory exists, then define data file
+            // Ensure directory exists, then define groups file
             File dataFile = new File(DATA_FOLDER, dataFileName);
 
-            // If data file doesn't exist, create it
+            // If groups file doesn't exist, create it
             if (!dataFile.exists()) {
                 Writer writer = new FileWriter(dataFile);
                 writer.write("{}");
                 writer.close();
             }
 
-            // Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
-            assignmentRecords = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>() {
+            // Deserialize json from groups file, as HashMap<Assignment, AssignmentRecord>
+            RecordMap<Assignment, AssignmentRecord> dataFromDisk = gson.fromJson(new FileReader(dataFile), new TypeToken<RecordMap<Assignment, AssignmentRecord>>() {
             }.getType());
+            assignmentRecords.clear();
+            assignmentRecords.putAll(dataFromDisk);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        updatePanel();
     }
 
     private void saveRecordsToDisk() {
-        if (assignmentRecords == null) {
-            return;
-        }
         try {
             File dataFile = new File(DATA_FOLDER, dataFileName);
             Writer writer = new FileWriter(dataFile);
@@ -477,12 +467,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
     private void clearData() {
         log.warn("CLEARING ALL DATA");
         assignmentRecords.clear();
-        updatePanel();
-    }
-
-    @Override
-    public void propertyChange(PropertyChangeEvent evt) {
-        updatePanel();
     }
 
     ////////////////////////////
@@ -497,6 +481,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
                 logInfo();
                 break;
             case "ppp":
+                log.info(assignmentRecords.values().toString());
                 break;
             case "XXX":
                 // Delete all records - "::XXX"
@@ -508,7 +493,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
     private void logInfo() {
         log.info("ASSIGNMENT RECORDS");
         log.info(assignmentRecords.toString());
-        assignmentRecords.forEach((type, assignmentRecord) -> {
+        assignmentRecords.values().forEach(assignmentRecord -> {
             log.info("INTERACTORS/START_TIME");
             log.info(assignmentRecord.getInteractors().toString());
             log.info(assignmentRecord.getStartInstant().toString());

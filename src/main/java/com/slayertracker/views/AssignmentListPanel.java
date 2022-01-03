@@ -22,26 +22,41 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
+package com.slayertracker.views;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+import com.slayertracker.SlayerTrackerConfig;
+import com.slayertracker.groups.Assignment;
+import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.RecordMap;
+import net.runelite.client.game.ItemManager;
 
-@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
-public interface SlayerTrackerConfig extends Config {
-    String GROUP_NAME = "slayertracker";
+import javax.swing.*;
 
-    @ConfigItem(
-            keyName = "lootUnit",
-            name = "Loot Unit",
-            description = "Display loot value as Grand Exchange or High Alchemy price."
-    )
-    default SlayerTrackerLootUnit lootUnit() {
-        return SlayerTrackerLootUnit.GRAND_EXCHANGE;
+public class AssignmentListPanel extends JPanel {
+
+    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+    private final SlayerTrackerConfig slayerTrackerConfig;
+    private final ItemManager itemManager;
+
+    AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+                        SlayerTrackerConfig slayerTrackerConfig,
+                        ItemManager itemManager) {
+
+        this.assignmentRecords = assignmentRecords;
+        this.slayerTrackerConfig = slayerTrackerConfig;
+        this.itemManager = itemManager;
+
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        build();
     }
 
-    enum SlayerTrackerLootUnit {
-        GRAND_EXCHANGE, HIGH_ALCHEMY
+    public void build() {
+        removeAll();
+
+        assignmentRecords.forEach((assignment, assignmentRecord) ->
+                add(new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager)));
+
+        revalidate();
+        repaint();
     }
 }

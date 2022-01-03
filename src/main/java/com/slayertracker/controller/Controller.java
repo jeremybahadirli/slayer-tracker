@@ -22,26 +22,34 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
+package com.slayertracker.controller;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+import com.slayertracker.groups.Assignment;
+import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.RecordMap;
+import com.slayertracker.views.SlayerTrackerPanel;
 
-@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
-public interface SlayerTrackerConfig extends Config {
-    String GROUP_NAME = "slayertracker";
+import javax.swing.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
-    @ConfigItem(
-            keyName = "lootUnit",
-            name = "Loot Unit",
-            description = "Display loot value as Grand Exchange or High Alchemy price."
-    )
-    default SlayerTrackerLootUnit lootUnit() {
-        return SlayerTrackerLootUnit.GRAND_EXCHANGE;
+public class Controller implements PropertyChangeListener {
+
+    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+    private final SlayerTrackerPanel slayerTrackerPanel;
+
+    public Controller(RecordMap<Assignment, AssignmentRecord> assignmentRecords, SlayerTrackerPanel slayerTrackerPanel) {
+        this.assignmentRecords = assignmentRecords;
+        this.slayerTrackerPanel = slayerTrackerPanel;
     }
 
-    enum SlayerTrackerLootUnit {
-        GRAND_EXCHANGE, HIGH_ALCHEMY
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        updateView();
+    }
+
+    public void updateView() {
+        SwingUtilities.invokeLater(() ->
+                slayerTrackerPanel.getAssignmentListPanel().build());
     }
 }

@@ -22,26 +22,34 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
+package com.slayertracker.views;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
+import com.slayertracker.SlayerTrackerConfig;
+import com.slayertracker.groups.Variant;
+import com.slayertracker.records.Record;
+import com.slayertracker.views.components.HeaderPanel;
+import com.slayertracker.views.components.StatsPanel;
+import net.runelite.client.ui.ColorScheme;
 
-@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
-public interface SlayerTrackerConfig extends Config {
-    String GROUP_NAME = "slayertracker";
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
-    @ConfigItem(
-            keyName = "lootUnit",
-            name = "Loot Unit",
-            description = "Display loot value as Grand Exchange or High Alchemy price."
-    )
-    default SlayerTrackerLootUnit lootUnit() {
-        return SlayerTrackerLootUnit.GRAND_EXCHANGE;
-    }
+public class VariantRecordPanel extends JPanel {
 
-    enum SlayerTrackerLootUnit {
-        GRAND_EXCHANGE, HIGH_ALCHEMY
+    VariantRecordPanel(
+            Variant variant,
+            Record record,
+            SlayerTrackerConfig slayerTrackerConfig) {
+
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+
+        add(new HeaderPanel(variant.getName()));
+
+        JPanel bodyPanel = new JPanel();
+        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
+        bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
+        bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        bodyPanel.add(new StatsPanel(record, slayerTrackerConfig));
+        add(bodyPanel);
     }
 }

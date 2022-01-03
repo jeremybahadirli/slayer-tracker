@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.model;
+package com.slayertracker.records;
 
 import com.google.gson.annotations.Expose;
 import lombok.Getter;
@@ -39,7 +39,6 @@ import java.util.Set;
 @Getter
 @Setter
 public class Record {
-
     @Expose
     private int kc;
     @Expose
@@ -51,9 +50,8 @@ public class Record {
     @Expose
     private int ha;
 
-    Set<NPC> interactors;
-
     private Instant startInstant;
+    private Set<NPC> interactors;
 
     private final PropertyChangeSupport support;
 
@@ -102,21 +100,5 @@ public class Record {
 
     public void setStartInstant(Instant instant) {
         startInstant = instant;
-    }
-
-    public int getKcRate() {
-        return Math.round(kc / hours);
-    }
-
-    public int getXpRate() {
-        return Math.round(xp / hours);
-    }
-
-    public int getGeRate() {
-        return Math.round(ge / hours);
-    }
-
-    public int getHaRate() {
-        return Math.round(ha / hours);
     }
 }

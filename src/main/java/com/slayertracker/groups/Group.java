@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,30 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.view;
+package com.slayertracker.groups;
 
-import javax.swing.*;
-import java.awt.*;
-
-public class RecordGroupPanel extends JPanel {
-
-    private boolean first;
-
-    RecordGroupPanel() {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        first = true;
-    }
-
-    void addRecordPanel(RecordPanel p) {
-        if (first) {
-            add(p);
-        } else {
-            JPanel hPanel = new JPanel();
-            hPanel.setLayout(new BoxLayout(hPanel, BoxLayout.X_AXIS));
-            hPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-            hPanel.add(p);
-            add(hPanel);
-        }
-        first = false;
-    }
+public interface Group {
 }
