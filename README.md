@@ -2,7 +2,7 @@
 
 **WARNING: THIS PLUGIN IS A WORK-IN-PROGRESS AND SHOULD NOT BE USED IN ITS CURRENT STATE.**
 
-SUP AL
+SUP AL WOWOWOWOW
 
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and block.
 
