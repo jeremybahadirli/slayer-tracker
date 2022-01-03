@@ -28,28 +28,31 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.SlayerTrackerPanel;
-
-import javax.swing.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import javax.swing.SwingUtilities;
 
-public class Controller implements PropertyChangeListener {
+public class Controller implements PropertyChangeListener
+{
 
-    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-    private final SlayerTrackerPanel slayerTrackerPanel;
+	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+	private final SlayerTrackerPanel slayerTrackerPanel;
 
-    public Controller(RecordMap<Assignment, AssignmentRecord> assignmentRecords, SlayerTrackerPanel slayerTrackerPanel) {
-        this.assignmentRecords = assignmentRecords;
-        this.slayerTrackerPanel = slayerTrackerPanel;
-    }
+	public Controller(RecordMap<Assignment, AssignmentRecord> assignmentRecords, SlayerTrackerPanel slayerTrackerPanel)
+	{
+		this.assignmentRecords = assignmentRecords;
+		this.slayerTrackerPanel = slayerTrackerPanel;
+	}
 
-    @Override
-    public void propertyChange(PropertyChangeEvent evt) {
-        updateView();
-    }
+	@Override
+	public void propertyChange(PropertyChangeEvent evt)
+	{
+		updateView();
+	}
 
-    public void updateView() {
-        SwingUtilities.invokeLater(() ->
-                slayerTrackerPanel.getAssignmentListPanel().build());
-    }
+	public void updateView()
+	{
+		SwingUtilities.invokeLater(() ->
+			slayerTrackerPanel.getAssignmentListPanel().build());
+	}
 }

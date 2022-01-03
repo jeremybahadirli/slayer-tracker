@@ -33,18 +33,20 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.PluginPanel;
 
 @Getter
-public class SlayerTrackerPanel extends PluginPanel {
+public class SlayerTrackerPanel extends PluginPanel
+{
 
-    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-    private final AssignmentListPanel assignmentListPanel;
+	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+	private final AssignmentListPanel assignmentListPanel;
 
-    public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-                              SlayerTrackerConfig slayerTrackerConfig,
-                              ItemManager itemManager) {
+	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+							  SlayerTrackerConfig slayerTrackerConfig,
+							  ItemManager itemManager)
+	{
 
-        this.assignmentRecords = assignmentRecords;
-        this.assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
+		this.assignmentRecords = assignmentRecords;
+		this.assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
 
-        add(assignmentListPanel);
-    }
+		add(assignmentListPanel);
+	}
 }

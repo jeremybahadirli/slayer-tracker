@@ -24,5 +24,6 @@
  */
 package com.slayertracker.groups;
 
-public interface Group {
+public interface Group
+{
 }

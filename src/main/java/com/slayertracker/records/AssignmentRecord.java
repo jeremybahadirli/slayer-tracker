@@ -26,17 +26,18 @@ package com.slayertracker.records;
 
 import com.google.gson.annotations.Expose;
 import com.slayertracker.groups.Variant;
+import java.beans.PropertyChangeListener;
 import lombok.Getter;
 
-import java.beans.PropertyChangeListener;
-
 @Getter
-public class AssignmentRecord extends Record {
-    @Expose
-    private final RecordMap<Variant, Record> variantRecords = new RecordMap<>();
+public class AssignmentRecord extends Record
+{
+	@Expose
+	private final RecordMap<Variant, Record> variantRecords = new RecordMap<>();
 
-    public AssignmentRecord(PropertyChangeListener pcl) {
-        super(pcl);
-        variantRecords.addPcl(pcl);
-    }
+	public AssignmentRecord(PropertyChangeListener pcl)
+	{
+		super(pcl);
+		variantRecords.addPcl(pcl);
+	}
 }

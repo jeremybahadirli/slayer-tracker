@@ -25,80 +25,87 @@
 package com.slayertracker.records;
 
 import com.google.gson.annotations.Expose;
-import lombok.Getter;
-import lombok.Setter;
-import net.runelite.api.NPC;
-
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
+import net.runelite.api.NPC;
 
 @Getter
 @Setter
-public class Record {
-    @Expose
-    private int kc;
-    @Expose
-    private float hours;
-    @Expose
-    private int xp;
-    @Expose
-    private int ge;
-    @Expose
-    private int ha;
+public class Record
+{
+	@Expose
+	private int kc;
+	@Expose
+	private float hours;
+	@Expose
+	private int xp;
+	@Expose
+	private int ge;
+	@Expose
+	private int ha;
 
-    private Instant startInstant;
-    private Set<NPC> interactors;
+	private Instant startInstant;
+	private Set<NPC> interactors;
 
-    private final PropertyChangeSupport support;
+	private final PropertyChangeSupport support;
 
-    public Record(PropertyChangeListener pcl) {
-        support = new PropertyChangeSupport(this);
-        support.addPropertyChangeListener(pcl);
+	public Record(PropertyChangeListener pcl)
+	{
+		support = new PropertyChangeSupport(this);
+		support.addPropertyChangeListener(pcl);
 
-        interactors = new HashSet<>();
+		interactors = new HashSet<>();
 
-        kc = 0;
-        hours = 0f;
-        xp = 0;
-        ge = 0;
-        ha = 0;
-    }
+		kc = 0;
+		hours = 0f;
+		xp = 0;
+		ge = 0;
+		ha = 0;
+	}
 
-    public void incrementKc() {
-        int oldVal = kc;
-        kc++;
-        support.firePropertyChange("kc", oldVal, kc);
-    }
+	public void incrementKc()
+	{
+		int oldVal = kc;
+		kc++;
+		support.firePropertyChange("kc", oldVal, kc);
+	}
 
-    public void addToHours(Duration d) {
-        float oldVal = hours;
-        hours = hours + (d.getSeconds() / 3600f);
-        support.firePropertyChange("hours", oldVal, hours);
-    }
+	public void addToHours(Duration d)
+	{
+		float oldVal = hours;
+		hours = hours + (d.getSeconds() / 3600f);
+		support.firePropertyChange("hours", oldVal, hours);
+	}
 
-    public void addToXp(int i) {
-        int oldVal = xp;
-        xp += i;
-        support.firePropertyChange("xp", oldVal, xp);
-    }
+	public void addToXp(int i)
+	{
+		int oldVal = xp;
+		xp += i;
+		support.firePropertyChange("xp", oldVal, xp);
+	}
 
-    public void addToGe(int i) {
-        int oldVal = ge;
-        ge += i;
-        support.firePropertyChange("ge", oldVal, ge);
-    }
+	public void addToGe(int i)
+	{
+		int oldVal = ge;
+		ge += i;
+		support.firePropertyChange("ge", oldVal, ge);
+	}
 
-    public void addToHa(int i) {
-        int oldVal = ha;
-        ha += i;
-        support.firePropertyChange("ha", oldVal, ha);
-    }
+	public void addToHa(int i)
+	{
+		int oldVal = ha;
+		ha += i;
+		support.firePropertyChange("ha", oldVal, ha);
+	}
 
-    public void setStartInstant(Instant instant) {
-        startInstant = instant;
-    }
+	public void setStartInstant(Instant instant)
+	{
+		startInstant = instant;
+	}
 }

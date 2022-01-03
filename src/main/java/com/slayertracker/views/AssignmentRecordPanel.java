@@ -29,29 +29,33 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.views.components.HeaderPanel;
 import com.slayertracker.views.components.StatsPanel;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.ColorScheme;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+public class AssignmentRecordPanel extends JPanel
+{
 
-public class AssignmentRecordPanel extends JPanel {
+	public AssignmentRecordPanel(Assignment assignment,
+								 AssignmentRecord assignmentRecord,
+								 SlayerTrackerConfig slayerTrackerConfig,
+								 ItemManager itemManager)
+	{
 
-    public AssignmentRecordPanel(Assignment assignment,
-                                 AssignmentRecord assignmentRecord,
-                                 SlayerTrackerConfig slayerTrackerConfig,
-                                 ItemManager itemManager) {
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		add(new HeaderPanel(assignment.getName()));
 
-        add(new HeaderPanel(assignment.getName()));
-
-        JPanel bodyPanel = new JPanel();
-        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
-        bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
-        bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-        bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
-        bodyPanel.add(new StatsPanel(assignmentRecord, slayerTrackerConfig));
-        add(bodyPanel);
-    }
+		JPanel bodyPanel = new JPanel();
+		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
+		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
+		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
+		bodyPanel.add(new StatsPanel(assignmentRecord, slayerTrackerConfig));
+		add(bodyPanel);
+	}
 }

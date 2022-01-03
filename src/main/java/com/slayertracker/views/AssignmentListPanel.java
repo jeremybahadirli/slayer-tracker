@@ -28,35 +28,38 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import javax.swing.BoxLayout;
+import javax.swing.JPanel;
 import net.runelite.client.game.ItemManager;
 
-import javax.swing.*;
+public class AssignmentListPanel extends JPanel
+{
 
-public class AssignmentListPanel extends JPanel {
+	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+	private final SlayerTrackerConfig slayerTrackerConfig;
+	private final ItemManager itemManager;
 
-    private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-    private final SlayerTrackerConfig slayerTrackerConfig;
-    private final ItemManager itemManager;
+	AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+						SlayerTrackerConfig slayerTrackerConfig,
+						ItemManager itemManager)
+	{
 
-    AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-                        SlayerTrackerConfig slayerTrackerConfig,
-                        ItemManager itemManager) {
+		this.assignmentRecords = assignmentRecords;
+		this.slayerTrackerConfig = slayerTrackerConfig;
+		this.itemManager = itemManager;
 
-        this.assignmentRecords = assignmentRecords;
-        this.slayerTrackerConfig = slayerTrackerConfig;
-        this.itemManager = itemManager;
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		build();
+	}
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        build();
-    }
+	public void build()
+	{
+		removeAll();
 
-    public void build() {
-        removeAll();
+		assignmentRecords.forEach((assignment, assignmentRecord) ->
+			add(new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager)));
 
-        assignmentRecords.forEach((assignment, assignmentRecord) ->
-                add(new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager)));
-
-        revalidate();
-        repaint();
-    }
+		revalidate();
+		repaint();
+	}
 }

@@ -29,26 +29,28 @@ import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.views.components.HeaderPanel;
 import com.slayertracker.views.components.StatsPanel;
+import javax.swing.BoxLayout;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+public class VariantRecordPanel extends JPanel
+{
 
-public class VariantRecordPanel extends JPanel {
+	VariantRecordPanel(Variant variant,
+					   Record record,
+					   SlayerTrackerConfig slayerTrackerConfig)
+	{
 
-    VariantRecordPanel(Variant variant,
-                       Record record,
-                       SlayerTrackerConfig slayerTrackerConfig) {
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		add(new HeaderPanel(variant.getName()));
 
-        add(new HeaderPanel(variant.getName()));
-
-        JPanel bodyPanel = new JPanel();
-        bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
-        bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
-        bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-        bodyPanel.add(new StatsPanel(record, slayerTrackerConfig));
-        add(bodyPanel);
-    }
+		JPanel bodyPanel = new JPanel();
+		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
+		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
+		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+		bodyPanel.add(new StatsPanel(record, slayerTrackerConfig));
+		add(bodyPanel);
+	}
 }

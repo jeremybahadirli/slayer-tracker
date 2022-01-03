@@ -27,43 +27,47 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
+import java.awt.Dimension;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JPanel;
 import net.runelite.client.game.ItemManager;
 
-import javax.swing.*;
-import java.awt.*;
+public class GroupListPanel extends JPanel
+{
 
-public class GroupListPanel extends JPanel {
+	private final Assignment assignment;
+	private final AssignmentRecord assignmentRecord;
+	private final SlayerTrackerConfig slayerTrackerConfig;
+	private final ItemManager itemManager;
 
-    private final Assignment assignment;
-    private final AssignmentRecord assignmentRecord;
-    private final SlayerTrackerConfig slayerTrackerConfig;
-    private final ItemManager itemManager;
+	GroupListPanel(Assignment assignment,
+				   AssignmentRecord assignmentRecord,
+				   SlayerTrackerConfig slayerTrackerConfig,
+				   ItemManager itemManager)
+	{
 
-    GroupListPanel(Assignment assignment,
-                   AssignmentRecord assignmentRecord,
-                   SlayerTrackerConfig slayerTrackerConfig,
-                   ItemManager itemManager) {
+		this.assignment = assignment;
+		this.assignmentRecord = assignmentRecord;
+		this.slayerTrackerConfig = slayerTrackerConfig;
+		this.itemManager = itemManager;
 
-        this.assignment = assignment;
-        this.assignmentRecord = assignmentRecord;
-        this.slayerTrackerConfig = slayerTrackerConfig;
-        this.itemManager = itemManager;
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		build();
+	}
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        build();
-    }
+	private void build()
+	{
+		add(new AssignmentRecordPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager));
 
-    private void build() {
-        add(new AssignmentRecordPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager));
+		assignmentRecord.getVariantRecords().forEach((variant, variantRecord) -> {
+			JPanel horizontalPanel = new JPanel();
+			horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
+			horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
+			horizontalPanel.add(new VariantRecordPanel(variant, variantRecord, slayerTrackerConfig));
+			add(horizontalPanel);
+		});
 
-        assignmentRecord.getVariantRecords().forEach((variant, variantRecord) -> {
-            JPanel horizontalPanel = new JPanel();
-            horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
-            horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-            horizontalPanel.add(new VariantRecordPanel(variant, variantRecord, slayerTrackerConfig));
-            add(horizontalPanel);
-        });
-
-        add(Box.createRigidArea(new Dimension(0, 5)));
-    }
+		add(Box.createRigidArea(new Dimension(0, 5)));
+	}
 }

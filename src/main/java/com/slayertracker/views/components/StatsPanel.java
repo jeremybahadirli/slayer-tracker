@@ -25,126 +25,132 @@
 package com.slayertracker.views.components;
 
 import com.slayertracker.SlayerTrackerConfig;
+import static com.slayertracker.SlayerTrackerConfig.SlayerTrackerLootUnit.HIGH_ALCHEMY;
 import com.slayertracker.records.Record;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.text.NumberFormat;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import net.runelite.client.ui.FontManager;
 
-import javax.swing.*;
-import java.awt.*;
-import java.text.NumberFormat;
+public class StatsPanel extends JPanel
+{
 
-import static com.slayertracker.SlayerTrackerConfig.SlayerTrackerLootUnit.HIGH_ALCHEMY;
+	public StatsPanel(Record record, SlayerTrackerConfig slayerTrackerConfig)
+	{
 
-public class StatsPanel extends JPanel {
+		// Format data
 
-    public StatsPanel(Record record, SlayerTrackerConfig slayerTrackerConfig) {
+		NumberFormat formatter = NumberFormat.getInstance();
 
-        // Format data
+		String kc = formatter.format(record.getKc());
+		String kcRate = formatter.format(Math.round(record.getKc() / record.getHours()));
+		String xp = formatter.format(record.getXp());
+		String xpRate = formatter.format(Math.round(record.getXp() / record.getHours()));
 
-        NumberFormat formatter = NumberFormat.getInstance();
+		String gpString;
+		String gp;
+		String gpRate;
+		if (slayerTrackerConfig.lootUnit().equals(HIGH_ALCHEMY))
+		{
+			gpString = "ha";
+			gp = formatter.format(record.getHa());
+			gpRate = formatter.format(Math.round(record.getHa() / record.getHours()));
+		}
+		else
+		{
+			gpString = "ge";
+			gp = formatter.format(record.getGe());
+			gpRate = formatter.format(Math.round(record.getGe() / record.getHours()));
+		}
 
-        String kc = formatter.format(record.getKc());
-        String kcRate = formatter.format(Math.round(record.getKc() / record.getHours()));
-        String xp = formatter.format(record.getXp());
-        String xpRate = formatter.format(Math.round(record.getXp() / record.getHours()));
+		// Layout panel
 
-        String gpString;
-        String gp;
-        String gpRate;
-        if (slayerTrackerConfig.lootUnit().equals(HIGH_ALCHEMY)) {
-            gpString = "ha";
-            gp = formatter.format(record.getHa());
-            gpRate = formatter.format(Math.round(record.getHa() / record.getHours()));
-        } else {
-            gpString = "ge";
-            gp = formatter.format(record.getGe());
-            gpRate = formatter.format(Math.round(record.getGe() / record.getHours()));
-        }
+		setLayout(new GridLayout());
+		setOpaque(false);
 
-        // Layout panel
+		JPanel leftStats = new JPanel();
+		leftStats.setLayout(new GridBagLayout());
+		leftStats.setOpaque(false);
 
-        setLayout(new GridLayout());
-        setOpaque(false);
+		JPanel rightStats = new JPanel();
+		rightStats.setLayout(new GridBagLayout());
+		rightStats.setOpaque(false);
 
-        JPanel leftStats = new JPanel();
-        leftStats.setLayout(new GridBagLayout());
-        leftStats.setOpaque(false);
+		GridBagConstraints c = new GridBagConstraints();
 
-        JPanel rightStats = new JPanel();
-        rightStats.setLayout(new GridBagLayout());
-        rightStats.setOpaque(false);
+		// All
+		c.anchor = GridBagConstraints.LINE_START;
 
-        GridBagConstraints c = new GridBagConstraints();
+		// Labels
+		c.weightx = 0;
 
-        // All
-        c.anchor = GridBagConstraints.LINE_START;
+		c.gridx = 0;
+		c.gridy = 0;
+		JLabel kcLabel = new JLabel("kc: ");
+		kcLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(kcLabel, c);
 
-        // Labels
-        c.weightx = 0;
+		JLabel kcRateLabel = new JLabel("kc/h: ");
+		kcRateLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(kcRateLabel, c);
 
-        c.gridx = 0;
-        c.gridy = 0;
-        JLabel kcLabel = new JLabel("kc: ");
-        kcLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(kcLabel, c);
+		c.gridx = 0;
+		c.gridy = 1;
+		JLabel xpLabel = new JLabel("xp: ");
+		xpLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(xpLabel, c);
 
-        JLabel kcRateLabel = new JLabel("kc/h: ");
-        kcRateLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(kcRateLabel, c);
+		JLabel xpRateLabel = new JLabel("xp/h: ");
+		xpRateLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(xpRateLabel, c);
 
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel xpLabel = new JLabel("xp: ");
-        xpLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(xpLabel, c);
+		c.gridx = 0;
+		c.gridy = 2;
+		JLabel gpLabel = new JLabel(gpString + ": ");
+		gpLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(gpLabel, c);
 
-        JLabel xpRateLabel = new JLabel("xp/h: ");
-        xpRateLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(xpRateLabel, c);
+		JLabel gpRateLabel = new JLabel(gpString + "/h: ");
+		gpRateLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(gpRateLabel, c);
 
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel gpLabel = new JLabel(gpString + ": ");
-        gpLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(gpLabel, c);
+		// Values
+		c.weightx = 1;
 
-        JLabel gpRateLabel = new JLabel(gpString + "/h: ");
-        gpRateLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(gpRateLabel, c);
+		c.gridx = 1;
+		c.gridy = 0;
+		JLabel kcValueLabel = new JLabel(kc);
+		kcValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(kcValueLabel, c);
 
-        // Values
-        c.weightx = 1;
+		JLabel kcRateValueLabel = new JLabel(kcRate);
+		kcRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(kcRateValueLabel, c);
 
-        c.gridx = 1;
-        c.gridy = 0;
-        JLabel kcValueLabel = new JLabel(kc);
-        kcValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(kcValueLabel, c);
+		c.gridx = 1;
+		c.gridy = 1;
+		JLabel xpValueLabel = new JLabel(xp);
+		xpValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(xpValueLabel, c);
 
-        JLabel kcRateValueLabel = new JLabel(kcRate);
-        kcRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(kcRateValueLabel, c);
+		JLabel xpRateValueLabel = new JLabel(xpRate);
+		xpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(xpRateValueLabel, c);
 
-        c.gridx = 1;
-        c.gridy = 1;
-        JLabel xpValueLabel = new JLabel(xp);
-        xpValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(xpValueLabel, c);
+		c.gridx = 1;
+		c.gridy = 2;
+		JLabel gpValueLabel = new JLabel(gp);
+		gpValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		leftStats.add(gpValueLabel, c);
 
-        JLabel xpRateValueLabel = new JLabel(xpRate);
-        xpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(xpRateValueLabel, c);
+		JLabel gpRateValueLabel = new JLabel(gpRate);
+		gpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
+		rightStats.add(gpRateValueLabel, c);
 
-        c.gridx = 1;
-        c.gridy = 2;
-        JLabel gpValueLabel = new JLabel(gp);
-        gpValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        leftStats.add(gpValueLabel, c);
-
-        JLabel gpRateValueLabel = new JLabel(gpRate);
-        gpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-        rightStats.add(gpRateValueLabel, c);
-
-        add(leftStats);
-        add(rightStats);
-    }
+		add(leftStats);
+		add(rightStats);
+	}
 }

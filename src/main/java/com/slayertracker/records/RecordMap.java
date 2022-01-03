@@ -25,46 +25,52 @@
 package com.slayertracker.records;
 
 import com.slayertracker.groups.Group;
-
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R> {
-    private final PropertyChangeSupport support;
+public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
+{
+	private final PropertyChangeSupport support;
 
-    public RecordMap() {
-        super();
-        support = new PropertyChangeSupport(this);
-    }
+	public RecordMap()
+	{
+		super();
+		support = new PropertyChangeSupport(this);
+	}
 
-    public void addPcl(PropertyChangeListener pcl) {
-        support.addPropertyChangeListener(pcl);
-    }
+	public void addPcl(PropertyChangeListener pcl)
+	{
+		support.addPropertyChangeListener(pcl);
+	}
 
-    @Override
-    public R put(G group, R record) {
-        support.firePropertyChange("records", null, group);
-        return super.put(group, record);
-    }
+	@Override
+	public R put(G group, R record)
+	{
+		support.firePropertyChange("records", null, group);
+		return super.put(group, record);
+	}
 
-    @Override
-    public void putAll(Map<? extends G, ? extends R> m) {
-        super.putAll(m);
-        support.firePropertyChange("records", false, true);
-    }
+	@Override
+	public void putAll(Map<? extends G, ? extends R> m)
+	{
+		super.putAll(m);
+		support.firePropertyChange("records", false, true);
+	}
 
-    @Override
-    public R remove(Object group) {
-        support.firePropertyChange("records", group, null);
-        return super.remove(group);
-    }
+	@Override
+	public R remove(Object group)
+	{
+		support.firePropertyChange("records", group, null);
+		return super.remove(group);
+	}
 
-    @Override
-    public void clear() {
-        support.firePropertyChange("records", this.keySet(), Collections.EMPTY_SET);
-        super.clear();
-    }
+	@Override
+	public void clear()
+	{
+		support.firePropertyChange("records", this.keySet(), Collections.EMPTY_SET);
+		super.clear();
+	}
 }

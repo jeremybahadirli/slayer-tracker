@@ -24,18 +24,20 @@
  */
 package com.slayertracker.views.components;
 
+import java.awt.BorderLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import java.awt.*;
+public class HeaderPanel extends JPanel
+{
 
-public class HeaderPanel extends JPanel {
-
-    public HeaderPanel(String name) {
-        setLayout(new BorderLayout());
-        setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
-        setBorder(new EmptyBorder(4, 4, 4, 4));
-        add(new JLabel(name));
-    }
+	public HeaderPanel(String name)
+	{
+		setLayout(new BorderLayout());
+		setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
+		setBorder(new EmptyBorder(4, 4, 4, 4));
+		add(new JLabel(name));
+	}
 }
