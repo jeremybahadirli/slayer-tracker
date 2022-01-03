@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2017, Tyler <https://github.com/tylerthardy>
  * Copyright (c) 2018, Shaun Dreclin <shaundreclin@gmail.com>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.model;
+package com.slayertracker.groups;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -39,11 +40,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.slayertracker.model.Variant.*;
+import static com.slayertracker.groups.Variant.*;
 import static net.runelite.api.ItemID.*;
 
 @Getter
-public enum Assignment {
+public enum Assignment implements Group {
     //<editor-fold desc="Enums">
     ABERRANT_SPECTRES("Aberrant spectres", new Variant[]{Variant.ABERRANT_SPECTRE, DEVIANT_SPECTRE}, ItemID.ABERRANT_SPECTRE, "Spectre"),
     ABYSSAL_DEMONS("Abyssal demons", ABYSSAL_DEMON),
@@ -108,7 +109,7 @@ public enum Assignment {
     GREEN_DRAGONS("Green dragons", GREEN_DRAGON_MASK, "Baby green dragon", "Elvarg"),
     GROTESQUE_GUARDIANS("Grotesque Guardians", MIDNIGHT, "Dusk", "Dawn"),
     HARPIE_BUG_SWARMS("Harpie bug swarms", SWARM),
-    HELLHOUNDS("Hellhounds", new Variant[]{Variant.CERBERUS, Variant.HELLHOUND}, ItemID.HELLHOUND),
+    HELLHOUNDS("Hellhounds", new Variant[]{Variant.CERBERUS, Variant.HELLHOUND}, ItemID.HELLHOUND, "Cerberus"),
     HILL_GIANTS("Hill giants", ENSOULED_GIANT_HEAD, "Cyclops"),
     HOBGOBLINS("Hobgoblins", HOBGOBLIN_GUARD),
     HYDRAS("Hydras", HYDRA),

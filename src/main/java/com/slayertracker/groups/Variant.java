@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.model;
+package com.slayertracker.groups;
 
 import lombok.Getter;
 
 @Getter
-public enum Variant {
+public enum Variant implements Group {
     //<editor-fold desc="Enums">
     // Aberrant spectres
     ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
