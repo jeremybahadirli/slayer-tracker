@@ -108,7 +108,7 @@ public enum Assignment {
     GREEN_DRAGONS("Green dragons", GREEN_DRAGON_MASK, "Baby green dragon", "Elvarg"),
     GROTESQUE_GUARDIANS("Grotesque Guardians", MIDNIGHT, "Dusk", "Dawn"),
     HARPIE_BUG_SWARMS("Harpie bug swarms", SWARM),
-    HELLHOUNDS("Hellhounds", HELLHOUND),
+    HELLHOUNDS("Hellhounds", new Variant[]{Variant.CERBERUS, Variant.HELLHOUND}, ItemID.HELLHOUND),
     HILL_GIANTS("Hill giants", ENSOULED_GIANT_HEAD, "Cyclops"),
     HOBGOBLINS("Hobgoblins", HOBGOBLIN_GUARD),
     HYDRAS("Hydras", HYDRA),

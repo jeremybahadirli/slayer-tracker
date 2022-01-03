@@ -2,8 +2,6 @@
 
 **WARNING: THIS PLUGIN IS A WORK-IN-PROGRESS AND SHOULD NOT BE USED IN ITS CURRENT STATE.**
 
-SUP AL WOWOWOWOW
-
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and block.
 
 **Note:** This plugin only counts time when the Player is engaged in combat. AFK time between kills is not tracked. Due to this, experience and profitability rates will typically report higher than what is actually received, because the Player is assumed to be 100% time-efficient.

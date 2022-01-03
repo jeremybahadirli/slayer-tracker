@@ -42,6 +42,9 @@ public enum Variant {
     // Fire giants
     FIRE_GIANT_WEAK("level-86", new int[]{86}),
     FIRE_GIANT_STRONG("Catacombs of Kourend", new int[]{104, 109}),
+    // Hellhounds
+    CERBERUS("Cerberus", "Cerberus"),
+    HELLHOUND("Hellhound", "Hellhound"),
     // Jad
     JAD("Jad", 25250, "TzTok-Jad"), // PLACEHOLDER must add to Assignment
     FIGHT_CAVE_OTHERS("Other", "Tz-Kih", "Tz-Kek", "Tok-Xil", "Yt-MekKok", "Ket-Zek", "Yt-HurKot"),
