@@ -37,11 +37,10 @@ import javax.swing.border.EmptyBorder;
 
 public class AssignmentRecordPanel extends JPanel {
 
-    public AssignmentRecordPanel(
-            Assignment assignment,
-            AssignmentRecord assignmentRecord,
-            SlayerTrackerConfig slayerTrackerConfig,
-            ItemManager itemManager) {
+    public AssignmentRecordPanel(Assignment assignment,
+                                 AssignmentRecord assignmentRecord,
+                                 SlayerTrackerConfig slayerTrackerConfig,
+                                 ItemManager itemManager) {
 
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 

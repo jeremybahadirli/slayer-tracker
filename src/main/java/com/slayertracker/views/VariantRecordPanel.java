@@ -36,10 +36,9 @@ import javax.swing.border.EmptyBorder;
 
 public class VariantRecordPanel extends JPanel {
 
-    VariantRecordPanel(
-            Variant variant,
-            Record record,
-            SlayerTrackerConfig slayerTrackerConfig) {
+    VariantRecordPanel(Variant variant,
+                       Record record,
+                       SlayerTrackerConfig slayerTrackerConfig) {
 
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 

@@ -39,11 +39,10 @@ public class GroupListPanel extends JPanel {
     private final SlayerTrackerConfig slayerTrackerConfig;
     private final ItemManager itemManager;
 
-    GroupListPanel(
-            Assignment assignment,
-            AssignmentRecord assignmentRecord,
-            SlayerTrackerConfig slayerTrackerConfig,
-            ItemManager itemManager) {
+    GroupListPanel(Assignment assignment,
+                   AssignmentRecord assignmentRecord,
+                   SlayerTrackerConfig slayerTrackerConfig,
+                   ItemManager itemManager) {
 
         this.assignment = assignment;
         this.assignmentRecord = assignmentRecord;
