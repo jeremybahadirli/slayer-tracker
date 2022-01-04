@@ -40,7 +40,6 @@ public class StatsPanel extends JPanel
 
 	public StatsPanel(Record record, SlayerTrackerConfig slayerTrackerConfig)
 	{
-
 		// Format data
 
 		NumberFormat formatter = NumberFormat.getInstance();
@@ -66,7 +65,7 @@ public class StatsPanel extends JPanel
 			gpRate = formatter.format(Math.round(record.getGe() / record.getHours()));
 		}
 
-		// Layout panel
+		// Lay out panel
 
 		setLayout(new GridLayout());
 		setOpaque(false);

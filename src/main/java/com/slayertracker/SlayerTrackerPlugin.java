@@ -533,7 +533,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	{
 		clientThread.invokeLater(() ->
 			SwingUtilities.invokeLater(() ->
-				slayerTrackerPanel.build()));
+				slayerTrackerPanel.update()));
 	}
 
 	@Provides

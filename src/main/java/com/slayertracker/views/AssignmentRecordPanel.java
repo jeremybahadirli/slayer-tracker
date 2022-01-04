@@ -34,28 +34,33 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.ColorScheme;
 
-public class AssignmentRecordPanel extends JPanel
+@Getter
+public class AssignmentRecordPanel extends RecordPanel
 {
-
-	public AssignmentRecordPanel(Assignment assignment,
-								 AssignmentRecord assignmentRecord,
-								 SlayerTrackerConfig slayerTrackerConfig,
-								 ItemManager itemManager)
+	AssignmentRecordPanel(Assignment assignment,
+						  AssignmentRecord assignmentRecord,
+						  SlayerTrackerConfig slayerTrackerConfig,
+						  ItemManager itemManager)
 	{
+		this.record = assignmentRecord;
+		this.slayerTrackerConfig = slayerTrackerConfig;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-		add(new HeaderPanel(assignment.getName()));
+		headerPanel = new HeaderPanel(assignment.getName());
+		add(headerPanel);
 
-		JPanel bodyPanel = new JPanel();
+		bodyPanel = new JPanel();
 		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
 		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
 		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
-		bodyPanel.add(new StatsPanel(assignmentRecord, slayerTrackerConfig));
+		statsPanel = new StatsPanel(record, slayerTrackerConfig);
+		bodyPanel.add(statsPanel);
 		add(bodyPanel);
 	}
 }

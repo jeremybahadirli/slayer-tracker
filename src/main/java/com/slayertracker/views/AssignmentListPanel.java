@@ -28,19 +28,64 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import java.awt.Dimension;
+import java.util.HashSet;
+import java.util.Set;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import net.runelite.client.game.ItemManager;
 
 public class AssignmentListPanel extends JPanel
 {
+	private final SlayerTrackerConfig slayerTrackerConfig;
+	private final ItemManager itemManager;
+
+	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+
+	private final Set<GroupListPanel> groupListPanels = new HashSet<>();
+
 	AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 						SlayerTrackerConfig slayerTrackerConfig,
 						ItemManager itemManager)
 	{
+		this.assignmentRecords = assignmentRecords;
+		this.slayerTrackerConfig = slayerTrackerConfig;
+		this.itemManager = itemManager;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		assignmentRecords.forEach((assignment, assignmentRecord) ->
-			add(new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager)));
+		update();
+	}
+
+	void update()
+	{
+		// Remove panels
+		groupListPanels.removeIf(groupListPanel ->
+			!assignmentRecords.containsValue(groupListPanel.getAssignmentRecord()));
+
+		// Update panels
+		groupListPanels.forEach(GroupListPanel::update);
+
+		// Add panels
+		assignmentRecords.forEach((assignment, assignmentRecord) -> {
+			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignmentRecord().equals(assignmentRecord)))
+			{
+				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager);
+				groupListPanels.add(groupListPanel);
+			}
+		});
+
+		build();
+	}
+
+	void build()
+	{
+		removeAll();
+		groupListPanels.forEach(groupListPanel -> {
+			add(groupListPanel);
+			add(Box.createRigidArea(new Dimension(0, 5)));
+		});
+		revalidate();
+		repaint();
 	}
 }

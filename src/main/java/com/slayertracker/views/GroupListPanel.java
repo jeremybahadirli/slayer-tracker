@@ -28,46 +28,119 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import java.awt.Dimension;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.HashMap;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
+import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 
+@Getter
 public class GroupListPanel extends JPanel
 {
-
-	private final Assignment assignment;
-	private final AssignmentRecord assignmentRecord;
 	private final SlayerTrackerConfig slayerTrackerConfig;
-	private final ItemManager itemManager;
+
+	private final AssignmentRecord assignmentRecord;
+
+	private final AssignmentRecordPanel assignmentRecordPanel;
+	private final HashMap<RecordPanel, JPanel> variantRecordPanelToHorizontalPanel = new HashMap<>();
 
 	GroupListPanel(Assignment assignment,
 				   AssignmentRecord assignmentRecord,
 				   SlayerTrackerConfig slayerTrackerConfig,
 				   ItemManager itemManager)
 	{
-
-		this.assignment = assignment;
-		this.assignmentRecord = assignmentRecord;
 		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.itemManager = itemManager;
+		this.assignmentRecord = assignmentRecord;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+
+		// Assignment Record Panel
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager);
+		assignmentRecordPanel.headerPanel.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				if (e.getButton() == MouseEvent.BUTTON1)
+				{
+					toggleCollapsedAll();
+				}
+			}
+		});
+		add(assignmentRecordPanel);
+
+		update();
+	}
+
+	void update()
+	{
+		// Remove panels
+		variantRecordPanelToHorizontalPanel.forEach((recordPanel, horizontalPanel) -> {
+			if (!assignmentRecord.getVariantRecords().containsValue(recordPanel.getRecord()))
+			{
+				variantRecordPanelToHorizontalPanel.remove(recordPanel);
+			}
+		});
+
+		// Update panels
+		assignmentRecordPanel.update();
+		variantRecordPanelToHorizontalPanel.keySet().forEach(RecordPanel::update);
+
+		// Add panels
+		assignmentRecord.getVariantRecords().forEach((variant, variantRecord) -> {
+			// For each Variant Record in model, add panel if NO Variant Panel's Record matches it
+			if (variantRecordPanelToHorizontalPanel.keySet().stream().noneMatch(variantRecordPanel -> variantRecordPanel.getRecord().equals(variantRecord)))
+			{
+				JPanel horizontalPanel = new JPanel();
+				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
+				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, slayerTrackerConfig);
+				horizontalPanel.add(variantRecordPanel);
+				variantRecordPanelToHorizontalPanel.put(variantRecordPanel, horizontalPanel);
+			}
+		});
+
 		build();
 	}
 
-	private void build()
+	void build()
 	{
-		add(new AssignmentRecordPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager));
+		removeAll();
+		add(assignmentRecordPanel);
+		variantRecordPanelToHorizontalPanel.values().forEach(this::add);
 
-		assignmentRecord.getVariantRecords().forEach((variant, variantRecord) -> {
-			JPanel horizontalPanel = new JPanel();
-			horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
-			horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-			horizontalPanel.add(new VariantRecordPanel(variant, variantRecord, slayerTrackerConfig));
-			add(horizontalPanel);
-		});
+		revalidate();
+		repaint();
+	}
 
-		add(Box.createRigidArea(new Dimension(0, 5)));
+	void toggleCollapsedAll()
+	{
+		if (assignmentRecordPanel.isCollapsed())
+		{
+			expandAll();
+		}
+		else
+		{
+			collapseAll();
+		}
+	}
+
+	private void expandAll()
+	{
+		// Expand Assignment Record panel and all of its Variant Record panels
+		assignmentRecordPanel.expand();
+		variantRecordPanelToHorizontalPanel.values().forEach(variantRecordPanel ->
+			variantRecordPanel.setVisible(true));
+	}
+
+	private void collapseAll()
+	{
+		// Collapse Assignment Record panel and all of its Variant Record panels
+		assignmentRecordPanel.collapse();
+		variantRecordPanelToHorizontalPanel.values().forEach(variantRecordPanel ->
+			variantRecordPanel.setVisible(false));
 	}
 }

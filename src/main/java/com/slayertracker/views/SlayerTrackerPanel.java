@@ -37,35 +37,23 @@ import net.runelite.client.ui.PluginPanel;
 @Getter
 public class SlayerTrackerPanel extends PluginPanel
 {
-
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-	private final SlayerTrackerConfig slayerTrackerConfig;
-	private final ItemManager itemManager;
+
+	private final JButton resetAllButton;
+	private final AssignmentListPanel assignmentListPanel;
 
 	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 							  SlayerTrackerConfig slayerTrackerConfig,
 							  ItemManager itemManager)
 	{
 		this.assignmentRecords = assignmentRecords;
-		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.itemManager = itemManager;
 
-		build();
-	}
-
-	public void build()
-	{
-		removeAll();
-
-		// Records list
-		add(new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager));
+		// Assignment list panel
+		assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
+		add(assignmentListPanel);
 
 		// Reset All button
-		JButton resetAllButton = new JButton("Reset All");
-		if (assignmentRecords.isEmpty())
-		{
-			resetAllButton.setEnabled(false);
-		}
+		resetAllButton = new JButton("Reset All");
 		resetAllButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
 				"This will permanently delete all records.",
@@ -79,7 +67,12 @@ public class SlayerTrackerPanel extends PluginPanel
 		});
 		add(resetAllButton);
 
-		revalidate();
-		repaint();
+		update();
+	}
+
+	public void update()
+	{
+		assignmentListPanel.update();
+		resetAllButton.setEnabled(!assignmentRecords.isEmpty());
 	}
 }

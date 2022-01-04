@@ -32,7 +32,6 @@ import net.runelite.client.ui.ColorScheme;
 
 public class HeaderPanel extends JPanel
 {
-
 	public HeaderPanel(String name)
 	{
 		setLayout(new BorderLayout());

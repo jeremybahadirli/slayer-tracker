@@ -25,52 +25,74 @@
 package com.slayertracker.views;
 
 import com.slayertracker.SlayerTrackerConfig;
-import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.views.components.HeaderPanel;
 import com.slayertracker.views.components.StatsPanel;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import javax.swing.BoxLayout;
+import java.awt.Color;
+import java.util.Arrays;
 import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
 import lombok.Getter;
-import net.runelite.client.ui.ColorScheme;
+import lombok.Setter;
 
 @Getter
-public class VariantRecordPanel extends RecordPanel
+@Setter
+public class RecordPanel extends JPanel
 {
-	VariantRecordPanel(Variant variant,
-					   Record record,
-					   SlayerTrackerConfig slayerTrackerConfig)
+	SlayerTrackerConfig slayerTrackerConfig;
+
+	Record record;
+
+	HeaderPanel headerPanel;
+	JPanel bodyPanel;
+	StatsPanel statsPanel;
+
+	void update()
 	{
-		this.record = record;
-		this.slayerTrackerConfig = slayerTrackerConfig;
-
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-
-		// Header Panel
-		headerPanel = new HeaderPanel(variant.getName());
-		headerPanel.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mouseClicked(MouseEvent e)
-			{
-				if (e.getButton() == MouseEvent.BUTTON1)
-				{
-					toggleCollapsed();
-				}
-			}
-		});
-		add(headerPanel);
-
-		// Body Panel
-		bodyPanel = new JPanel();
-		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
-		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
-		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+		bodyPanel.remove(statsPanel);
 		statsPanel = new StatsPanel(record, slayerTrackerConfig);
 		bodyPanel.add(statsPanel);
-		add(bodyPanel);
+	}
+
+	void expand()
+	{
+		if (isCollapsed())
+		{
+			bodyPanel.setVisible(true);
+			toggleDimmer(true);
+		}
+	}
+
+	void collapse()
+	{
+		if (!isCollapsed())
+		{
+			bodyPanel.setVisible(false);
+			toggleDimmer(false);
+		}
+	}
+
+	void toggleCollapsed()
+	{
+		if (isCollapsed())
+		{
+			expand();
+		}
+		else
+		{
+			collapse();
+		}
+	}
+
+	boolean isCollapsed()
+	{
+		return !bodyPanel.isVisible();
+	}
+
+	private void toggleDimmer(boolean brighten)
+	{
+		Arrays.stream(headerPanel.getComponents()).forEach(component -> {
+			Color color = component.getForeground();
+			component.setForeground(brighten ? color.brighter() : color.darker());
+		});
 	}
 }
