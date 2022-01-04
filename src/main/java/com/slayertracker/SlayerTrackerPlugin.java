@@ -356,11 +356,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		NPC npc = (NPC) actor;
 
-		if (assignmentRecords.get(currentAssignment).getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
+		if (assignmentRecords.get(currentAssignment).getInteractors().stream().noneMatch(interactor -> interactor.equals(npc)))
 		{
-			xpShareInteractors.add(npc);
-			assignmentRecords.get(currentAssignment).incrementKc();
+			return;
 		}
+
+		xpShareInteractors.add(npc);
+		assignmentRecords.get(currentAssignment).incrementKc();
 
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			if (assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
