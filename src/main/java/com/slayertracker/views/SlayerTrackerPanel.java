@@ -28,6 +28,8 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.PluginPanel;
@@ -37,16 +39,51 @@ public class SlayerTrackerPanel extends PluginPanel
 {
 
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-	private final AssignmentListPanel assignmentListPanel;
+	private final SlayerTrackerConfig slayerTrackerConfig;
+	private final ItemManager itemManager;
 
 	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 							  SlayerTrackerConfig slayerTrackerConfig,
 							  ItemManager itemManager)
 	{
-
 		this.assignmentRecords = assignmentRecords;
-		this.assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
+		this.slayerTrackerConfig = slayerTrackerConfig;
+		this.itemManager = itemManager;
 
-		add(assignmentListPanel);
+		build();
+	}
+
+	public void build()
+	{
+		removeAll();
+
+		// Records list
+		add(new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager));
+
+		// Reset All button
+		JButton resetAllButton = new JButton("Reset All");
+		if (assignmentRecords.isEmpty())
+		{
+			resetAllButton.setEnabled(false);
+		}
+		resetAllButton.addActionListener(event -> {
+			final int result = JOptionPane.showOptionDialog(this,
+				"This will permanently delete all records.",
+				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+				null, new String[]{"Yes", "No"}, "No");
+
+			if (result != JOptionPane.YES_OPTION)
+			{
+				return;
+			}
+			else
+			{
+				assignmentRecords.clear();
+			}
+		});
+		add(resetAllButton);
+
+		revalidate();
+		repaint();
 	}
 }
