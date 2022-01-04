@@ -2,6 +2,8 @@
 
 **WARNING: THIS PLUGIN IS A WORK-IN-PROGRESS AND SHOULD NOT BE USED IN ITS CURRENT STATE.**
 
+**Latest Notable Update:** 01/03/22 – Add "Remove All" button to side panel.
+
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and block.
 
 **Note:** This plugin only counts time when the Player is engaged in combat. AFK time between kills is not tracked. Due to this, experience and profitability rates will typically report higher than what is actually received.
