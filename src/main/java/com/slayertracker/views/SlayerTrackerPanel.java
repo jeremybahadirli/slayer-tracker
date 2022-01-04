@@ -72,11 +72,7 @@ public class SlayerTrackerPanel extends PluginPanel
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 
-			if (result != JOptionPane.YES_OPTION)
-			{
-				return;
-			}
-			else
+			if (result == JOptionPane.YES_OPTION)
 			{
 				assignmentRecords.clear();
 			}
