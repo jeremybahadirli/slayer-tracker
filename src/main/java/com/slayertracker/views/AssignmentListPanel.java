@@ -34,32 +34,13 @@ import net.runelite.client.game.ItemManager;
 
 public class AssignmentListPanel extends JPanel
 {
-
-	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-	private final SlayerTrackerConfig slayerTrackerConfig;
-	private final ItemManager itemManager;
-
 	AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 						SlayerTrackerConfig slayerTrackerConfig,
 						ItemManager itemManager)
 	{
 
-		this.assignmentRecords = assignmentRecords;
-		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.itemManager = itemManager;
-
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		build();
-	}
-
-	public void build()
-	{
-		removeAll();
-
 		assignmentRecords.forEach((assignment, assignmentRecord) ->
 			add(new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager)));
-
-		revalidate();
-		repaint();
 	}
 }
