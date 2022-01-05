@@ -4,9 +4,9 @@
 
 ---
 Latest Updates:
-* 01/04/22 – Individual Records now collapsable
+* 01/04/22 – Add "Reset" right-click option to Record Panels
 * 01/04/22 – Record Panels now collapsable
-* 01/03/22 – Add "Remove All" button to Side Panel
+* 01/03/22 – Add "Reset All" button to Side Panel
 * 01/02/22 – Improve Side Panel formatting/layout
 ---
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and block.
