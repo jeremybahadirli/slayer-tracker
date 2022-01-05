@@ -27,6 +27,7 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -43,22 +44,25 @@ public class GroupListPanel extends JPanel
 	private final SlayerTrackerConfig slayerTrackerConfig;
 
 	private final AssignmentRecord assignmentRecord;
+	private final RecordMap<Assignment, AssignmentRecord> recordMap;
 
 	private final AssignmentRecordPanel assignmentRecordPanel;
 	private final HashMap<RecordPanel, JPanel> variantRecordPanelToHorizontalPanel = new HashMap<>();
 
 	GroupListPanel(Assignment assignment,
 				   AssignmentRecord assignmentRecord,
+				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 				   SlayerTrackerConfig slayerTrackerConfig,
 				   ItemManager itemManager)
 	{
 		this.slayerTrackerConfig = slayerTrackerConfig;
 		this.assignmentRecord = assignmentRecord;
+		this.recordMap = assignmentRecords;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Assignment Record Panel
-		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager);
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, assignmentRecords, slayerTrackerConfig, itemManager);
 		assignmentRecordPanel.headerPanel.addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -78,12 +82,8 @@ public class GroupListPanel extends JPanel
 	void update()
 	{
 		// Remove panels
-		variantRecordPanelToHorizontalPanel.forEach((recordPanel, horizontalPanel) -> {
-			if (!assignmentRecord.getVariantRecords().containsValue(recordPanel.getRecord()))
-			{
-				variantRecordPanelToHorizontalPanel.remove(recordPanel);
-			}
-		});
+		variantRecordPanelToHorizontalPanel.keySet().removeIf(recordPanel ->
+			!assignmentRecord.getVariantRecords().containsValue(recordPanel.getRecord()));
 
 		// Update panels
 		assignmentRecordPanel.update();
@@ -97,7 +97,7 @@ public class GroupListPanel extends JPanel
 				JPanel horizontalPanel = new JPanel();
 				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
 				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, slayerTrackerConfig);
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, assignmentRecord.getVariantRecords(), slayerTrackerConfig);
 				horizontalPanel.add(variantRecordPanel);
 				variantRecordPanelToHorizontalPanel.put(variantRecordPanel, horizontalPanel);
 			}

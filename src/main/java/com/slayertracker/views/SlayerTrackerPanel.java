@@ -32,6 +32,7 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
 @Getter
@@ -54,6 +55,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		// Reset All button
 		resetAllButton = new JButton("Reset All");
+		resetAllButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		resetAllButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
 				"This will permanently delete all records.",
@@ -73,6 +75,6 @@ public class SlayerTrackerPanel extends PluginPanel
 	public void update()
 	{
 		assignmentListPanel.update();
-		resetAllButton.setEnabled(!assignmentRecords.isEmpty());
+		resetAllButton.setVisible(!assignmentRecords.isEmpty());
 	}
 }

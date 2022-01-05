@@ -503,7 +503,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	{
 		try
 		{
-
+			if (dataFileName == null)
+			{
+				return;
+			}
 			File dataFile = new File(DATA_FOLDER, dataFileName);
 			Writer writer = new FileWriter(dataFile);
 			log.info("SAVING DATA TO DISK");
@@ -513,9 +516,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 		catch (Exception e)
 		{
-			// TODO
-			// NPE will occur if closing the game without ever logging in,
-			// due to dataFileName being defined by the Player's username.
 			e.printStackTrace();
 		}
 	}

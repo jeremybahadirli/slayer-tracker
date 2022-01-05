@@ -27,6 +27,7 @@ package com.slayertracker.views.components;
 import com.slayertracker.SlayerTrackerConfig;
 import static com.slayertracker.SlayerTrackerConfig.SlayerTrackerLootUnit.HIGH_ALCHEMY;
 import com.slayertracker.records.Record;
+import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -89,30 +90,36 @@ public class StatsPanel extends JPanel
 		c.gridx = 0;
 		c.gridy = 0;
 		JLabel kcLabel = new JLabel("kc: ");
+		kcLabel.setForeground(Color.WHITE);
 		kcLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(kcLabel, c);
 
 		JLabel kcRateLabel = new JLabel("kc/h: ");
+		kcRateLabel.setForeground(Color.WHITE);
 		kcRateLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(kcRateLabel, c);
 
 		c.gridx = 0;
 		c.gridy = 1;
 		JLabel xpLabel = new JLabel("xp: ");
+		xpLabel.setForeground(Color.WHITE);
 		xpLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(xpLabel, c);
 
 		JLabel xpRateLabel = new JLabel("xp/h: ");
+		xpRateLabel.setForeground(Color.WHITE);
 		xpRateLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(xpRateLabel, c);
 
 		c.gridx = 0;
 		c.gridy = 2;
 		JLabel gpLabel = new JLabel(gpString + ": ");
+		gpLabel.setForeground(Color.WHITE);
 		gpLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(gpLabel, c);
 
 		JLabel gpRateLabel = new JLabel(gpString + "/h: ");
+		gpRateLabel.setForeground(Color.WHITE);
 		gpRateLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(gpRateLabel, c);
 
@@ -122,30 +129,36 @@ public class StatsPanel extends JPanel
 		c.gridx = 1;
 		c.gridy = 0;
 		JLabel kcValueLabel = new JLabel(kc);
+		kcValueLabel.setForeground(Color.WHITE);
 		kcValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(kcValueLabel, c);
 
 		JLabel kcRateValueLabel = new JLabel(kcRate);
+		kcRateValueLabel.setForeground(Color.WHITE);
 		kcRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(kcRateValueLabel, c);
 
 		c.gridx = 1;
 		c.gridy = 1;
 		JLabel xpValueLabel = new JLabel(xp);
+		xpValueLabel.setForeground(Color.WHITE);
 		xpValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(xpValueLabel, c);
 
 		JLabel xpRateValueLabel = new JLabel(xpRate);
+		xpRateValueLabel.setForeground(Color.WHITE);
 		xpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(xpRateValueLabel, c);
 
 		c.gridx = 1;
 		c.gridy = 2;
 		JLabel gpValueLabel = new JLabel(gp);
+		gpValueLabel.setForeground(Color.WHITE);
 		gpValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		leftStats.add(gpValueLabel, c);
 
 		JLabel gpRateValueLabel = new JLabel(gpRate);
+		gpRateValueLabel.setForeground(Color.WHITE);
 		gpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
 		rightStats.add(gpRateValueLabel, c);
 

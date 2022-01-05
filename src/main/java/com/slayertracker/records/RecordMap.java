@@ -46,10 +46,13 @@ public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 		support.addPropertyChangeListener(pcl);
 	}
 
+	// TODO TEST WHETHER PROPERTY CHANGES ARE PICKED UP BY SlayerTrackerPlugin FOR
+	// TODO VARIANTS AND ASSIGNMENTS
+
 	@Override
 	public R put(G group, R record)
 	{
-		support.firePropertyChange("records", null, group);
+		support.firePropertyChange("RecordMap " + group.getName(), null, group);
 		return super.put(group, record);
 	}
 
@@ -57,20 +60,22 @@ public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 	public void putAll(Map<? extends G, ? extends R> m)
 	{
 		super.putAll(m);
-		support.firePropertyChange("records", false, true);
+		support.firePropertyChange("RecordMap putAll", false, true);
 	}
 
 	@Override
 	public R remove(Object group)
 	{
-		support.firePropertyChange("records", group, null);
-		return super.remove(group);
+		R record = super.remove(group);
+		super.remove(group);
+		support.firePropertyChange("RecordMap remove", group, null);
+		return record;
 	}
 
 	@Override
 	public void clear()
 	{
-		support.firePropertyChange("records", this.keySet(), Collections.EMPTY_SET);
+		support.firePropertyChange("RecordMap clear", this.keySet(), Collections.EMPTY_SET);
 		super.clear();
 	}
 }

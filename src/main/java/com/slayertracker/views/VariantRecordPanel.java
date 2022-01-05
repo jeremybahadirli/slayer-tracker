@@ -27,30 +27,25 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
-import com.slayertracker.views.components.HeaderPanel;
+import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.components.StatsPanel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.BoxLayout;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
 import lombok.Getter;
-import net.runelite.client.ui.ColorScheme;
 
 @Getter
 public class VariantRecordPanel extends RecordPanel
 {
 	VariantRecordPanel(Variant variant,
 					   Record record,
+					   RecordMap<Variant, Record> variantRecords,
 					   SlayerTrackerConfig slayerTrackerConfig)
 	{
-		this.record = record;
+		super(variant, variantRecords);
 		this.slayerTrackerConfig = slayerTrackerConfig;
-
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		this.record = record;
 
 		// Header Panel
-		headerPanel = new HeaderPanel(variant.getName());
 		headerPanel.addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -62,15 +57,9 @@ public class VariantRecordPanel extends RecordPanel
 				}
 			}
 		});
-		add(headerPanel);
 
 		// Body Panel
-		bodyPanel = new JPanel();
-		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
-		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
-		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		statsPanel = new StatsPanel(record, slayerTrackerConfig);
 		bodyPanel.add(statsPanel);
-		add(bodyPanel);
 	}
 }

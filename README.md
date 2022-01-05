@@ -4,6 +4,7 @@
 
 ---
 Latest Updates:
+* 01/04/22 – Individual Records now collapsable, tweaked Side Panel text colors
 * 01/04/22 – Record Panels now collapsable
 * 01/03/22 – Add "Remove All" button to Side Panel
 * 01/02/22 – Improve Side Panel formatting/layout

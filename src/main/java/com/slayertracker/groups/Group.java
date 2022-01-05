@@ -26,4 +26,5 @@ package com.slayertracker.groups;
 
 public interface Group
 {
+	String getName();
 }

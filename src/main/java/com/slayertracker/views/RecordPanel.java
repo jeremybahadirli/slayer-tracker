@@ -25,14 +25,19 @@
 package com.slayertracker.views;
 
 import com.slayertracker.SlayerTrackerConfig;
+import com.slayertracker.groups.Group;
 import com.slayertracker.records.Record;
+import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.components.HeaderPanel;
 import com.slayertracker.views.components.StatsPanel;
 import java.awt.Color;
 import java.util.Arrays;
+import javax.swing.BoxLayout;
 import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.client.ui.ColorScheme;
 
 @Getter
 @Setter
@@ -45,6 +50,22 @@ public class RecordPanel extends JPanel
 	HeaderPanel headerPanel;
 	JPanel bodyPanel;
 	StatsPanel statsPanel;
+
+	RecordPanel(Group group, RecordMap<? extends Group, ? extends Record> recordMap)
+	{
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+
+		// Header Panel
+		headerPanel = new HeaderPanel(group, recordMap);
+		add(headerPanel);
+
+		// Body Panel
+		bodyPanel = new JPanel();
+		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
+		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
+		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+		add(bodyPanel);
+	}
 
 	void update()
 	{

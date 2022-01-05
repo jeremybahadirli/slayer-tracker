@@ -33,11 +33,12 @@ import lombok.Getter;
 public class AssignmentRecord extends Record
 {
 	@Expose
-	private final RecordMap<Variant, Record> variantRecords = new RecordMap<>();
+	private final RecordMap<Variant, Record> variantRecords;
 
 	public AssignmentRecord(PropertyChangeListener pcl)
 	{
 		super(pcl);
+		variantRecords = new RecordMap<>();
 		variantRecords.addPcl(pcl);
 	}
 }

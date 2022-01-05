@@ -70,7 +70,7 @@ public class AssignmentListPanel extends JPanel
 		assignmentRecords.forEach((assignment, assignmentRecord) -> {
 			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignmentRecord().equals(assignmentRecord)))
 			{
-				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, slayerTrackerConfig, itemManager);
+				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, assignmentRecords, slayerTrackerConfig, itemManager);
 				groupListPanels.add(groupListPanel);
 			}
 		});
