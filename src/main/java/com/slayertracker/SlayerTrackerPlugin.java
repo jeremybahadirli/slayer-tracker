@@ -415,7 +415,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onStatChanged(StatChanged event)
 	{
-		if (event.getSkill() != SLAYER || currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
+		if (event.getSkill() != SLAYER)
 		{
 			return;
 		}
@@ -430,6 +430,11 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		{
 			// This xp drop is the initial xp sent on login
 			cachedXp = newSlayerXp;
+			return;
+		}
+
+		if (currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
+		{
 			return;
 		}
 
