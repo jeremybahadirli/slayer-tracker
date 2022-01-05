@@ -32,7 +32,6 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 
 @Getter

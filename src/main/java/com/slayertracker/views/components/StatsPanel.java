@@ -27,7 +27,6 @@ package com.slayertracker.views.components;
 import com.slayertracker.SlayerTrackerConfig;
 import static com.slayertracker.SlayerTrackerConfig.SlayerTrackerLootUnit.HIGH_ALCHEMY;
 import com.slayertracker.records.Record;
-import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;

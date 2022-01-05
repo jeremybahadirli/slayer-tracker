@@ -375,7 +375,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onNpcLootReceived(NpcLootReceived event)
 	{
-		if (currentAssignment == null)
+		if (currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
 		{
 			return;
 		}
@@ -416,7 +416,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onStatChanged(StatChanged event)
 	{
-		if (currentAssignment == null || event.getSkill() != SLAYER)
+		if (event.getSkill() != SLAYER || currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
 		{
 			return;
 		}
