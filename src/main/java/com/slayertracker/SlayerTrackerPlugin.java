@@ -403,7 +403,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			})
 			.sum();
 
-
 		assignmentRecords.get(currentAssignment).addToGe(lootGe);
 		assignmentRecords.get(currentAssignment).addToHa(lootHa);
 
