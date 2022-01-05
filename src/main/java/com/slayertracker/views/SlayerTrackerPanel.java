@@ -55,7 +55,6 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		// Reset All button
 		resetAllButton = new JButton("Reset All");
-		resetAllButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		resetAllButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
 				"This will permanently delete all records.",
