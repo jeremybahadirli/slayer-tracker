@@ -144,7 +144,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private Gson gson;
 
 	private Assignment currentAssignment;
-	private static final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>();
+	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
 	private final Set<NPC> xpShareInteractors = new HashSet<>();
 	private int cachedXp = -1;
 
@@ -155,7 +155,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	{
 		// Create side panel and controller
 		slayerTrackerPanel = new SlayerTrackerPanel(assignmentRecords, config, itemManager);
-		assignmentRecords.addPcl(this);
 
 		// Create button for side panel
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
@@ -170,14 +169,16 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// Create data folder on disk if it doesn't exist
 		DATA_FOLDER.mkdirs();
 
-		// Create gson instance for groups serialization.
-		// First two type adapters register SlayerTrackerPlugin as
-		// a property change listener for records loaded from disk
-		// Second two type adapters (de)serialize combatInstant as a long
+		// GSON serializes record data to JSON for disk storage
 		gson = new GsonBuilder()
+			// Only serialize fields with @Expose
 			.excludeFieldsWithoutExposeAnnotation()
+			// When building records from JSON, run these classes' constructors,
+			// passing SlayerTrackerPlugin as a property change listener
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
+			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<Variant, Record>>) type -> new RecordMap<>(this))
+			// GSON doesn't recognize Instance, so serialize that as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
 			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
@@ -366,12 +367,14 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		xpShareInteractors.add(npc);
-		assignmentRecords.get(currentAssignment).incrementKc();
+		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
+		assignmentRecord.incrementKc();
 
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			if (assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
+			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+			if (variantRecord != null && variantRecord.getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
 			{
-				assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).incrementKc();
+				variantRecord.incrementKc();
 			}
 		});
 	}
@@ -407,12 +410,17 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			})
 			.sum();
 
-		assignmentRecords.get(currentAssignment).addToGe(lootGe);
-		assignmentRecords.get(currentAssignment).addToHa(lootHa);
+		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
+		assignmentRecord.addToGe(lootGe);
+		assignmentRecord.addToHa(lootHa);
 
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).addToGe(lootGe);
-			assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).addToHa(lootHa);
+			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+			if (variantRecord != null)
+			{
+				variantRecord.addToGe(lootGe);
+				variantRecord.addToHa(lootHa);
+			}
 		});
 	}
 
@@ -469,10 +477,17 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		NPC npc = xpShareInteractors.iterator().next();
 		final int thisNpcsXpShare = slayerXpDrop * getSlayerXp.apply(npc) / hpTotal;
 
-		assignmentRecords.get(currentAssignment).addToXp(thisNpcsXpShare);
+		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
+		assignmentRecord.addToXp(thisNpcsXpShare);
 
-		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant ->
-			assignmentRecords.get(currentAssignment).getVariantRecords().get(variant).addToXp(thisNpcsXpShare));
+		// Determine which Variant of the Assignment this NPC is, then if one exists...
+		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+			if (variantRecord != null)
+			{
+				variantRecord.addToXp(thisNpcsXpShare);
+			}
+		});
 
 		slayerXpDrop -= thisNpcsXpShare;
 		xpShareInteractors.remove(npc);

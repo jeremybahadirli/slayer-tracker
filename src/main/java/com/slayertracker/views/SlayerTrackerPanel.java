@@ -26,10 +26,15 @@ package com.slayertracker.views;
 
 import com.google.common.collect.ImmutableList;
 import com.slayertracker.SlayerTrackerConfig;
+import com.slayertracker.SlayerTrackerLootUnit;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -47,8 +52,16 @@ public class SlayerTrackerPanel extends PluginPanel
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 
 	private final JButton resetAllButton;
-	private final AssignmentListPanel assignmentListPanel;
+	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
+
+	private Function<? super RecordListPanel, Long> sortFunction = recordPanel ->
+		(long) -1 * recordPanel.getRecord().getCombatInstant().getEpochSecond();
+
+	private final Set<GroupListPanel> groupListPanels = new HashSet<>();
+
+	private final ItemManager itemManager;
+	private final SlayerTrackerConfig config;
 
 	private static final ImmutableList<String> SORT_ORDERS = ImmutableList.of(
 		"Recently Killed",
@@ -57,10 +70,12 @@ public class SlayerTrackerPanel extends PluginPanel
 	);
 
 	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-							  SlayerTrackerConfig slayerTrackerConfig,
+							  SlayerTrackerConfig config,
 							  ItemManager itemManager)
 	{
 		this.assignmentRecords = assignmentRecords;
+		this.itemManager = itemManager;
+		this.config = config;
 
 		// Sorter
 		JPanel sorterPanel = new JPanel();
@@ -69,13 +84,39 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(Box.createRigidArea(new Dimension(48, 0)));
 		sorterComboBox = new JComboBox<>();
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
-		sorterComboBox.addActionListener(l ->
-			update());
+		sorterComboBox.addActionListener(l -> {
+			switch (sorterComboBox.getSelectedItem().toString())
+			{
+				case "XP Rate":
+					sortFunction = panel ->
+						(long) Math.round(-1 * panel.getRecord().getXp() / panel.getRecord().getHours());
+					break;
+				case "GP Rate":
+					if (config.lootUnit().equals(SlayerTrackerLootUnit.GRAND_EXCHANGE))
+					{
+						sortFunction = panel ->
+							(long) Math.round(-1 * panel.getRecord().getGe() / panel.getRecord().getHours());
+					}
+					else
+					{
+						sortFunction = panel ->
+							(long) Math.round(-1 * panel.getRecord().getHa() / panel.getRecord().getHours());
+					}
+					break;
+				default:
+					sortFunction = panel ->
+						-1 * panel.getRecord().getCombatInstant().getEpochSecond();
+					break;
+			}
+
+			update();
+		});
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
 
 		// Assignment list
-		assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager, sorterComboBox.getSelectedItem().toString());
+		assignmentListPanel = new JPanel();
+		assignmentListPanel.setLayout(new BoxLayout(assignmentListPanel, BoxLayout.Y_AXIS));
 		add(assignmentListPanel);
 
 		// Reset All button
@@ -98,7 +139,36 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	public void update()
 	{
-		assignmentListPanel.update(sorterComboBox.getSelectedItem().toString());
+		// Assignment list
+
+		// Remove panels
+		groupListPanels.removeIf(groupListPanel ->
+			!assignmentRecords.containsValue(groupListPanel.getRecord()));
+
+		// Update panels
+		groupListPanels.forEach(groupListPanel -> groupListPanel.update(sortFunction));
+
+		// Add panels
+		assignmentRecords.forEach((assignment, assignmentRecord) -> {
+			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getRecord().equals(assignmentRecord)))
+			{
+				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, assignmentRecords, config, itemManager, sortFunction);
+				groupListPanels.add(groupListPanel);
+			}
+		});
+
+		// Rebuild
+
+		assignmentListPanel.removeAll();
+
+		groupListPanels.stream()
+			.sorted(Comparator.comparing(sortFunction))
+			.forEachOrdered((GroupListPanel groupListPanel) -> {
+				assignmentListPanel.add(groupListPanel);
+				assignmentListPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+			});
+
+		// Reset All button
 		resetAllButton.setVisible(!assignmentRecords.isEmpty());
 	}
 }

@@ -22,50 +22,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.views.components;
+package com.slayertracker.views;
 
-import com.slayertracker.groups.Group;
 import com.slayertracker.records.Record;
-import com.slayertracker.records.RecordMap;
-import java.awt.BorderLayout;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.border.EmptyBorder;
-import net.runelite.client.ui.ColorScheme;
 
-public class HeaderPanel extends JPanel
+public interface RecordListPanel
 {
-	public HeaderPanel(Group group, RecordMap<? extends Group, ? extends Record> recordMap)
-	{
-		setLayout(new BorderLayout());
-		setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
-		setBorder(new EmptyBorder(4, 4, 4, 4));
-		add(new JLabel(group.getName()));
-
-		// Popup Menu
-		final JMenuItem reset = new JMenuItem("Reset");
-		reset.addActionListener(e ->
-		{
-			final int result = JOptionPane.showOptionDialog(this,
-				"This will delete the record: " + group.getName(),
-				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
-				null, new String[]{"Yes", "No"}, "No");
-
-			if (result == JOptionPane.YES_OPTION)
-			{
-				recordMap.remove(group);
-			}
-		});
-		JPopupMenu popupMenu = getComponentPopupMenu();
-		if (popupMenu == null)
-		{
-			popupMenu = new JPopupMenu();
-			popupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
-			setComponentPopupMenu(popupMenu);
-		}
-		popupMenu.add(reset);
-	}
+	Record getRecord();
 }

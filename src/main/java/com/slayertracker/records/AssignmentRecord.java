@@ -38,7 +38,6 @@ public class AssignmentRecord extends Record
 	public AssignmentRecord(PropertyChangeListener pcl)
 	{
 		super(pcl);
-		variantRecords = new RecordMap<>();
-		variantRecords.addPcl(pcl);
+		variantRecords = new RecordMap<>(pcl);
 	}
 }

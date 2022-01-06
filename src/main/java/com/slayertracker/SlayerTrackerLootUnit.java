@@ -24,22 +24,8 @@
  */
 package com.slayertracker;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-
-@ConfigGroup(SlayerTrackerConfig.GROUP_NAME)
-public interface SlayerTrackerConfig extends Config
+public enum SlayerTrackerLootUnit
 {
-	String GROUP_NAME = "slayertracker";
-
-	@ConfigItem(
-		keyName = "lootUnit",
-		name = "Loot Unit",
-		description = "Display loot as Grand Exchange or High Alchemy value."
-	)
-	default SlayerTrackerLootUnit lootUnit()
-	{
-		return SlayerTrackerLootUnit.GRAND_EXCHANGE;
-	}
+	GRAND_EXCHANGE,
+	HIGH_ALCHEMY
 }

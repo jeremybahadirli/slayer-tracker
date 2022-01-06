@@ -35,19 +35,12 @@ public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 {
 	private final PropertyChangeSupport support;
 
-	public RecordMap()
+	public RecordMap(PropertyChangeListener pcl)
 	{
 		super();
 		support = new PropertyChangeSupport(this);
-	}
-
-	public void addPcl(PropertyChangeListener pcl)
-	{
 		support.addPropertyChangeListener(pcl);
 	}
-
-	// TODO TEST WHETHER PROPERTY CHANGES ARE PICKED UP BY SlayerTrackerPlugin FOR
-	// TODO VARIANTS AND ASSIGNMENTS
 
 	@Override
 	public R put(G group, R record)

@@ -28,35 +28,65 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Group;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
-import com.slayertracker.views.components.HeaderPanel;
 import com.slayertracker.views.components.StatsPanel;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.util.Arrays;
 import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
-import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
 
 @Getter
-@Setter
-public class RecordPanel extends JPanel
+public class RecordPanel extends JPanel implements RecordListPanel
 {
-	SlayerTrackerConfig slayerTrackerConfig;
+	private final SlayerTrackerConfig config;
+	private final Record record;
+	private final JPanel headerPanel;
 
-	Record record;
-
-	HeaderPanel headerPanel;
 	JPanel bodyPanel;
 	StatsPanel statsPanel;
 
-	RecordPanel(Group group, RecordMap<? extends Group, ? extends Record> recordMap)
+	RecordPanel(Group group,
+				Record record,
+				RecordMap<? extends Group, ? extends Record> recordMap,
+				SlayerTrackerConfig config)
 	{
+		this.record = record;
+		this.config = config;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Header Panel
-		headerPanel = new HeaderPanel(group, recordMap);
+		headerPanel = new JPanel();
+		headerPanel.setLayout(new BorderLayout());
+		headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
+		headerPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+		headerPanel.add(new JLabel(group.getName()));
+		final JMenuItem resetMenuItem = new JMenuItem("Reset");
+		resetMenuItem.addActionListener(e ->
+		{
+			final int selection = JOptionPane.showOptionDialog(this,
+				"This will delete the record: " + group.getName(),
+				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+				null, new String[]{"Yes", "No"}, "No");
+			if (selection == JOptionPane.YES_OPTION)
+			{
+				recordMap.remove(group);
+			}
+		});
+		JPopupMenu popupMenu = getComponentPopupMenu();
+		if (popupMenu == null)
+		{
+			popupMenu = new JPopupMenu();
+			popupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
+			headerPanel.setComponentPopupMenu(popupMenu);
+		}
+		popupMenu.add(resetMenuItem);
 		add(headerPanel);
 
 		// Body Panel
@@ -65,12 +95,14 @@ public class RecordPanel extends JPanel
 		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
 		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		add(bodyPanel);
+
+		statsPanel = new StatsPanel(record, config.lootUnit());
 	}
 
 	void update()
 	{
 		bodyPanel.remove(statsPanel);
-		statsPanel = new StatsPanel(record, slayerTrackerConfig);
+		statsPanel = new StatsPanel(record, config.lootUnit());
 		bodyPanel.add(statsPanel);
 	}
 

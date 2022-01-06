@@ -28,7 +28,6 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
-import com.slayertracker.views.components.StatsPanel;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import lombok.Getter;
@@ -40,16 +39,11 @@ public class AssignmentRecordPanel extends RecordPanel
 	AssignmentRecordPanel(Assignment assignment,
 						  AssignmentRecord assignmentRecord,
 						  RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-						  SlayerTrackerConfig slayerTrackerConfig,
+						  SlayerTrackerConfig config,
 						  ItemManager itemManager)
 	{
-		super(assignment, assignmentRecords);
-		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.record = assignmentRecord;
-
-		// Body Panel
+		super(assignment, assignmentRecord, assignmentRecords, config);
 		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
-		statsPanel = new StatsPanel(record, slayerTrackerConfig);
 		bodyPanel.add(statsPanel);
 	}
 }

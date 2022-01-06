@@ -28,38 +28,17 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
-import com.slayertracker.views.components.StatsPanel;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import lombok.Getter;
 
 @Getter
 public class VariantRecordPanel extends RecordPanel
 {
 	VariantRecordPanel(Variant variant,
-					   Record record,
+					   Record variantRecord,
 					   RecordMap<Variant, Record> variantRecords,
-					   SlayerTrackerConfig slayerTrackerConfig)
+					   SlayerTrackerConfig config)
 	{
-		super(variant, variantRecords);
-		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.record = record;
-
-		// Header Panel
-		headerPanel.addMouseListener(new MouseAdapter()
-		{
-			@Override
-			public void mouseClicked(MouseEvent e)
-			{
-				if (e.getButton() == MouseEvent.BUTTON1)
-				{
-					toggleCollapsed();
-				}
-			}
-		});
-
-		// Body Panel
-		statsPanel = new StatsPanel(record, slayerTrackerConfig);
+		super(variant, variantRecord, variantRecords, config);
 		bodyPanel.add(statsPanel);
 	}
 }

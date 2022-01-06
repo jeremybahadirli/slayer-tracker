@@ -24,8 +24,7 @@
  */
 package com.slayertracker.views.components;
 
-import com.slayertracker.SlayerTrackerConfig;
-import static com.slayertracker.SlayerTrackerConfig.SlayerTrackerLootUnit.HIGH_ALCHEMY;
+import com.slayertracker.SlayerTrackerLootUnit;
 import com.slayertracker.records.Record;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -38,7 +37,7 @@ import net.runelite.client.ui.FontManager;
 public class StatsPanel extends JPanel
 {
 
-	public StatsPanel(Record record, SlayerTrackerConfig slayerTrackerConfig)
+	public StatsPanel(Record record, SlayerTrackerLootUnit lootUnit)
 	{
 		// Format data
 
@@ -52,7 +51,7 @@ public class StatsPanel extends JPanel
 		String gpString;
 		String gp;
 		String gpRate;
-		if (slayerTrackerConfig.lootUnit().equals(HIGH_ALCHEMY))
+		if (lootUnit.equals(SlayerTrackerLootUnit.HIGH_ALCHEMY))
 		{
 			gpString = "ha";
 			gp = formatter.format(record.getHa());

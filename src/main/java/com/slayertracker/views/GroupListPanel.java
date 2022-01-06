@@ -41,11 +41,11 @@ import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 
 @Getter
-public class GroupListPanel extends JPanel
+public class GroupListPanel extends JPanel implements RecordListPanel
 {
-	private final SlayerTrackerConfig slayerTrackerConfig;
+	private final SlayerTrackerConfig config;
 
-	private final AssignmentRecord assignmentRecord;
+	private final AssignmentRecord record;
 	private final RecordMap<Assignment, AssignmentRecord> recordMap;
 
 	private final AssignmentRecordPanel assignmentRecordPanel;
@@ -54,19 +54,19 @@ public class GroupListPanel extends JPanel
 	GroupListPanel(Assignment assignment,
 				   AssignmentRecord assignmentRecord,
 				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-				   SlayerTrackerConfig slayerTrackerConfig,
+				   SlayerTrackerConfig config,
 				   ItemManager itemManager,
-				   String sortOrder)
+				   Function<? super RecordListPanel, Long> sortFunction)
 	{
-		this.slayerTrackerConfig = slayerTrackerConfig;
-		this.assignmentRecord = assignmentRecord;
+		this.config = config;
+		this.record = assignmentRecord;
 		this.recordMap = assignmentRecords;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Assignment Record Panel
-		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, assignmentRecords, slayerTrackerConfig, itemManager);
-		assignmentRecordPanel.headerPanel.addMouseListener(new MouseAdapter()
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, assignmentRecords, config, itemManager);
+		assignmentRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(MouseEvent e)
@@ -79,30 +79,41 @@ public class GroupListPanel extends JPanel
 		});
 		add(assignmentRecordPanel);
 
-		update(sortOrder);
+		update(sortFunction);
 	}
 
-	void update(String sortOrder)
+	void update(Function<? super RecordListPanel, Long> sortFunction)
 	{
 		// Remove/Update/Add Panels
 
 		// Remove panels
 		variantRecordPanelToHorizontalPanel.keySet().removeIf(recordPanel ->
-			!assignmentRecord.getVariantRecords().containsValue(recordPanel.getRecord()));
+			!record.getVariantRecords().containsValue(recordPanel.getRecord()));
 
 		// Update panels
 		assignmentRecordPanel.update();
 		variantRecordPanelToHorizontalPanel.keySet().forEach(RecordPanel::update);
 
 		// Add panels
-		assignmentRecord.getVariantRecords().forEach((variant, variantRecord) -> {
+		record.getVariantRecords().forEach((variant, variantRecord) -> {
 			// For each Variant Record in model, add panel if NO Variant Panel's Record matches it
 			if (variantRecordPanelToHorizontalPanel.keySet().stream().noneMatch(variantRecordPanel -> variantRecordPanel.getRecord().equals(variantRecord)))
 			{
 				JPanel horizontalPanel = new JPanel();
 				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
 				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, assignmentRecord.getVariantRecords(), slayerTrackerConfig);
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, record.getVariantRecords(), config);
+				variantRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
+				{
+					@Override
+					public void mouseClicked(MouseEvent e)
+					{
+						if (e.getButton() == MouseEvent.BUTTON1)
+						{
+							variantRecordPanel.toggleCollapsed();
+						}
+					}
+				});
 				horizontalPanel.add(variantRecordPanel);
 				variantRecordPanelToHorizontalPanel.put(variantRecordPanel, horizontalPanel);
 			}
@@ -112,31 +123,6 @@ public class GroupListPanel extends JPanel
 
 		removeAll();
 		add(assignmentRecordPanel);
-
-		Function<RecordPanel, Long> sortFunction;
-		switch (sortOrder)
-		{
-			case "XP Rate":
-				sortFunction = variantRecordPanel ->
-					(long) Math.round(-1 * variantRecordPanel.getRecord().getXp() / variantRecordPanel.getRecord().getHours());
-				break;
-			case "GP Rate":
-				if (slayerTrackerConfig.lootUnit().equals(SlayerTrackerConfig.SlayerTrackerLootUnit.GRAND_EXCHANGE))
-				{
-					sortFunction = variantRecordPanel ->
-						(long) Math.round(-1 * variantRecordPanel.getRecord().getGe() / variantRecordPanel.getRecord().getHours());
-				}
-				else
-				{
-					sortFunction = variantRecordPanel ->
-						(long) Math.round(-1 * variantRecordPanel.getRecord().getHa() / variantRecordPanel.getRecord().getHours());
-				}
-				break;
-			default:
-				sortFunction = variantRecordPanel ->
-					-1 * variantRecordPanel.getRecord().getCombatInstant().getEpochSecond();
-				break;
-		}
 
 		variantRecordPanelToHorizontalPanel.keySet().stream()
 			.sorted(Comparator.comparing(sortFunction))
