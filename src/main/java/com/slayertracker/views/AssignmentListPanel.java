@@ -29,8 +29,10 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
@@ -47,44 +49,73 @@ public class AssignmentListPanel extends JPanel
 
 	AssignmentListPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 						SlayerTrackerConfig slayerTrackerConfig,
-						ItemManager itemManager)
+						ItemManager itemManager,
+						String sortOrder)
 	{
 		this.assignmentRecords = assignmentRecords;
 		this.slayerTrackerConfig = slayerTrackerConfig;
 		this.itemManager = itemManager;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		update();
+		update(sortOrder);
 	}
 
-	void update()
+	void update(String sortOrder)
 	{
+		// Remove/Update/Add Panels
+
 		// Remove panels
 		groupListPanels.removeIf(groupListPanel ->
 			!assignmentRecords.containsValue(groupListPanel.getAssignmentRecord()));
 
 		// Update panels
-		groupListPanels.forEach(GroupListPanel::update);
+		groupListPanels.forEach(groupListPanel -> groupListPanel.update(sortOrder));
 
 		// Add panels
 		assignmentRecords.forEach((assignment, assignmentRecord) -> {
 			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignmentRecord().equals(assignmentRecord)))
 			{
-				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, assignmentRecords, slayerTrackerConfig, itemManager);
+				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecord, assignmentRecords, slayerTrackerConfig, itemManager, sortOrder);
 				groupListPanels.add(groupListPanel);
 			}
 		});
 
-		build();
-	}
+		// Rebuild
 
-	void build()
-	{
 		removeAll();
-		groupListPanels.forEach(groupListPanel -> {
-			add(groupListPanel);
-			add(Box.createRigidArea(new Dimension(0, 5)));
-		});
+
+		Function<GroupListPanel, Long> sortFunction;
+		switch (sortOrder)
+		{
+			case "XP Rate":
+				sortFunction = groupListPanel ->
+					(long) Math.round(-1 * groupListPanel.getAssignmentRecord().getXp() / groupListPanel.getAssignmentRecord().getHours());
+				break;
+			case "GP Rate":
+				if (slayerTrackerConfig.lootUnit().equals(SlayerTrackerConfig.SlayerTrackerLootUnit.GRAND_EXCHANGE))
+				{
+					sortFunction = groupListPanel ->
+						(long) Math.round(-1 * groupListPanel.getAssignmentRecord().getGe() / groupListPanel.getAssignmentRecord().getHours());
+				}
+				else
+				{
+					sortFunction = groupListPanel ->
+						(long) Math.round(-1 * groupListPanel.getAssignmentRecord().getHa() / groupListPanel.getAssignmentRecord().getHours());
+				}
+				break;
+			default:
+				sortFunction = groupListPanel ->
+					-1 * groupListPanel.getAssignmentRecord().getCombatInstant().getEpochSecond();
+				break;
+		}
+
+		groupListPanels.stream()
+			.sorted(Comparator.comparing(sortFunction))
+			.forEachOrdered((GroupListPanel groupListPanel) -> {
+				add(groupListPanel);
+				add(Box.createRigidArea(new Dimension(0, 5)));
+			});
+
 		revalidate();
 		repaint();
 	}

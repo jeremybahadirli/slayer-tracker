@@ -31,7 +31,9 @@ import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
@@ -53,7 +55,8 @@ public class GroupListPanel extends JPanel
 				   AssignmentRecord assignmentRecord,
 				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 				   SlayerTrackerConfig slayerTrackerConfig,
-				   ItemManager itemManager)
+				   ItemManager itemManager,
+				   String sortOrder)
 	{
 		this.slayerTrackerConfig = slayerTrackerConfig;
 		this.assignmentRecord = assignmentRecord;
@@ -76,11 +79,13 @@ public class GroupListPanel extends JPanel
 		});
 		add(assignmentRecordPanel);
 
-		update();
+		update(sortOrder);
 	}
 
-	void update()
+	void update(String sortOrder)
 	{
+		// Remove/Update/Add Panels
+
 		// Remove panels
 		variantRecordPanelToHorizontalPanel.keySet().removeIf(recordPanel ->
 			!assignmentRecord.getVariantRecords().containsValue(recordPanel.getRecord()));
@@ -103,14 +108,39 @@ public class GroupListPanel extends JPanel
 			}
 		});
 
-		build();
-	}
+		// Rebuild
 
-	void build()
-	{
 		removeAll();
 		add(assignmentRecordPanel);
-		variantRecordPanelToHorizontalPanel.values().forEach(this::add);
+
+		Function<RecordPanel, Long> sortFunction;
+		switch (sortOrder)
+		{
+			case "XP Rate":
+				sortFunction = variantRecordPanel ->
+					(long) Math.round(-1 * variantRecordPanel.getRecord().getXp() / variantRecordPanel.getRecord().getHours());
+				break;
+			case "GP Rate":
+				if (slayerTrackerConfig.lootUnit().equals(SlayerTrackerConfig.SlayerTrackerLootUnit.GRAND_EXCHANGE))
+				{
+					sortFunction = variantRecordPanel ->
+						(long) Math.round(-1 * variantRecordPanel.getRecord().getGe() / variantRecordPanel.getRecord().getHours());
+				}
+				else
+				{
+					sortFunction = variantRecordPanel ->
+						(long) Math.round(-1 * variantRecordPanel.getRecord().getHa() / variantRecordPanel.getRecord().getHours());
+				}
+				break;
+			default:
+				sortFunction = variantRecordPanel ->
+					-1 * variantRecordPanel.getRecord().getCombatInstant().getEpochSecond();
+				break;
+		}
+
+		variantRecordPanelToHorizontalPanel.keySet().stream()
+			.sorted(Comparator.comparing(sortFunction))
+			.forEachOrdered(variantRecordPanel -> add(variantRecordPanelToHorizontalPanel.get(variantRecordPanel)));
 
 		revalidate();
 		repaint();

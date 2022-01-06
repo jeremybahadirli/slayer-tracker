@@ -27,6 +27,9 @@ package com.slayertracker;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
 import com.slayertracker.groups.Assignment;
@@ -168,12 +171,17 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		DATA_FOLDER.mkdirs();
 
 		// Create gson instance for groups serialization.
-		// Type adapters register SlayerTrackerPlugin as
+		// First two type adapters register SlayerTrackerPlugin as
 		// a property change listener for records loaded from disk
+		// Second two type adapters (de)serialize combatInstant as a long
 		gson = new GsonBuilder()
 			.excludeFieldsWithoutExposeAnnotation()
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
+			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
+				new JsonPrimitive(instant.getEpochSecond()))
+			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
+				Instant.ofEpochSecond(json.getAsLong()))
 			.create();
 
 		// If already logged in on plugin startup, store current Slayer xp for xp drop calculation
@@ -235,14 +243,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
 				this.currentAssignment = assignment);
 
-			// Clear interactors and start times for all records
+			// Clear interactors for all records
 			assignmentRecords.values().forEach(assignmentRecord -> {
 				assignmentRecord.getInteractors().clear();
-				assignmentRecord.setStartInstant(null);
-				assignmentRecord.getVariantRecords().values().forEach(variantRecord -> {
-					variantRecord.getInteractors().clear();
-					variantRecord.setStartInstant(null);
-				});
+				assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
 			});
 		}
 	}
@@ -266,16 +270,16 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			assignmentRecord.getInteractors().stream()
 				.filter(isNotInteracting)
 				.forEach(interactor -> {
-					assignmentRecord.addToHours(Duration.between(assignmentRecord.getStartInstant(), now));
-					assignmentRecord.setStartInstant(now);
+					assignmentRecord.addToHours(Duration.between(assignmentRecord.getCombatInstant(), now));
+					assignmentRecord.setCombatInstant(now);
 				});
 
 			assignmentRecord.getVariantRecords().values().forEach(variantRecord ->
 				variantRecord.getInteractors().stream()
 					.filter(isNotInteracting)
 					.forEach(interactor -> {
-						variantRecord.addToHours(Duration.between(variantRecord.getStartInstant(), now));
-						variantRecord.setStartInstant(now);
+						variantRecord.addToHours(Duration.between(variantRecord.getCombatInstant(), now));
+						variantRecord.setCombatInstant(now);
 					}));
 		});
 
@@ -320,10 +324,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// If Assignment Record for this npc doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
-		// If this was the first interactor in the record, set start instant to now
+		// If this was the first interactor in the record, set combat instant to now
 		if (assignmentRecord.getInteractors().isEmpty())
 		{
-			assignmentRecord.setStartInstant(now);
+			assignmentRecord.setCombatInstant(now);
 		}
 		// Add the npc to the record's interactors
 		assignmentRecord.getInteractors().add(npc);
@@ -334,7 +338,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (variantRecord.getInteractors().isEmpty())
 			{
-				variantRecord.setStartInstant(now);
+				variantRecord.setCombatInstant(now);
 			}
 			variantRecord.getInteractors().add(npc);
 		});

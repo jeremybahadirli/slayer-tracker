@@ -49,8 +49,9 @@ public class Record
 	private int ge;
 	@Expose
 	private int ha;
+	@Expose
+	private Instant combatInstant;
 
-	private Instant startInstant;
 	private Set<NPC> interactors;
 
 	private final PropertyChangeSupport support;
@@ -104,8 +105,8 @@ public class Record
 		support.firePropertyChange("ha", oldVal, ha);
 	}
 
-	public void setStartInstant(Instant instant)
+	public void setCombatInstant(Instant instant)
 	{
-		startInstant = instant;
+		combatInstant = instant;
 	}
 }

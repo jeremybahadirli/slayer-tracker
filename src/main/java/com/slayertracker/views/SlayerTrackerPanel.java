@@ -24,12 +24,19 @@
  */
 package com.slayertracker.views;
 
+import com.google.common.collect.ImmutableList;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import java.awt.Dimension;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.PluginPanel;
@@ -41,6 +48,13 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	private final JButton resetAllButton;
 	private final AssignmentListPanel assignmentListPanel;
+	private final JComboBox<String> sorterComboBox;
+
+	private static final ImmutableList<String> SORT_ORDERS = ImmutableList.of(
+		"Recently Killed",
+		"XP Rate",
+		"GP Rate"
+	);
 
 	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 							  SlayerTrackerConfig slayerTrackerConfig,
@@ -48,8 +62,20 @@ public class SlayerTrackerPanel extends PluginPanel
 	{
 		this.assignmentRecords = assignmentRecords;
 
-		// Assignment list panel
-		assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager);
+		// Sorter
+		JPanel sorterPanel = new JPanel();
+		sorterPanel.setLayout(new BoxLayout(sorterPanel, BoxLayout.X_AXIS));
+		sorterPanel.add(new JLabel("Sort by:"));
+		sorterPanel.add(Box.createRigidArea(new Dimension(48, 0)));
+		sorterComboBox = new JComboBox<>();
+		SORT_ORDERS.forEach(sorterComboBox::addItem);
+		sorterComboBox.addActionListener(l ->
+			update());
+		sorterPanel.add(sorterComboBox);
+		add(sorterPanel);
+
+		// Assignment list
+		assignmentListPanel = new AssignmentListPanel(assignmentRecords, slayerTrackerConfig, itemManager, sorterComboBox.getSelectedItem().toString());
 		add(assignmentListPanel);
 
 		// Reset All button
@@ -72,7 +98,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	public void update()
 	{
-		assignmentListPanel.update();
+		assignmentListPanel.update(sorterComboBox.getSelectedItem().toString());
 		resetAllButton.setVisible(!assignmentRecords.isEmpty());
 	}
 }
