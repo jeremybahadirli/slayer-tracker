@@ -61,7 +61,7 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemID;
 import net.runelite.api.NPC;
-import static net.runelite.api.Skill.SLAYER;
+import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -191,7 +191,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// If not logged in, Player will receive xp drop on login, so we will store it then
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
-			cachedXp = client.getSkillExperience(SLAYER);
+			cachedXp = client.getSkillExperience(Skill.SLAYER);
 		}
 	}
 
@@ -429,7 +429,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onStatChanged(StatChanged event)
 	{
-		if (event.getSkill() != SLAYER)
+		if (event.getSkill() != Skill.SLAYER)
 		{
 			return;
 		}
