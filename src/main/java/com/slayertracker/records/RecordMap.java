@@ -33,20 +33,20 @@ import java.util.Map;
 
 public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 {
-	private final PropertyChangeSupport support;
+	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 	public RecordMap(PropertyChangeListener pcl)
 	{
 		super();
-		support = new PropertyChangeSupport(this);
 		support.addPropertyChangeListener(pcl);
 	}
 
 	@Override
 	public R put(G group, R record)
 	{
+		R r = super.put(group, record);
 		support.firePropertyChange("RecordMap " + group.getName(), null, group);
-		return super.put(group, record);
+		return r;
 	}
 
 	@Override
@@ -59,16 +59,15 @@ public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 	@Override
 	public R remove(Object group)
 	{
-		R record = super.remove(group);
-		super.remove(group);
+		R r = super.remove(group);
 		support.firePropertyChange("RecordMap remove", group, null);
-		return record;
+		return r;
 	}
 
 	@Override
 	public void clear()
 	{
-		support.firePropertyChange("RecordMap clear", this.keySet(), Collections.EMPTY_SET);
 		super.clear();
+		support.firePropertyChange("RecordMap clear", this.keySet(), Collections.EMPTY_SET);
 	}
 }

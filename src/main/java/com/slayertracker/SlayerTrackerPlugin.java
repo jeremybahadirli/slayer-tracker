@@ -84,6 +84,8 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
+// DEVELOPMENT STARTED 12/05/21
+//
 // TERMINOLOGY
 // Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
 // Variant: A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)"
@@ -532,7 +534,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 			File dataFile = new File(DATA_FOLDER, dataFileName);
 			Writer writer = new FileWriter(dataFile);
-			log.info("SAVING DATA TO DISK");
 			gson.toJson(assignmentRecords, writer);
 			writer.flush();
 			writer.close();

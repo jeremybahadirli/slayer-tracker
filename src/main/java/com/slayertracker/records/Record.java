@@ -32,11 +32,9 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Getter;
-import lombok.Setter;
 import net.runelite.api.NPC;
 
 @Getter
-@Setter
 public class Record
 {
 	@Expose
@@ -52,16 +50,12 @@ public class Record
 	@Expose
 	private Instant combatInstant;
 
-	private Set<NPC> interactors;
-
-	private final PropertyChangeSupport support;
+	private final Set<NPC> interactors = new HashSet<>();
+	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 	public Record(PropertyChangeListener pcl)
 	{
-		support = new PropertyChangeSupport(this);
 		support.addPropertyChangeListener(pcl);
-
-		interactors = new HashSet<>();
 
 		kc = 0;
 		hours = 0f;

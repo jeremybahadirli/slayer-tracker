@@ -4,6 +4,7 @@
 
 ---
 Latest Updates:
+* 01/06/22 – Add welcome text
 * 01/06/22 – Record Panels now sortable
   * **SAVE FILE MUST BE UPDATED – Contact Jeremy or reset it by deleting .runelite/slayer-tracker/**
 * 01/04/22 – Add "Reset" right-click option to Record Panels

@@ -31,6 +31,7 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -44,13 +45,18 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.PluginErrorPanel;
 
 @Getter
 public class SlayerTrackerPanel extends PluginPanel
 {
+	private static final int VERTICAL_GAP = 6;
+
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 
+	private final JPanel welcomePanel;
 	private final JButton resetAllButton;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
@@ -76,6 +82,8 @@ public class SlayerTrackerPanel extends PluginPanel
 		this.assignmentRecords = assignmentRecords;
 		this.itemManager = itemManager;
 		this.config = config;
+
+		setLayout(new DynamicGridLayout(0, 1, 0, VERTICAL_GAP));
 
 		// Sorter
 		JPanel sorterPanel = new JPanel();
@@ -113,6 +121,16 @@ public class SlayerTrackerPanel extends PluginPanel
 		});
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
+
+		// TODO make this better
+		// Welcome text
+		welcomePanel = new JPanel();
+		welcomePanel.setLayout(new GridLayout(0, 1));
+		welcomePanel.add(Box.createRigidArea(new Dimension(0, 64)));
+		PluginErrorPanel welcomeText = new PluginErrorPanel();
+		welcomeText.setContent("Slayer Tracker", "Compare XP and GP rates for each Slayer task.");
+		welcomePanel.add(welcomeText);
+		add(welcomePanel);
 
 		// Assignment list
 		assignmentListPanel = new JPanel();
@@ -165,8 +183,14 @@ public class SlayerTrackerPanel extends PluginPanel
 			.sorted(Comparator.comparing(sortFunction))
 			.forEachOrdered((GroupListPanel groupListPanel) -> {
 				assignmentListPanel.add(groupListPanel);
-				assignmentListPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+				assignmentListPanel.add(Box.createRigidArea(new Dimension(0, VERTICAL_GAP)));
 			});
+
+		// Welcome label
+		if (!assignmentRecords.isEmpty())
+		{
+			remove(welcomePanel);
+		}
 
 		// Reset All button
 		resetAllButton.setVisible(!assignmentRecords.isEmpty());
