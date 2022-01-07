@@ -32,6 +32,7 @@ import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -190,6 +191,10 @@ public class SlayerTrackerPanel extends PluginPanel
 		if (!assignmentRecords.isEmpty())
 		{
 			remove(welcomePanel);
+		}
+		else if (Arrays.stream(getComponents()).noneMatch(component -> component.equals(welcomePanel)))
+		{
+			add(welcomePanel);
 		}
 
 		// Reset All button
