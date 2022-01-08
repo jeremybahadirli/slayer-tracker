@@ -169,7 +169,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		// Add panels
 		assignmentRecords.keySet().forEach(assignment -> {
-			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getRecord().equals(assignment)))
+			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignment().equals(assignment)))
 			{
 				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecords, config, itemManager, sortFunction);
 				groupListPanels.add(groupListPanel);
