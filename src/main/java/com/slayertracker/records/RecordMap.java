@@ -24,7 +24,6 @@
  */
 package com.slayertracker.records;
 
-import com.slayertracker.groups.Group;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.Collections;

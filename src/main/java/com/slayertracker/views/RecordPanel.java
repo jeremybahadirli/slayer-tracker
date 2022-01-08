@@ -46,6 +46,8 @@ import net.runelite.client.ui.ColorScheme;
 public class RecordPanel extends JPanel implements RecordListPanel
 {
 	private final SlayerTrackerConfig config;
+
+	private final Group group;
 	private final Record record;
 	private final JPanel headerPanel;
 
@@ -53,11 +55,11 @@ public class RecordPanel extends JPanel implements RecordListPanel
 	StatsPanel statsPanel;
 
 	RecordPanel(Group group,
-				Record record,
 				RecordMap<? extends Group, ? extends Record> recordMap,
 				SlayerTrackerConfig config)
 	{
-		this.record = record;
+		this.group = group;
+		this.record = recordMap.get(group);
 		this.config = config;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 

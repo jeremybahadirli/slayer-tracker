@@ -34,11 +34,10 @@ import lombok.Getter;
 public class VariantRecordPanel extends RecordPanel
 {
 	VariantRecordPanel(Variant variant,
-					   Record variantRecord,
 					   RecordMap<Variant, Record> variantRecords,
 					   SlayerTrackerConfig config)
 	{
-		super(variant, variantRecord, variantRecords, config);
+		super(variant, variantRecords, config);
 		bodyPanel.add(statsPanel);
 	}
 }

@@ -37,12 +37,11 @@ import net.runelite.client.game.ItemManager;
 public class AssignmentRecordPanel extends RecordPanel
 {
 	AssignmentRecordPanel(Assignment assignment,
-						  AssignmentRecord assignmentRecord,
 						  RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 						  SlayerTrackerConfig config,
 						  ItemManager itemManager)
 	{
-		super(assignment, assignmentRecord, assignmentRecords, config);
+		super(assignment, assignmentRecords, config);
 		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
 		bodyPanel.add(statsPanel);
 	}

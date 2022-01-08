@@ -32,7 +32,8 @@ import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -45,27 +46,26 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 {
 	private final SlayerTrackerConfig config;
 
+	private final Assignment assignment;
 	private final AssignmentRecord record;
-	private final RecordMap<Assignment, AssignmentRecord> recordMap;
 
 	private final AssignmentRecordPanel assignmentRecordPanel;
-	private final HashMap<RecordPanel, JPanel> variantRecordPanelToHorizontalPanel = new HashMap<>();
+	private final Set<RecordPanel> variantRecordPanels = new HashSet<>();
 
 	GroupListPanel(Assignment assignment,
-				   AssignmentRecord assignmentRecord,
 				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 				   SlayerTrackerConfig config,
 				   ItemManager itemManager,
 				   Function<? super RecordListPanel, Long> sortFunction)
 	{
+		this.assignment = assignment;
 		this.config = config;
-		this.record = assignmentRecord;
-		this.recordMap = assignmentRecords;
+		this.record = assignmentRecords.get(assignment);
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Assignment Record Panel
-		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecord, assignmentRecords, config, itemManager);
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecords, config, itemManager);
 		assignmentRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -87,23 +87,20 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		// Remove/Update/Add Panels
 
 		// Remove panels
-		variantRecordPanelToHorizontalPanel.keySet().removeIf(recordPanel ->
+		variantRecordPanels.removeIf(recordPanel ->
 			!record.getVariantRecords().containsValue(recordPanel.getRecord()));
 
 		// Update panels
 		assignmentRecordPanel.update();
-		variantRecordPanelToHorizontalPanel.keySet().forEach(RecordPanel::update);
+		variantRecordPanels.forEach(RecordPanel::update);
 
 		// Add panels
-		record.getVariantRecords().forEach((variant, variantRecord) -> {
+		record.getVariantRecords().keySet().forEach(variant -> {
 			// For each Variant Record in model, add panel if NO Variant Panel's Record matches it
-			if (variantRecordPanelToHorizontalPanel.keySet().stream().noneMatch(variantRecordPanel ->
-				variantRecordPanel.getRecord().equals(variantRecord)))
+			if (variantRecordPanels.stream().noneMatch(variantRecordPanel ->
+				variantRecordPanel.getGroup().equals(variant)))
 			{
-				JPanel horizontalPanel = new JPanel();
-				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
-				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, variantRecord, record.getVariantRecords(), config);
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), config);
 				variantRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 				{
 					@Override
@@ -115,8 +112,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 						}
 					}
 				});
-				horizontalPanel.add(variantRecordPanel);
-				variantRecordPanelToHorizontalPanel.put(variantRecordPanel, horizontalPanel);
+				variantRecordPanels.add(variantRecordPanel);
 			}
 		});
 
@@ -125,9 +121,15 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		removeAll();
 		add(assignmentRecordPanel);
 
-		variantRecordPanelToHorizontalPanel.keySet().stream()
+		variantRecordPanels.stream()
 			.sorted(Comparator.comparing(sortFunction))
-			.forEachOrdered(variantRecordPanel -> add(variantRecordPanelToHorizontalPanel.get(variantRecordPanel)));
+			.forEachOrdered(variantRecordPanel -> {
+				JPanel horizontalPanel = new JPanel();
+				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
+				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
+				horizontalPanel.add(variantRecordPanel);
+				add(horizontalPanel);
+			});
 
 		revalidate();
 		repaint();
@@ -149,7 +151,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	{
 		// Expand Assignment Record panel and all of its Variant Record panels
 		assignmentRecordPanel.expand();
-		variantRecordPanelToHorizontalPanel.values().forEach(variantRecordPanel ->
+		variantRecordPanels.forEach(variantRecordPanel ->
 			variantRecordPanel.setVisible(true));
 	}
 
@@ -157,7 +159,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	{
 		// Collapse Assignment Record panel and all of its Variant Record panels
 		assignmentRecordPanel.collapse();
-		variantRecordPanelToHorizontalPanel.values().forEach(variantRecordPanel ->
+		variantRecordPanels.forEach(variantRecordPanel ->
 			variantRecordPanel.setVisible(false));
 	}
 }
