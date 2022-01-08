@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
+public class RecordMap<G, R extends Record> extends HashMap<G, R>
 {
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
@@ -45,7 +45,7 @@ public class RecordMap<G extends Group, R extends Record> extends HashMap<G, R>
 	public R put(G group, R record)
 	{
 		R r = super.put(group, record);
-		support.firePropertyChange("RecordMap " + group.getName(), null, group);
+		support.firePropertyChange("RecordMap " + group, null, group);
 		return r;
 	}
 

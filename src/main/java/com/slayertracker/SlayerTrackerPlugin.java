@@ -220,6 +220,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 					.ifPresent(assignment -> this.currentAssignment = assignment);
 				// Set groups file name before loading the records
 				// This will be remembered for saving after logout as well
+				// TODO NPE when changing accounts or possibly failing to login
 				dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
 				loadRecordsFromDisk();
 				break;
