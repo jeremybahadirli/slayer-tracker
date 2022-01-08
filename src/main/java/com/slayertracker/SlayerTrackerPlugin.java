@@ -152,6 +152,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	private SlayerTrackerPanel slayerTrackerPanel;
 
+	private boolean loggingIn = false;
+
 	@Override
 	protected void startUp()
 	{
@@ -214,13 +216,20 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		switch (event.getGameState())
 		{
 			case LOGGING_IN:
+				loggingIn = true;
+				break;
+			case LOGGED_IN:
+				if (!loggingIn)
+				{
+					return;
+				}
+				loggingIn = false;
 				// Set current assignment from Slayer Plugin config file
 				Assignment.getAssignmentByName(
 						configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
 					.ifPresent(assignment -> this.currentAssignment = assignment);
 				// Set groups file name before loading the records
 				// This will be remembered for saving after logout as well
-				// TODO NPE when changing accounts or possibly failing to login
 				dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
 				loadRecordsFromDisk();
 				break;
