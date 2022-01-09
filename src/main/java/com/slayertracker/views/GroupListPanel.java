@@ -28,16 +28,15 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
-import java.awt.Dimension;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
 
@@ -77,7 +76,6 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 				}
 			}
 		});
-		add(assignmentRecordPanel);
 
 		update(sortFunction);
 	}
@@ -119,16 +117,14 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		// Rebuild
 
 		removeAll();
+
 		add(assignmentRecordPanel);
 
 		variantRecordPanels.stream()
 			.sorted(Comparator.comparing(sortFunction))
 			.forEachOrdered(variantRecordPanel -> {
-				JPanel horizontalPanel = new JPanel();
-				horizontalPanel.setLayout(new BoxLayout(horizontalPanel, BoxLayout.X_AXIS));
-				horizontalPanel.add(Box.createRigidArea(new Dimension(36, 0)));
-				horizontalPanel.add(variantRecordPanel);
-				add(horizontalPanel);
+				variantRecordPanel.setBorder(new EmptyBorder(0, 36, 0, 0));
+				add(variantRecordPanel);
 			});
 
 		revalidate();

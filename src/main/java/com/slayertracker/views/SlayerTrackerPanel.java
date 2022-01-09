@@ -31,8 +31,6 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
-import java.awt.GridLayout;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -57,7 +55,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 
-	private final JPanel welcomePanel;
+	PluginErrorPanel welcomeText;
 	private final JButton resetAllButton;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
@@ -123,20 +121,14 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
 
-		// TODO make this better
-		// Welcome text
-		welcomePanel = new JPanel();
-		welcomePanel.setLayout(new GridLayout(0, 1));
-		welcomePanel.add(Box.createRigidArea(new Dimension(0, 64)));
-		PluginErrorPanel welcomeText = new PluginErrorPanel();
-		welcomeText.setContent("Slayer Tracker", "Compare XP and GP rates for each Slayer task.");
-		welcomePanel.add(welcomeText);
-		add(welcomePanel);
-
-		// Assignment list
+		// Assignment list panel
 		assignmentListPanel = new JPanel();
-		assignmentListPanel.setLayout(new BoxLayout(assignmentListPanel, BoxLayout.Y_AXIS));
+		assignmentListPanel.setLayout(new DynamicGridLayout(0, 1, 0, VERTICAL_GAP));
 		add(assignmentListPanel);
+
+		// Welcome text
+		welcomeText = new PluginErrorPanel();
+		welcomeText.setContent("Slayer Tracker", "Compare XP and GP rates for each Slayer task.");
 
 		// Reset All button
 		resetAllButton = new JButton("Reset All");
@@ -158,7 +150,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	public void update()
 	{
-		// Assignment list
+		// Remove/Update/Add Panels
 
 		// Remove panels
 		groupListPanels.removeIf(groupListPanel ->
@@ -180,24 +172,20 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		assignmentListPanel.removeAll();
 
-		groupListPanels.stream()
-			.sorted(Comparator.comparing(sortFunction))
-			.forEachOrdered((GroupListPanel groupListPanel) -> {
-				assignmentListPanel.add(groupListPanel);
-				assignmentListPanel.add(Box.createRigidArea(new Dimension(0, VERTICAL_GAP)));
-			});
-
-		// Welcome label
-		if (!assignmentRecords.isEmpty())
+		if (groupListPanels.isEmpty())
 		{
-			remove(welcomePanel);
+			// Welcome text
+			assignmentListPanel.add(welcomeText);
 		}
-		else if (Arrays.stream(getComponents()).noneMatch(component -> component.equals(welcomePanel)))
+		else
 		{
-			add(welcomePanel);
+			// Group List Panels
+			groupListPanels.stream()
+				.sorted(Comparator.comparing(sortFunction))
+				.forEachOrdered(assignmentListPanel::add);
 		}
 
 		// Reset All button
-		resetAllButton.setVisible(!assignmentRecords.isEmpty());
+		resetAllButton.setVisible(!groupListPanels.isEmpty());
 	}
 }
