@@ -265,9 +265,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	private final Predicate<NPC> isNotInteracting = interactor ->
 		!client.getNpcs().contains(interactor)
-			|| client.getLocalPlayer().getInteracting() != interactor // For null case, != rather than !.equals
-			&& (interactor.getInteracting() == null
-			|| !interactor.getInteracting().equals(client.getLocalPlayer()));
+			|| client.getLocalPlayer() == null
+			|| client.getLocalPlayer().getInteracting() != interactor
+			&& interactor.getInteracting() != client.getLocalPlayer();
 
 	@Subscribe
 	public void onGameTick(GameTick event)
@@ -572,8 +572,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private static final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->
 		// True if formatted NPC name contains any of the Assignment's target names,
 		// AND NPC has an Attack OR Pick action
-		assignment.getTargetNames().stream().anyMatch(
-			npc.getTransformedComposition().getName().replace('\u00A0', ' ').toLowerCase()::contains)
+		npc.getTransformedComposition() != null
+			&& assignment.getTargetNames().stream()
+			.anyMatch(npc.getTransformedComposition().getName().replace('\u00A0', ' ').toLowerCase()::contains)
 			&& (ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Attack")
 			|| ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Pick"));
 
