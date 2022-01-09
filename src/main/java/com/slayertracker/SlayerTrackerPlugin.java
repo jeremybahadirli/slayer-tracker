@@ -44,9 +44,11 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Writer;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -170,9 +172,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			.build();
 		clientToolbar.addNavigation(navButton);
 
-		// Create data folder on disk if it doesn't exist
-		DATA_FOLDER.mkdirs();
-
 		// GSON serializes record data to JSON for disk storage
 		gson = new GsonBuilder()
 			// Only serialize fields with @Expose
@@ -181,7 +180,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			// passing SlayerTrackerPlugin as a property change listener
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
-			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<Variant, Record>>) type -> new RecordMap<>(this))
+			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
 			// GSON doesn't recognize Instance, so serialize that as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
@@ -510,10 +509,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	{
 		try
 		{
-			// Ensure directory exists, then define groups file
-			File dataFile = new File(DATA_FOLDER, dataFileName);
+			if (dataFileName == null)
+			{
+				return;
+			}
+			File dataFile = getDataFile();
 
-			// If groups file doesn't exist, create it
+			// If data file doesn't exist, create one with an empty RecordMap
 			if (!dataFile.exists())
 			{
 				Writer writer = new FileWriter(dataFile);
@@ -521,8 +523,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				writer.close();
 			}
 
-			// Deserialize json from groups file, as HashMap<Assignment, AssignmentRecord>
-			RecordMap<Assignment, AssignmentRecord> dataFromDisk = gson.fromJson(new FileReader(dataFile), new TypeToken<RecordMap<Assignment, AssignmentRecord>>()
+			// Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
+			// then copy it into assignmentRecords
+			HashMap<Assignment, AssignmentRecord> dataFromDisk = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
 			{
 			}.getType());
 			assignmentRecords.clear();
@@ -530,6 +533,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 		catch (Exception e)
 		{
+			slayerTrackerPanel.displayFileError();
 			e.printStackTrace();
 		}
 	}
@@ -542,7 +546,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			{
 				return;
 			}
-			File dataFile = new File(DATA_FOLDER, dataFileName);
+			File dataFile = getDataFile();
+
 			Writer writer = new FileWriter(dataFile);
 			gson.toJson(assignmentRecords, writer);
 			writer.flush();
@@ -550,8 +555,18 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 		catch (Exception e)
 		{
+			slayerTrackerPanel.displayFileError();
 			e.printStackTrace();
 		}
+	}
+
+	private File getDataFile() throws IOException
+	{
+		if (!DATA_FOLDER.exists() && !DATA_FOLDER.mkdirs())
+		{
+			throw new IOException("Could not create data folder: .runelite/slayer-tracker");
+		}
+		return new File(DATA_FOLDER, dataFileName);
 	}
 
 	private static final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->

@@ -188,4 +188,14 @@ public class SlayerTrackerPanel extends PluginPanel
 		// Reset All button
 		resetAllButton.setVisible(!groupListPanels.isEmpty());
 	}
+
+	public void displayFileError()
+	{
+		assignmentListPanel.removeAll();
+		assignmentListPanel.add(welcomeText);
+
+		PluginErrorPanel fileErrorPanel = new PluginErrorPanel();
+		fileErrorPanel.setContent("Error: Could not create save file", "Slayer Tracker needs access to .runelite/slayer-tracker");
+		assignmentListPanel.add(fileErrorPanel);
+	}
 }
