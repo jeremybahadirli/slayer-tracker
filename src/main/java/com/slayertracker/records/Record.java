@@ -62,41 +62,42 @@ public class Record
 		xp = 0;
 		ge = 0;
 		ha = 0;
+		combatInstant = Instant.now();
 	}
 
 	public void incrementKc()
 	{
 		int oldVal = kc;
 		kc++;
-		support.firePropertyChange("kc", oldVal, kc);
+		support.firePropertyChange("Record kc", oldVal, kc);
 	}
 
 	public void addToHours(Duration d)
 	{
 		float oldVal = hours;
 		hours = hours + (d.getSeconds() / 3600f);
-		support.firePropertyChange("hours", oldVal, hours);
+		support.firePropertyChange("Record hours", oldVal, hours);
 	}
 
 	public void addToXp(int i)
 	{
 		int oldVal = xp;
 		xp += i;
-		support.firePropertyChange("xp", oldVal, xp);
+		support.firePropertyChange("Record xp", oldVal, xp);
 	}
 
 	public void addToGe(int i)
 	{
 		int oldVal = ge;
 		ge += i;
-		support.firePropertyChange("ge", oldVal, ge);
+		support.firePropertyChange("Record ge", oldVal, ge);
 	}
 
 	public void addToHa(int i)
 	{
 		int oldVal = ha;
 		ha += i;
-		support.firePropertyChange("ha", oldVal, ha);
+		support.firePropertyChange("Record ha", oldVal, ha);
 	}
 
 	public void setCombatInstant(Instant instant)

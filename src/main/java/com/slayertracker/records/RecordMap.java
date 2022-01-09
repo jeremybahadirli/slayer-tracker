@@ -26,7 +26,6 @@ package com.slayertracker.records;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,29 +43,31 @@ public class RecordMap<G, R extends Record> extends HashMap<G, R>
 	public R put(G group, R record)
 	{
 		R r = super.put(group, record);
-		support.firePropertyChange("RecordMap " + group, null, group);
+		support.firePropertyChange("RecordMap put", r, record);
 		return r;
 	}
 
 	@Override
 	public void putAll(Map<? extends G, ? extends R> m)
 	{
+		Object oldMap = this.clone();
 		super.putAll(m);
-		support.firePropertyChange("RecordMap putAll", false, true);
+		support.firePropertyChange("RecordMap putAll", oldMap, this);
 	}
 
 	@Override
 	public R remove(Object group)
 	{
 		R r = super.remove(group);
-		support.firePropertyChange("RecordMap remove", group, null);
+		support.firePropertyChange("RecordMap remove", r, null);
 		return r;
 	}
 
 	@Override
 	public void clear()
 	{
+		Object oldMap = this.clone();
 		super.clear();
-		support.firePropertyChange("RecordMap clear", this.keySet(), Collections.EMPTY_SET);
+		support.firePropertyChange("RecordMap clear", oldMap, this);
 	}
 }
