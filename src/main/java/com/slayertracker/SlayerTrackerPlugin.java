@@ -35,6 +35,8 @@ import com.google.inject.Provides;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.CustomRecord;
+import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.SlayerTrackerPanel;
@@ -179,8 +181,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			// When building records from JSON, run these classes' constructors,
 			// passing SlayerTrackerPlugin as a property change listener
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
-			.registerTypeAdapter(Record.class, (InstanceCreator<Record>) type -> new Record(this))
 			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
+			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(this))
 			// GSON doesn't recognize Instance, so serialize that as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
@@ -259,6 +261,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			assignmentRecords.values().forEach(assignmentRecord -> {
 				assignmentRecord.getInteractors().clear();
 				assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
+				assignmentRecord.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
 			});
 		}
 	}
@@ -277,6 +280,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
+		// When interactor no longer interacting, add combat duration to record
 		final Instant now = Instant.now();
 		assignmentRecords.values().forEach(assignmentRecord -> {
 			assignmentRecord.getInteractors().stream()
@@ -293,12 +297,25 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 						variantRecord.addToHours(Duration.between(variantRecord.getCombatInstant(), now));
 						variantRecord.setCombatInstant(now);
 					}));
+
+			assignmentRecord.getCustomRecords().forEach(customRecord ->
+				customRecord.getInteractors().stream()
+					.filter(isNotInteracting)
+					.forEach(interactor -> {
+						customRecord.addToHours(Duration.between(customRecord.getCombatInstant(), now));
+						customRecord.setCombatInstant(now);
+					}));
 		});
 
+		// Remove no-longer-interacting interactors from Interactors set
 		assignmentRecords.values().forEach(assignmentRecord -> {
 			assignmentRecord.getInteractors().removeIf(isNotInteracting);
+
 			assignmentRecord.getVariantRecords().values().forEach(variantRecord ->
 				variantRecord.getInteractors().removeIf(isNotInteracting));
+
+			assignmentRecord.getCustomRecords().forEach(customRecord ->
+				customRecord.getInteractors().removeIf(isNotInteracting));
 		});
 	}
 
@@ -346,7 +363,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		// Do the same as above for the Variant, if one exists
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record(this));
+			assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record());
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (variantRecord.getInteractors().isEmpty())
 			{
@@ -354,6 +371,17 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 			variantRecord.getInteractors().add(npc);
 		});
+
+		// Do the same for all recording Custom records
+		assignmentRecord.getCustomRecords().stream()
+			.filter(CustomRecord::isRecording)
+			.forEach(customRecord -> {
+				if (customRecord.getInteractors().isEmpty())
+				{
+					customRecord.setCombatInstant(now);
+				}
+				customRecord.getInteractors().add(npc);
+			});
 	}
 
 	@Subscribe
@@ -388,6 +416,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				variantRecord.incrementKc();
 			}
 		});
+
+		assignmentRecord.getCustomRecords().stream()
+			.filter(CustomRecord::isRecording)
+			.forEach(Record::incrementKc);
 	}
 
 	@Subscribe
@@ -433,6 +465,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				variantRecord.addToHa(lootHa);
 			}
 		});
+
+		assignmentRecord.getCustomRecords().stream()
+			.filter(CustomRecord::isRecording)
+			.forEach(customRecord -> {
+				customRecord.addToGe(lootGe);
+				customRecord.addToHa(lootHa);
+			});
 	}
 
 	@Subscribe
@@ -499,6 +538,11 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				variantRecord.addToXp(thisNpcsXpShare);
 			}
 		});
+
+		assignmentRecord.getCustomRecords().stream()
+			.filter(CustomRecord::isRecording)
+			.forEach(customRecord ->
+				customRecord.addToXp(thisNpcsXpShare));
 
 		slayerXpDrop -= thisNpcsXpShare;
 		xpShareInteractors.remove(npc);

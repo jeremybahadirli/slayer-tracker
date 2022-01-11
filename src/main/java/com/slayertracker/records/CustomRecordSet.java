@@ -24,23 +24,41 @@
  */
 package com.slayertracker.records;
 
-import com.google.gson.annotations.Expose;
-import com.slayertracker.groups.Variant;
 import java.beans.PropertyChangeListener;
-import lombok.Getter;
+import java.beans.PropertyChangeSupport;
+import java.util.HashSet;
 
-@Getter
-public class AssignmentRecord extends Record
+public class CustomRecordSet<E extends CustomRecord> extends HashSet<E>
 {
-	@Expose
-	private final RecordMap<Variant, Record> variantRecords;
-	@Expose
-	private final CustomRecordSet<CustomRecord> customRecords;
+	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
-	public AssignmentRecord(PropertyChangeListener pcl)
+	public CustomRecordSet(PropertyChangeListener pcl)
 	{
-		super(pcl);
-		variantRecords = new RecordMap<>(pcl);
-		customRecords = new CustomRecordSet<>(pcl);
+		super();
+		support.addPropertyChangeListener(pcl);
+	}
+
+	@Override
+	public boolean add(E record)
+	{
+		boolean e = super.add(record);
+		support.firePropertyChange("CustomRecordMap add", false, e);
+		return e;
+	}
+
+	@Override
+	public boolean remove(Object record)
+	{
+		boolean o = super.remove(record);
+		support.firePropertyChange("CustomRecordMap remove", false, o);
+		return o;
+	}
+
+	@Override
+	public void clear()
+	{
+		Object oldSet = this.clone();
+		super.clear();
+		support.firePropertyChange("CustomRecordMap clear", oldSet, this);
 	}
 }

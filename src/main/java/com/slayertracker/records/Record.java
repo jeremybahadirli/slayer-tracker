@@ -53,16 +53,19 @@ public class Record
 	private final Set<NPC> interactors = new HashSet<>();
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
-	public Record(PropertyChangeListener pcl)
+	public Record()
 	{
-		support.addPropertyChangeListener(pcl);
-
 		kc = 0;
 		hours = 0f;
 		xp = 0;
 		ge = 0;
 		ha = 0;
 		combatInstant = Instant.now();
+	}
+
+	public Record(PropertyChangeListener pcl)
+	{
+		support.addPropertyChangeListener(pcl);
 	}
 
 	public void incrementKc()

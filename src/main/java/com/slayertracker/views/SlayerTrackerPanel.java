@@ -31,12 +31,15 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.KeyboardFocusManager;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -44,6 +47,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.PluginErrorPanel;
@@ -57,6 +61,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	PluginErrorPanel welcomeText;
 	private final JButton resetAllButton;
+	private final JButton resetCustomButton;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
 
@@ -90,9 +95,20 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(new JLabel("Sort by:"));
 		sorterPanel.add(Box.createRigidArea(new Dimension(48, 0)));
 		sorterComboBox = new JComboBox<>();
+		sorterComboBox.setRenderer(new DefaultListCellRenderer()
+		{
+			@Override
+			public void paint(Graphics g)
+			{
+				setBackground(ColorScheme.DARK_GRAY_COLOR);
+				super.paint(g);
+			}
+		});
+
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
 		sorterComboBox.addActionListener(l -> {
-			switch (sorterComboBox.getSelectedItem().toString())
+			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
+			switch (String.valueOf(sorterComboBox.getSelectedItem()))
 			{
 				case "XP Rate":
 					sortFunction = panel ->
@@ -131,7 +147,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		welcomeText.setContent("Slayer Tracker", "Compare XP and GP rates for each Slayer task.");
 
 		// Reset All button
-		resetAllButton = new JButton("Reset All");
+		resetAllButton = new JButton("Delete All");
 		resetAllButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
 				"This will permanently delete all records.",
@@ -144,6 +160,22 @@ public class SlayerTrackerPanel extends PluginPanel
 			}
 		});
 		add(resetAllButton);
+
+		// Reset Custom button
+		resetCustomButton = new JButton("Delete Custom Records");
+		resetCustomButton.addActionListener(event -> {
+			final int result = JOptionPane.showOptionDialog(this,
+				"This will permanently delete all custom records.",
+				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+				null, new String[]{"Yes", "No"}, "No");
+
+			if (result == JOptionPane.YES_OPTION)
+			{
+				assignmentRecords.values().forEach(assignmentRecord ->
+					assignmentRecord.getCustomRecords().clear());
+			}
+		});
+		add(resetCustomButton);
 
 		update();
 	}
@@ -187,6 +219,12 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		// Reset All button
 		resetAllButton.setVisible(!groupListPanels.isEmpty());
+
+		// Reset Custom button
+		resetCustomButton.setVisible(
+			!groupListPanels.isEmpty()
+				&& assignmentRecords.values().stream()
+				.anyMatch(assignmentRecord -> !assignmentRecord.getCustomRecords().isEmpty()));
 	}
 
 	public void displayFileError()

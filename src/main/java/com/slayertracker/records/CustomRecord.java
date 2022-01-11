@@ -25,7 +25,6 @@
 package com.slayertracker.records;
 
 import com.google.gson.annotations.Expose;
-import java.beans.PropertyChangeListener;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,11 +33,11 @@ import lombok.Setter;
 public class CustomRecord extends Record
 {
 	@Expose
-	private boolean recording;
+	private String name = "New Custom Record";
+	private boolean recording = false;
 
-	public CustomRecord(PropertyChangeListener pcl)
+	public CustomRecord()
 	{
-		super(pcl);
-		recording = false;
+		super();
 	}
 }

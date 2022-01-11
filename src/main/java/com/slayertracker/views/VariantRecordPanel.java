@@ -28,6 +28,7 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
+import javax.swing.Box;
 import lombok.Getter;
 
 @Getter
@@ -38,6 +39,8 @@ public class VariantRecordPanel extends RecordPanel
 					   SlayerTrackerConfig config)
 	{
 		super(variant, variantRecords, config);
+		headerPanel.add(Box.createHorizontalGlue());
+
 		bodyPanel.add(statsPanel);
 	}
 }

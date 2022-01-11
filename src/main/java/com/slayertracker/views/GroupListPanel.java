@@ -27,6 +27,7 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -49,7 +50,8 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	private final AssignmentRecord record;
 
 	private final AssignmentRecordPanel assignmentRecordPanel;
-	private final Set<RecordPanel> variantRecordPanels = new HashSet<>();
+	private final Set<VariantRecordPanel> variantRecordPanels = new HashSet<>();
+	private final Set<CustomRecordPanel> customRecordPanels = new HashSet<>();
 
 	GroupListPanel(Assignment assignment,
 				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
@@ -76,6 +78,8 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 				}
 			}
 		});
+		assignmentRecordPanel.getAddCustomRecordButton().addActionListener(l ->
+			record.getCustomRecords().add(new CustomRecord()));
 
 		update(sortFunction);
 	}
@@ -88,9 +92,13 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		variantRecordPanels.removeIf(recordPanel ->
 			!record.getVariantRecords().containsValue(recordPanel.getRecord()));
 
+		customRecordPanels.removeIf(recordPanel ->
+			!record.getCustomRecords().contains(recordPanel.getRecord()));
+
 		// Update panels
 		assignmentRecordPanel.update();
 		variantRecordPanels.forEach(RecordPanel::update);
+		customRecordPanels.forEach(CustomRecordPanel::update);
 
 		// Add panels
 		record.getVariantRecords().keySet().forEach(variant -> {
@@ -114,6 +122,26 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			}
 		});
 
+		record.getCustomRecords().forEach(customRecord -> {
+			if (customRecordPanels.stream().noneMatch(customRecordPanel ->
+				customRecordPanel.getRecord().equals(customRecord)))
+			{
+				CustomRecordPanel customRecordPanel = new CustomRecordPanel(customRecord.getName(), customRecord, record.getCustomRecords(), config);
+				customRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
+				{
+					@Override
+					public void mouseClicked(MouseEvent e)
+					{
+						if (e.getButton() == MouseEvent.BUTTON1)
+						{
+							customRecordPanel.toggleCollapsed();
+						}
+					}
+				});
+				customRecordPanels.add(customRecordPanel);
+			}
+		});
+
 		// Rebuild
 
 		removeAll();
@@ -125,6 +153,13 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			.forEachOrdered(variantRecordPanel -> {
 				variantRecordPanel.setBorder(new EmptyBorder(0, 36, 0, 0));
 				add(variantRecordPanel);
+			});
+
+		customRecordPanels.stream()
+			.sorted(Comparator.comparing(sortFunction))
+			.forEachOrdered(customRecordPanel -> {
+				customRecordPanel.setBorder(new EmptyBorder(0, 36, 0, 0));
+				add(customRecordPanel);
 			});
 
 		revalidate();
