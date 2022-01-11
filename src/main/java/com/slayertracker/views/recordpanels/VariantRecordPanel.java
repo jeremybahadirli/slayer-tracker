@@ -35,8 +35,8 @@ import lombok.Getter;
 public class VariantRecordPanel extends RecordPanel
 {
 	public VariantRecordPanel(Variant variant,
-					   RecordMap<Variant, Record> variantRecords,
-					   SlayerTrackerConfig config)
+							  RecordMap<Variant, Record> variantRecords,
+							  SlayerTrackerConfig config)
 	{
 		super(variant, variantRecords, config);
 		headerPanel.add(Box.createHorizontalGlue());

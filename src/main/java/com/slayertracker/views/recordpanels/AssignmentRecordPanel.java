@@ -48,13 +48,13 @@ public class AssignmentRecordPanel extends RecordPanel
 	JButton addCustomRecordButton;
 
 	public AssignmentRecordPanel(Assignment assignment,
-						  RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-						  SlayerTrackerConfig config,
-						  ItemManager itemManager)
+								 RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+								 SlayerTrackerConfig config,
+								 ItemManager itemManager)
 	{
 		super(assignment, assignmentRecords, config);
 
-		BufferedImage addIcon = ImageUtil.loadImageResource(getClass(), "/add_button.png");
+		BufferedImage addIcon = ImageUtil.loadImageResource(getClass(), "/add_icon.png");
 
 		addCustomRecordButton = new JButton(new ImageIcon(addIcon));
 		addCustomRecordButton.setBorder(new EmptyBorder(0, 0, 0, 0));

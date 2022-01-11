@@ -94,8 +94,8 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 		});
 		headerPanel.add(titleField);
 		// Record button
-		ImageIcon recordIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_button.png"));
-		ImageIcon recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_button_active.png"));
+		ImageIcon recordIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_icon.png"));
+		ImageIcon recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_active_icon.png"));
 		JToggleButton addCustomRecordButton = new JToggleButton(recordIcon);
 		addCustomRecordButton.addActionListener(l -> {
 			if (addCustomRecordButton.isSelected())
