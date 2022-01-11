@@ -28,7 +28,7 @@ import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.views.RecordListPanel;
-import com.slayertracker.views.components.StatsPanel;
+import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;

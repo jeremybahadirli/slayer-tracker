@@ -29,7 +29,7 @@ import com.slayertracker.groups.Group;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.RecordListPanel;
-import com.slayertracker.views.components.StatsPanel;
+import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.util.Arrays;
