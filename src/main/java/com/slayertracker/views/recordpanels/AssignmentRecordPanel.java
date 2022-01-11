@@ -22,25 +22,51 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.views;
+package com.slayertracker.views.recordpanels;
 
 import com.slayertracker.SlayerTrackerConfig;
-import com.slayertracker.groups.Variant;
-import com.slayertracker.records.Record;
+import com.slayertracker.groups.Assignment;
+import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.image.BufferedImage;
 import javax.swing.Box;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.border.EmptyBorder;
 import lombok.Getter;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.util.ImageUtil;
 
 @Getter
-public class VariantRecordPanel extends RecordPanel
+public class AssignmentRecordPanel extends RecordPanel
 {
-	VariantRecordPanel(Variant variant,
-					   RecordMap<Variant, Record> variantRecords,
-					   SlayerTrackerConfig config)
-	{
-		super(variant, variantRecords, config);
-		headerPanel.add(Box.createHorizontalGlue());
+	JButton addCustomRecordButton;
 
+	public AssignmentRecordPanel(Assignment assignment,
+						  RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+						  SlayerTrackerConfig config,
+						  ItemManager itemManager)
+	{
+		super(assignment, assignmentRecords, config);
+
+		BufferedImage addIcon = ImageUtil.loadImageResource(getClass(), "/add_button.png");
+
+		addCustomRecordButton = new JButton(new ImageIcon(addIcon));
+		addCustomRecordButton.setBorder(new EmptyBorder(0, 0, 0, 0));
+		addCustomRecordButton.setPreferredSize(new Dimension(16, 16));
+		addCustomRecordButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		addCustomRecordButton.setFocusPainted(false);
+		Component hg = Box.createHorizontalGlue();
+		hg.setBackground(Color.red);
+		headerPanel.add(hg);
+		headerPanel.add(addCustomRecordButton);
+
+		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
 		bodyPanel.add(statsPanel);
 	}
 }
