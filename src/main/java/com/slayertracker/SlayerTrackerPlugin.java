@@ -60,7 +60,6 @@ import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemID;
@@ -94,8 +93,8 @@ import org.apache.commons.lang3.ArrayUtils;
 // Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
 // Variant: A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)"
 // Group: A group of monsters that is tracked together by the plugin. Both of the above are Groups
-//        "Trolls" Assignment is a Group encompassing all trolls
-//        "Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles
+//		"Trolls" Assignment is a Group encompassing all trolls
+//		"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles
 // Record: The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group
 // Target Name: The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female"
 // Interactor: An individual on-assignment monster which is interacting with the player
@@ -104,22 +103,11 @@ import org.apache.commons.lang3.ArrayUtils;
 // Test logging out during interaction
 // Last kill of task - kc and xp are counted but gp is not.
 // Add all Variants (Category:Slayer monster)
-
-// For each task,
-// Add task weight for each master
-// Add config entry to choose master
-// record LastTask - Banshees 100
-// if currentTask != lastTask,
-// re-average in currentTask to slayer task average length
-// lastTask = currentTask
-
-// - TASK(time, xgp, weight) - All calculations based thereon
-// - goodness = xgp / time
-// - order all tasks by goodness, select only top good tasks allowing for point surplus
-// - Block highest weighted below cutoff
-// - Skip all others below cutoff
-
-// Do some test calculations on the above to get xgp/time gain calibrated
+// Add task weight and average quantity for each task, with extensions as necessary
+// To config, add:
+// 		Slayer Master combo box
+//		Active task extension checkboxes
+// To Side Panel, add Slayer Master view combo box, with option for "All"
 
 @Slf4j
 @PluginDescriptor(
@@ -161,7 +149,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Override
 	protected void startUp()
 	{
-		// Create side panel and controller
+		// Create side panel
 		slayerTrackerPanel = new SlayerTrackerPanel(assignmentRecords, config, itemManager);
 
 		// Create button for side panel
@@ -178,12 +166,12 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		gson = new GsonBuilder()
 			// Only serialize fields with @Expose
 			.excludeFieldsWithoutExposeAnnotation()
-			// When building records from JSON, run these classes' constructors,
-			// passing SlayerTrackerPlugin as a property change listener
+			// When building records from JSON, these classes get
+			// SlayerTrackerPlugin as a property change listener
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
 			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(this))
-			// GSON doesn't recognize Instance, so serialize that as a long
+			// GSON doesn't recognize Instance, so serialize/deserialize as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
 			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
@@ -220,27 +208,31 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				loggingIn = true;
 				break;
 			case LOGGED_IN:
+				// LOGGED_IN can execute while loading chunks in game, so
+				// only proceed if LOGGING_IN ran prior to this
 				if (!loggingIn)
 				{
 					return;
 				}
 				loggingIn = false;
+
 				// Set current assignment from Slayer Plugin config file
 				Assignment.getAssignmentByName(
 						configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
 					.ifPresent(assignment -> this.currentAssignment = assignment);
-				// Set groups file name before loading the records
-				// This will be remembered for saving after logout as well
+
+				// Set data file name
+				// This will be remembered for saving after logout
 				dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
 				loadRecordsFromDisk();
 				break;
 			case LOGIN_SCREEN:
-				// Save data to disk and reset xpShareInteractors as it could
-				// theoretically retain an npc if the player logs
-				// out at exactly the right instant
-				// Assignment Records will be re-defined on login
 				saveRecordsToDisk();
+
+				// xpShareInteractors could theoretically retain an npc
+				// if the player logs out at exactly the right instant
 				xpShareInteractors.clear();
+				// Reset slayer xp
 				cachedXp = -1;
 				break;
 		}
@@ -257,7 +249,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
 				this.currentAssignment = assignment);
 
-			// Clear interactors for all records
+			// Clear interactors for all records, as no more active kills will be on-task
 			assignmentRecords.values().forEach(assignmentRecord -> {
 				assignmentRecord.getInteractors().clear();
 				assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
@@ -266,6 +258,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 	}
 
+	// True if a Player-NPC interaction does not exist with the given NPC
 	private final Predicate<NPC> isNotInteracting = interactor ->
 		!client.getNpcs().contains(interactor)
 			|| client.getLocalPlayer() == null
@@ -280,7 +273,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		// When interactor no longer interacting, add combat duration to record
+		// When an interactor is no longer interacting, add the duration from the last combat instant
+		// to the record, then set the last combat instant to now.
 		final Instant now = Instant.now();
 		assignmentRecords.values().forEach(assignmentRecord -> {
 			assignmentRecord.getInteractors().stream()
@@ -307,7 +301,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 					}));
 		});
 
-		// Remove no-longer-interacting interactors from Interactors set
+		// Remove no-longer-interacting interactors from records' interactor sets
 		assignmentRecords.values().forEach(assignmentRecord -> {
 			assignmentRecord.getInteractors().removeIf(isNotInteracting);
 
@@ -353,7 +347,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// If Assignment Record for this npc doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
-		// If this was the first interactor in the record, set combat instant to now
+		// If this is the first interactor in the record, set last combat instant to now
 		if (assignmentRecord.getInteractors().isEmpty())
 		{
 			assignmentRecord.setCombatInstant(now);
@@ -372,7 +366,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			variantRecord.getInteractors().add(npc);
 		});
 
-		// Do the same for all recording Custom records
+		// Do the same as above for any recording Custom records
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
@@ -392,23 +386,28 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		Actor actor = event.getActor();
-		if (!(actor instanceof NPC))
+		// Only proceed if the dead actor was an NPC
+		if (!(event.getActor() instanceof NPC))
 		{
 			return;
 		}
 
-		NPC npc = (NPC) actor;
+		NPC npc = (NPC) event.getActor();
 
+		// Only proceed if the dead NPC is in the assignment record's interactors
 		if (assignmentRecords.get(currentAssignment).getInteractors().stream().noneMatch(interactor -> interactor.equals(npc)))
 		{
 			return;
 		}
 
+		// Add NPC to set of those who will be allotted xp from the next xp drop
 		xpShareInteractors.add(npc);
+
+		// Increment kc in assignment record
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 		assignmentRecord.incrementKc();
 
+		// Increment kc in any variant record which contains this NPC in its interactors
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (variantRecord != null && variantRecord.getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
@@ -417,6 +416,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 		});
 
+		// Increment kc in any recording custom records
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(Record::incrementKc);
@@ -436,12 +436,14 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
+		// Sum the GE item price of each dropped item
 		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
 				itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
 			.sum();
 
+		// Sum the HA item price of each dropped item
 		final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
-				// Since coins have 0 HA value, use (1*) the coin item stack quantity
+				// Since coins have 0 HA value instead of 1, use the coin item stack quantity as its value
 				if (itemStack.getId() == ItemID.COINS_995)
 				{
 					return itemStack.getQuantity();
@@ -453,10 +455,12 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			})
 			.sum();
 
+		// Add GE/HA values to assignment record
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 		assignmentRecord.addToGe(lootGe);
 		assignmentRecord.addToHa(lootHa);
 
+		// Add GE/HA values to the variant record, if one exists
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (variantRecord != null)
@@ -466,6 +470,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 		});
 
+		// Add GE/HA values to any recording custom records
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
@@ -485,52 +490,66 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		int newSlayerXp = event.getXp();
 		if (newSlayerXp <= cachedXp)
 		{
+			log.error("Hey it's that weird slayer xp case.");
 			return;
 		}
 
+		// If cached xp is its initial value of -1, this is the initial slayer xp
+		// given on login. Store that as the cached xp for future xp drop calculations
 		if (cachedXp == -1)
 		{
-			// This xp drop is the initial xp sent on login
 			cachedXp = newSlayerXp;
 			return;
 		}
 
+		// These checks need to be below the above initial login xp drop check
 		if (currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
 		{
 			return;
 		}
 
+		// This xp drop is the player's new xp minus the stored xp
 		final int slayerXpDrop = newSlayerXp - cachedXp;
 		cachedXp = newSlayerXp;
 
 		divideXp(slayerXpDrop, xpShareInteractors);
 	}
 
-	// If variant has defined custom Slayer XP value, use that
-	// Otherwise, use its HP
+	// Determines the slayer xp value of a given NPC
+	// If variant has defined custom Slayer XP value, use that, otherwise use NPC's HP
 	private final Function<NPC, Integer> getSlayerXp = npc ->
 		currentAssignment.getVariantMatchingNpc(npc).map(Variant::getSlayerXp)
 			.orElse(npcManager.getHealth(npc.getId()));
 
 	private void divideXp(int slayerXpDrop, Set<NPC> xpShareInteractors)
 	{
-		// Recursively allocate xp to each killed monster in the queue
-		// this will allow for safe rounding to whole xp amounts
+		// Recursively allocate xp to each monster in the queue for this xp drop
+		// This method will allow for safe rounding to whole xp amounts
 
+		// Final case to break recursion
 		if (xpShareInteractors.isEmpty())
 		{
 			return;
 		}
 
-		final int hpTotal = xpShareInteractors.stream().mapToInt(getSlayerXp::apply).sum();
+		// The sum of the slayer xp value of each NPC remaining in the queue
+		final int npcXpTotal = xpShareInteractors.stream().mapToInt(getSlayerXp::apply).sum();
 
+		// Choose the next NPC to allocate xp to
 		NPC npc = xpShareInteractors.iterator().next();
-		final int thisNpcsXpShare = slayerXpDrop * getSlayerXp.apply(npc) / hpTotal;
 
+		// Amount allocated is equal to the proportion of this NPC's xp value to the total value of the queue,
+		// times the xp received, rounded to an integer. Then, remove the amount allocated from the total
+		// Calculating in this way allows for distributing xp from the actual amount received,
+		// without fear of error in the total caused by the rounding of the individual NPCs
+		final int thisNpcsXpShare = slayerXpDrop * getSlayerXp.apply(npc) / npcXpTotal;
+		slayerXpDrop -= thisNpcsXpShare;
+
+		// Add the xp share to the assignment record
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 		assignmentRecord.addToXp(thisNpcsXpShare);
 
-		// Determine which Variant of the Assignment this NPC is, then if one exists...
+		// Add the xp share to the variant record if one exists
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (variantRecord != null)
@@ -539,12 +558,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 		});
 
+		// Add the xp share to any recording custom records
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord ->
 				customRecord.addToXp(thisNpcsXpShare));
 
-		slayerXpDrop -= thisNpcsXpShare;
+		// Remove this NPC from the queue and recursively repeat with every NPC in the queue
 		xpShareInteractors.remove(npc);
 		divideXp(slayerXpDrop, xpShareInteractors);
 	}
@@ -559,7 +579,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 			File dataFile = getDataFile();
 
-			// If data file doesn't exist, create one with an empty RecordMap
+			// If data file doesn't exist, create one with an empty assignment RecordMap
 			if (!dataFile.exists())
 			{
 				Writer writer = new FileWriter(dataFile);
@@ -569,6 +589,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 			// Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
 			// then copy it into assignmentRecords
+			// Must copy it in, because the ui has already received this RecordMap instance
 			HashMap<Assignment, AssignmentRecord> dataFromDisk = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
 			{
 			}.getType());
@@ -592,6 +613,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			}
 			File dataFile = getDataFile();
 
+			// Serialize assignmentRecords to json and write to the data file
 			Writer writer = new FileWriter(dataFile);
 			gson.toJson(assignmentRecords, writer);
 			writer.flush();
@@ -599,6 +621,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 		catch (Exception e)
 		{
+			// If data folder could not be created, display user-facing error in the Side Panel
 			slayerTrackerPanel.displayFileError();
 			e.printStackTrace();
 		}
@@ -606,6 +629,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	private File getDataFile() throws IOException
 	{
+		// Throw exception if data folder could not be created
 		if (!DATA_FOLDER.exists() && !DATA_FOLDER.mkdirs())
 		{
 			throw new IOException("Could not create data folder: .runelite/slayer-tracker");
@@ -613,9 +637,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		return new File(DATA_FOLDER, dataFileName);
 	}
 
+	// True if formatted NPC name contains any of the Assignment's target names,
+	// AND NPC has an Attack OR Pick action (pick action is for Zygomite)
 	private static final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->
-		// True if formatted NPC name contains any of the Assignment's target names,
-		// AND NPC has an Attack OR Pick action
 		npc.getTransformedComposition() != null
 			&& assignment.getTargetNames().stream()
 			.anyMatch(npc.getTransformedComposition().getName().replace('\u00A0', ' ').toLowerCase()::contains)
@@ -625,6 +649,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Override
 	public void propertyChange(PropertyChangeEvent evt)
 	{
+		// Side panel update is triggered by an updated value in an assignment record,
+		// or an assignment, variant, or custom record map
 		clientThread.invokeLater(() ->
 			SwingUtilities.invokeLater(() ->
 				slayerTrackerPanel.update()));
