@@ -40,4 +40,9 @@ public class CustomRecord extends Record
 	{
 		super();
 	}
+
+	public CustomRecord(Record record)
+	{
+		super(record);
+	}
 }

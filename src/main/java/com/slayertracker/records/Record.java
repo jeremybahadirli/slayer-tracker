@@ -63,6 +63,16 @@ public class Record
 		combatInstant = Instant.now();
 	}
 
+	public Record(Record record)
+	{
+		kc = record.getKc();
+		hours = record.getHours();
+		xp = record.getXp();
+		ge = record.getGe();
+		ha = record.getHa();
+		combatInstant = record.getCombatInstant();
+	}
+
 	public Record(PropertyChangeListener pcl)
 	{
 		support.addPropertyChangeListener(pcl);

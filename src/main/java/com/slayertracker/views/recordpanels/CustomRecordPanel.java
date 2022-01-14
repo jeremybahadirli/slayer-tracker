@@ -24,9 +24,9 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.CustomRecordSet;
+import com.slayertracker.views.GroupListPanel;
 import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
@@ -53,16 +53,18 @@ import net.runelite.client.util.ImageUtil;
 public class CustomRecordPanel extends JPanel implements RecordListPanel
 {
 	private final CustomRecord record;
-	private final SlayerTrackerConfig config;
+	private final GroupListPanel groupListPanel;
 	private final JPanel headerPanel;
 	private final JPanel bodyPanel;
 	private final JTextField titleField;
 	private StatsPanel statsPanel;
 
-	public CustomRecordPanel(CustomRecord record, CustomRecordSet<CustomRecord> customRecordSet, SlayerTrackerConfig config)
+	public CustomRecordPanel(CustomRecord record,
+							 CustomRecordSet<CustomRecord> customRecordSet,
+							 GroupListPanel groupListPanel)
 	{
 		this.record = record;
-		this.config = config;
+		this.groupListPanel = groupListPanel;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Header Panel
@@ -121,7 +123,7 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
-				"This will delete the record: " + titleField.getText(),
+				"<html>This will delete the record: <b>" + titleField.getText().toUpperCase() + "</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)
@@ -147,20 +149,23 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		add(bodyPanel);
 		// Stats Panel
-		statsPanel = new StatsPanel(record, config.lootUnit());
+		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 		bodyPanel.add(statsPanel);
 	}
 
-	public CustomRecordPanel(String title, CustomRecord record, CustomRecordSet<CustomRecord> customRecordSet, SlayerTrackerConfig config)
+	public CustomRecordPanel(String title,
+							 CustomRecord record,
+							 CustomRecordSet<CustomRecord> customRecordSet,
+							 GroupListPanel groupListPanel)
 	{
-		this(record, customRecordSet, config);
+		this(record, customRecordSet, groupListPanel);
 		titleField.setText(title);
 	}
 
 	public void update()
 	{
 		bodyPanel.remove(statsPanel);
-		statsPanel = new StatsPanel(record, config.lootUnit());
+		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 		bodyPanel.add(statsPanel);
 	}
 

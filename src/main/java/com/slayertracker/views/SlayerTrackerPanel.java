@@ -55,29 +55,26 @@ import net.runelite.client.ui.components.PluginErrorPanel;
 @Getter
 public class SlayerTrackerPanel extends PluginPanel
 {
-	private static final int VERTICAL_GAP = 6;
+	private final int VERTICAL_GAP = 6;
 
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
+	private final ItemManager itemManager;
+	private final SlayerTrackerConfig config;
 
-	PluginErrorPanel welcomeText;
+	private final PluginErrorPanel welcomeText;
 	private final JButton resetAllButton;
 	private final JButton resetCustomButton;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
-
-	private Function<? super RecordListPanel, Long> sortFunction = recordPanel ->
-		(long) -1 * recordPanel.getRecord().getCombatInstant().getEpochSecond();
-
 	private final Set<GroupListPanel> groupListPanels = new HashSet<>();
-
-	private final ItemManager itemManager;
-	private final SlayerTrackerConfig config;
 
 	private static final ImmutableList<String> SORT_ORDERS = ImmutableList.of(
 		"Recently Killed",
 		"XP Rate",
 		"GP Rate"
 	);
+	private Function<? super RecordListPanel, Long> sortFunction = recordPanel ->
+		(long) -1 * recordPanel.getRecord().getCombatInstant().getEpochSecond();
 
 	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 							  SlayerTrackerConfig config,
@@ -104,7 +101,6 @@ public class SlayerTrackerPanel extends PluginPanel
 				super.paint(g);
 			}
 		});
-
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
 		sorterComboBox.addActionListener(l -> {
 			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
@@ -131,7 +127,6 @@ public class SlayerTrackerPanel extends PluginPanel
 						-1 * panel.getRecord().getCombatInstant().getEpochSecond();
 					break;
 			}
-
 			update();
 		});
 		sorterPanel.add(sorterComboBox);
@@ -150,7 +145,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		resetAllButton = new JButton("Delete All");
 		resetAllButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
-				"This will permanently delete all records.",
+				"<html>This will delete: <b>ALL RECORDS</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 
@@ -165,7 +160,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		resetCustomButton = new JButton("Delete Custom Records");
 		resetCustomButton.addActionListener(event -> {
 			final int result = JOptionPane.showOptionDialog(this,
-				"This will permanently delete all custom records.",
+				"<html>This will delete: <b>ALL CUSTOM RECORDS</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 

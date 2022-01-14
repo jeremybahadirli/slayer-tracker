@@ -24,10 +24,10 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import com.slayertracker.views.GroupListPanel;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -38,7 +38,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
@@ -49,10 +48,9 @@ public class AssignmentRecordPanel extends RecordPanel
 
 	public AssignmentRecordPanel(Assignment assignment,
 								 RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-								 SlayerTrackerConfig config,
-								 ItemManager itemManager)
+								 GroupListPanel groupListPanel)
 	{
-		super(assignment, assignmentRecords, config);
+		super(assignment, assignmentRecords, groupListPanel);
 
 		BufferedImage addIcon = ImageUtil.loadImageResource(getClass(), "/add_icon.png");
 
@@ -66,7 +64,7 @@ public class AssignmentRecordPanel extends RecordPanel
 		headerPanel.add(hg);
 		headerPanel.add(addCustomRecordButton);
 
-		bodyPanel.add(new JLabel(new ImageIcon(itemManager.getImage(assignment.getItemSpriteId()))));
+		bodyPanel.add(new JLabel(new ImageIcon(groupListPanel.getItemManager().getImage(assignment.getItemSpriteId()))));
 		bodyPanel.add(statsPanel);
 	}
 }

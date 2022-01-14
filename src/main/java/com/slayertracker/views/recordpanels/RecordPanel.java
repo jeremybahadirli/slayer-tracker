@@ -24,10 +24,11 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Group;
+import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
+import com.slayertracker.views.GroupListPanel;
 import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
@@ -46,7 +47,7 @@ import net.runelite.client.ui.ColorScheme;
 @Getter
 public class RecordPanel extends JPanel implements RecordListPanel
 {
-	private final SlayerTrackerConfig config;
+	private final GroupListPanel groupListPanel;
 
 	private final Group group;
 	private final Record record;
@@ -58,11 +59,11 @@ public class RecordPanel extends JPanel implements RecordListPanel
 
 	RecordPanel(Group group,
 				RecordMap<? extends Group, ? extends Record> recordMap,
-				SlayerTrackerConfig config)
+				GroupListPanel groupListPanel)
 	{
+		this.groupListPanel = groupListPanel;
 		this.group = group;
 		this.record = recordMap.get(group);
-		this.config = config;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Header Panel
@@ -73,11 +74,12 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		JLabel titleLabel = new JLabel(group.getName());
 		titleLabel.setMinimumSize(new Dimension(1, titleLabel.getPreferredSize().height));
 		headerPanel.add(titleLabel);
+
 		final JMenuItem resetMenuItem = new JMenuItem("Delete");
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
-				"This will delete the record: " + group.getName(),
+				"<html>This will delete the record: <b>" + group.getName().toUpperCase() + "</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)
@@ -85,6 +87,10 @@ public class RecordPanel extends JPanel implements RecordListPanel
 				recordMap.remove(group);
 			}
 		});
+
+		final JMenuItem copyToCustomRecordMenuItem = new JMenuItem("Copy to Custom Record");
+		copyToCustomRecordMenuItem.addActionListener(e ->
+			groupListPanel.getRecord().getCustomRecords().add(new CustomRecord(record)));
 		JPopupMenu popupMenu = getComponentPopupMenu();
 		if (popupMenu == null)
 		{
@@ -92,6 +98,8 @@ public class RecordPanel extends JPanel implements RecordListPanel
 			popupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
 			headerPanel.setComponentPopupMenu(popupMenu);
 		}
+
+		popupMenu.add(copyToCustomRecordMenuItem);
 		popupMenu.add(resetMenuItem);
 		add(headerPanel);
 
@@ -102,13 +110,13 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		add(bodyPanel);
 
-		statsPanel = new StatsPanel(record, config.lootUnit());
+		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 	}
 
 	public void update()
 	{
 		bodyPanel.remove(statsPanel);
-		statsPanel = new StatsPanel(record, config.lootUnit());
+		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 		bodyPanel.add(statsPanel);
 	}
 

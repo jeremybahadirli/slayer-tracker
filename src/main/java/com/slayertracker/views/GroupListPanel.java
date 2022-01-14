@@ -49,6 +49,7 @@ import net.runelite.client.game.ItemManager;
 public class GroupListPanel extends JPanel implements RecordListPanel
 {
 	private final SlayerTrackerConfig config;
+	private final ItemManager itemManager;
 
 	private final Assignment assignment;
 	private final AssignmentRecord record;
@@ -65,12 +66,13 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	{
 		this.assignment = assignment;
 		this.config = config;
+		this.itemManager = itemManager;
 		this.record = assignmentRecords.get(assignment);
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Assignment Record Panel
-		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecords, config, itemManager);
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecords, this);
 		assignmentRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 		{
 			@Override
@@ -110,7 +112,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			if (variantRecordPanels.stream().noneMatch(variantRecordPanel ->
 				variantRecordPanel.getGroup().equals(variant)))
 			{
-				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), config);
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), this);
 				variantRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 				{
 					@Override
@@ -130,7 +132,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			if (customRecordPanels.stream().noneMatch(customRecordPanel ->
 				customRecordPanel.getRecord().equals(customRecord)))
 			{
-				CustomRecordPanel customRecordPanel = new CustomRecordPanel(customRecord.getName(), customRecord, record.getCustomRecords(), config);
+				CustomRecordPanel customRecordPanel = new CustomRecordPanel(customRecord.getName(), customRecord, record.getCustomRecords(), this);
 				customRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 				{
 					@Override

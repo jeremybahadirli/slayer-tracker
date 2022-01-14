@@ -24,10 +24,10 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
+import com.slayertracker.views.GroupListPanel;
 import javax.swing.Box;
 import lombok.Getter;
 
@@ -36,9 +36,9 @@ public class VariantRecordPanel extends RecordPanel
 {
 	public VariantRecordPanel(Variant variant,
 							  RecordMap<Variant, Record> variantRecords,
-							  SlayerTrackerConfig config)
+							  GroupListPanel groupListPanel)
 	{
-		super(variant, variantRecords, config);
+		super(variant, variantRecords, groupListPanel);
 		headerPanel.add(Box.createHorizontalGlue());
 
 		bodyPanel.add(statsPanel);
