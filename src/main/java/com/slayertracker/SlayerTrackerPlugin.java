@@ -241,20 +241,34 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		// If Slayer Plugin task changes
-		if (event.getGroup().equals(SlayerConfig.GROUP_NAME) && event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
+		switch (event.getGroup())
 		{
-			// Set current assignment to null, or the new value if it is valid
-			currentAssignment = null;
-			Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
-				this.currentAssignment = assignment);
+			case SlayerTrackerConfig.GROUP_NAME:
+				// User has changed loot unit in the settings. Update the Side Panel
+				if (event.getKey().equals(SlayerTrackerConfig.LOOT_UNIT_KEY))
+				{
+					clientThread.invokeLater(() ->
+						SwingUtilities.invokeLater(() ->
+							slayerTrackerPanel.update()));
+				}
+				break;
+			case SlayerConfig.GROUP_NAME:
+				// Slayer Plugin task name has changed
+				if (event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
+				{
+					// Set current assignment to null, or the new value if it is valid
+					currentAssignment = null;
+					Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
+						this.currentAssignment = assignment);
 
-			// Clear interactors for all records, as no more active kills will be on-task
-			assignmentRecords.values().forEach(assignmentRecord -> {
-				assignmentRecord.getInteractors().clear();
-				assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
-				assignmentRecord.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
-			});
+					// Clear interactors for all records, as no more active kills will be on-task
+					assignmentRecords.values().forEach(assignmentRecord -> {
+						assignmentRecord.getInteractors().clear();
+						assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
+						assignmentRecord.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
+					});
+				}
+				break;
 		}
 	}
 

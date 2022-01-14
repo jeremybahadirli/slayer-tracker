@@ -33,6 +33,7 @@ import net.runelite.client.config.ConfigItem;
 public interface SlayerTrackerConfig extends Config
 {
 	String GROUP_NAME = "slayertracker";
+	String LOOT_UNIT_KEY = "lootUnit";
 
 	@ConfigItem(
 		keyName = "lootUnit",
