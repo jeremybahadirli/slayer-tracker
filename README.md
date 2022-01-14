@@ -4,10 +4,10 @@
 
 ---
 Latest Updates:
+* 01/14/22 – Add "Copy to Custom Record" right-click option
 * 01/10/22 – Add Custom Records
     * **SAVE FILE MUST BE UPDATED – Contact Jeremy or reset it by deleting .runelite/slayer-tracker/**
 * 01/06/22 – Add welcome text
-* 01/06/22 – Record Panels now sortable
 ---
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and block.
 
