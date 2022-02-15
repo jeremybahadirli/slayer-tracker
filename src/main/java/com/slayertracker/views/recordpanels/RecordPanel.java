@@ -35,6 +35,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.util.Arrays;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -126,6 +127,9 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		{
 			bodyPanel.setVisible(true);
 			toggleDimmer(true);
+			Arrays.stream(headerPanel.getComponents())
+				.filter(component -> component instanceof JButton)
+				.forEach(button -> button.setEnabled(true));
 		}
 	}
 
@@ -135,6 +139,9 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		{
 			bodyPanel.setVisible(false);
 			toggleDimmer(false);
+			Arrays.stream(headerPanel.getComponents())
+				.filter(component -> component instanceof JButton)
+				.forEach(button -> button.setEnabled(false));
 		}
 	}
 

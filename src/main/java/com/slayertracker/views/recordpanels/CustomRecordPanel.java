@@ -52,8 +52,9 @@ import net.runelite.client.util.ImageUtil;
 @Getter
 public class CustomRecordPanel extends JPanel implements RecordListPanel
 {
-	private final CustomRecord record;
 	private final GroupListPanel groupListPanel;
+
+	private final CustomRecord record;
 	private final JPanel headerPanel;
 	private final JPanel bodyPanel;
 	private final JTextField titleField;

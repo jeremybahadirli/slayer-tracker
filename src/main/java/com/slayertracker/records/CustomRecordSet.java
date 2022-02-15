@@ -42,7 +42,7 @@ public class CustomRecordSet<E extends CustomRecord> extends HashSet<E>
 	public boolean add(E record)
 	{
 		boolean e = super.add(record);
-		support.firePropertyChange("CustomRecordMap add", false, e);
+		support.firePropertyChange("CustomRecordSet add", false, e);
 		return e;
 	}
 
@@ -50,7 +50,7 @@ public class CustomRecordSet<E extends CustomRecord> extends HashSet<E>
 	public boolean remove(Object record)
 	{
 		boolean o = super.remove(record);
-		support.firePropertyChange("CustomRecordMap remove", false, o);
+		support.firePropertyChange("CustomRecordSet remove", false, o);
 		return o;
 	}
 
@@ -59,6 +59,6 @@ public class CustomRecordSet<E extends CustomRecord> extends HashSet<E>
 	{
 		Object oldSet = this.clone();
 		super.clear();
-		support.firePropertyChange("CustomRecordMap clear", oldSet, this);
+		support.firePropertyChange("CustomRecordSet clear", oldSet, this);
 	}
 }

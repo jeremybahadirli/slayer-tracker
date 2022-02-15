@@ -190,6 +190,8 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		assignmentRecordPanel.expand();
 		variantRecordPanels.forEach(variantRecordPanel ->
 			variantRecordPanel.setVisible(true));
+		customRecordPanels.forEach(customRecordPanel ->
+			customRecordPanel.setVisible(true));
 	}
 
 	private void collapseAll()
@@ -198,5 +200,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		assignmentRecordPanel.collapse();
 		variantRecordPanels.forEach(variantRecordPanel ->
 			variantRecordPanel.setVisible(false));
+		customRecordPanels.forEach(customRecordPanel ->
+			customRecordPanel.setVisible(false));
 	}
 }
