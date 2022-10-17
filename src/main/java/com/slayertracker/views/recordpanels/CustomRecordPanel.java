@@ -29,19 +29,13 @@ import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.views.GroupListPanel;
 import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.util.Arrays;
 import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
-import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.border.EmptyBorder;
@@ -50,38 +44,31 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
 @Getter
-public class CustomRecordPanel extends JPanel implements RecordListPanel
+public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 {
 	private final GroupListPanel groupListPanel;
 
 	private final CustomRecord record;
-	private final JPanel headerPanel;
-	private final JPanel bodyPanel;
+
 	private final JTextField titleField;
-	private StatsPanel statsPanel;
 
 	public CustomRecordPanel(CustomRecord record,
 							 CustomRecordSet<CustomRecord> customRecordSet,
 							 GroupListPanel groupListPanel)
 	{
+		super(record, groupListPanel);
 		this.record = record;
 		this.groupListPanel = groupListPanel;
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Header Panel
 
-		headerPanel = new JPanel();
-		headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.X_AXIS));
-		headerPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-		headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
 		// Title text field
 		titleField = new JTextField("New Custom Record");
 		titleField.setBorder(new EmptyBorder(0, 0, 0, 0));
 		titleField.setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
 		titleField.setMinimumSize(new Dimension(1, titleField.getPreferredSize().height));
 		titleField.setPreferredSize(new Dimension(titleField.getPreferredSize().width, titleField.getPreferredSize().height - 1));
-		titleField.addActionListener(l ->
-			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent());
+		titleField.addActionListener(l -> KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent());
 		titleField.addFocusListener(new FocusListener()
 		{
 			@Override
@@ -119,8 +106,10 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 		addCustomRecordButton.setFocusPainted(false);
 		headerPanel.add(Box.createHorizontalGlue());
 		headerPanel.add(addCustomRecordButton);
+
 		// Right-click menu
-		final JMenuItem resetMenuItem = new JMenuItem("Delete");
+
+		// Delete button
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
@@ -132,26 +121,15 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 				customRecordSet.remove(record);
 			}
 		});
-		JPopupMenu popupMenu = getComponentPopupMenu();
-		if (popupMenu == null)
-		{
-			popupMenu = new JPopupMenu();
-			popupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
-			headerPanel.setComponentPopupMenu(popupMenu);
-		}
 		popupMenu.add(resetMenuItem);
-		add(headerPanel);
 
-		// Body Panel
-
-		bodyPanel = new JPanel();
-		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
-		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
-		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-		add(bodyPanel);
 		// Stats Panel
+
 		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 		bodyPanel.add(statsPanel);
+
+		add(headerPanel);
+		add(bodyPanel);
 	}
 
 	public CustomRecordPanel(String title,
@@ -161,55 +139,5 @@ public class CustomRecordPanel extends JPanel implements RecordListPanel
 	{
 		this(record, customRecordSet, groupListPanel);
 		titleField.setText(title);
-	}
-
-	public void update()
-	{
-		bodyPanel.remove(statsPanel);
-		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
-		bodyPanel.add(statsPanel);
-	}
-
-	void expand()
-	{
-		if (isCollapsed())
-		{
-			bodyPanel.setVisible(true);
-			toggleDimmer(true);
-		}
-	}
-
-	void collapse()
-	{
-		if (!isCollapsed())
-		{
-			bodyPanel.setVisible(false);
-			toggleDimmer(false);
-		}
-	}
-
-	public void toggleCollapsed()
-	{
-		if (isCollapsed())
-		{
-			expand();
-		}
-		else
-		{
-			collapse();
-		}
-	}
-
-	boolean isCollapsed()
-	{
-		return !bodyPanel.isVisible();
-	}
-
-	private void toggleDimmer(boolean brighten)
-	{
-		Arrays.stream(headerPanel.getComponents()).forEach(component -> {
-			Color color = component.getForeground();
-			component.setForeground(brighten ? color.brighter() : color.darker());
-		});
 	}
 }

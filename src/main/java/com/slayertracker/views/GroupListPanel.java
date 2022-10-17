@@ -110,7 +110,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		record.getVariantRecords().keySet().forEach(variant -> {
 			// For each Variant Record in model, add panel if NO Variant Panel's Record matches it
 			if (variantRecordPanels.stream().noneMatch(variantRecordPanel ->
-				variantRecordPanel.getGroup().equals(variant)))
+				variantRecordPanel.getVariant().equals(variant)))
 			{
 				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), this);
 				variantRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()

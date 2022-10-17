@@ -32,10 +32,12 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
@@ -50,10 +52,16 @@ public class AssignmentRecordPanel extends RecordPanel
 								 RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 								 GroupListPanel groupListPanel)
 	{
-		super(assignment, assignmentRecords, groupListPanel);
+		super(assignmentRecords.get(assignment), groupListPanel);
 
+		// Header panel
+
+		// Title
+		JLabel titleLabel = new JLabel(assignment.getName());
+		titleLabel.setMinimumSize(new Dimension(1, titleLabel.getPreferredSize().height));
+		headerPanel.add(titleLabel);
+		// Add button
 		BufferedImage addIcon = ImageUtil.loadImageResource(getClass(), "/add_icon.png");
-
 		addCustomRecordButton = new JButton(new ImageIcon(addIcon));
 		addCustomRecordButton.setBorder(new EmptyBorder(0, 0, 0, 0));
 		addCustomRecordButton.setPreferredSize(new Dimension(16, 16));
@@ -64,7 +72,43 @@ public class AssignmentRecordPanel extends RecordPanel
 		headerPanel.add(hg);
 		headerPanel.add(addCustomRecordButton);
 
+		// Right-click menu
+
+		// Delete button
+		resetMenuItem.addActionListener(e ->
+		{
+			final int selection = JOptionPane.showOptionDialog(this,
+				"<html>This will delete the record: <b>" + assignment.getName().toUpperCase() + "</b></html>",
+				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+				null, new String[]{"Yes", "No"}, "No");
+			if (selection == JOptionPane.YES_OPTION)
+			{
+				assignmentRecords.remove(assignment);
+			}
+		});
+
+		// Stats panel
+
 		bodyPanel.add(new JLabel(new ImageIcon(groupListPanel.getItemManager().getImage(assignment.getItemSpriteId()))));
 		bodyPanel.add(statsPanel);
+
+		add(headerPanel);
+		add(bodyPanel);
+	}
+
+	public void expand()
+	{
+		super.expand();
+		Arrays.stream(headerPanel.getComponents())
+			.filter(component -> component instanceof JButton)
+			.forEach(button -> button.setEnabled(true));
+	}
+
+	public void collapse()
+	{
+		super.collapse();
+		Arrays.stream(headerPanel.getComponents())
+			.filter(component -> component instanceof JButton)
+			.forEach(button -> button.setEnabled(false));
 	}
 }

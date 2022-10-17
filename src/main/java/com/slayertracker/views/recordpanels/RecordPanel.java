@@ -24,21 +24,15 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.groups.Group;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.Record;
-import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.GroupListPanel;
 import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.util.Arrays;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.border.EmptyBorder;
@@ -50,66 +44,52 @@ public class RecordPanel extends JPanel implements RecordListPanel
 {
 	private final GroupListPanel groupListPanel;
 
-	private final Group group;
 	private final Record record;
 
 	final JPanel headerPanel;
+	final JMenuItem resetMenuItem;
 	final JPanel bodyPanel;
+	JPopupMenu popupMenu;
 
 	StatsPanel statsPanel;
 
-	RecordPanel(Group group,
-				RecordMap<? extends Group, ? extends Record> recordMap,
-				GroupListPanel groupListPanel)
+	RecordPanel(Record record, GroupListPanel groupListPanel)
 	{
+		this.record = record;
 		this.groupListPanel = groupListPanel;
-		this.group = group;
-		this.record = recordMap.get(group);
+
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Header Panel
+
 		headerPanel = new JPanel();
 		headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.X_AXIS));
 		headerPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
 		headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR.darker());
-		JLabel titleLabel = new JLabel(group.getName());
-		titleLabel.setMinimumSize(new Dimension(1, titleLabel.getPreferredSize().height));
-		headerPanel.add(titleLabel);
 
-		final JMenuItem resetMenuItem = new JMenuItem("Delete");
-		resetMenuItem.addActionListener(e ->
-		{
-			final int selection = JOptionPane.showOptionDialog(this,
-				"<html>This will delete the record: <b>" + group.getName().toUpperCase() + "</b></html>",
-				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
-				null, new String[]{"Yes", "No"}, "No");
-			if (selection == JOptionPane.YES_OPTION)
-			{
-				recordMap.remove(group);
-			}
-		});
+		// Right-click menu
 
+		// Delete button
+		resetMenuItem = new JMenuItem("Delete");
+		// Copy to custom record button
 		final JMenuItem copyToCustomRecordMenuItem = new JMenuItem("Copy to Custom Record");
 		copyToCustomRecordMenuItem.addActionListener(e ->
 			groupListPanel.getRecord().getCustomRecords().add(new CustomRecord(record)));
-		JPopupMenu popupMenu = getComponentPopupMenu();
+		popupMenu = getComponentPopupMenu();
 		if (popupMenu == null)
 		{
 			popupMenu = new JPopupMenu();
 			popupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
 			headerPanel.setComponentPopupMenu(popupMenu);
 		}
-
 		popupMenu.add(copyToCustomRecordMenuItem);
 		popupMenu.add(resetMenuItem);
-		add(headerPanel);
 
 		// Body Panel
 		bodyPanel = new JPanel();
 		bodyPanel.setLayout(new BoxLayout(bodyPanel, BoxLayout.X_AXIS));
 		bodyPanel.setBackground((ColorScheme.DARKER_GRAY_COLOR));
 		bodyPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-		add(bodyPanel);
 
 		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
 	}
@@ -123,26 +103,14 @@ public class RecordPanel extends JPanel implements RecordListPanel
 
 	public void expand()
 	{
-		if (isCollapsed())
-		{
-			bodyPanel.setVisible(true);
-			toggleDimmer(true);
-			Arrays.stream(headerPanel.getComponents())
-				.filter(component -> component instanceof JButton)
-				.forEach(button -> button.setEnabled(true));
-		}
+		bodyPanel.setVisible(true);
+		toggleDimmer(true);
 	}
 
 	public void collapse()
 	{
-		if (!isCollapsed())
-		{
-			bodyPanel.setVisible(false);
-			toggleDimmer(false);
-			Arrays.stream(headerPanel.getComponents())
-				.filter(component -> component instanceof JButton)
-				.forEach(button -> button.setEnabled(false));
-		}
+		bodyPanel.setVisible(false);
+		toggleDimmer(false);
 	}
 
 	public void toggleCollapsed()

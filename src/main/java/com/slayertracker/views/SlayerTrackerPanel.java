@@ -90,7 +90,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		JPanel sorterPanel = new JPanel();
 		sorterPanel.setLayout(new BoxLayout(sorterPanel, BoxLayout.X_AXIS));
 		sorterPanel.add(new JLabel("Sort by:"));
-		sorterPanel.add(Box.createRigidArea(new Dimension(48, 0)));
+		sorterPanel.add(Box.createRigidArea(new Dimension(39, 0)));
 		sorterComboBox = new JComboBox<>();
 		sorterComboBox.setRenderer(new DefaultListCellRenderer()
 		{

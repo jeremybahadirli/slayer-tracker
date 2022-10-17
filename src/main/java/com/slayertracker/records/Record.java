@@ -75,6 +75,7 @@ public class Record
 
 	public Record(PropertyChangeListener pcl)
 	{
+		this();
 		support.addPropertyChangeListener(pcl);
 	}
 
