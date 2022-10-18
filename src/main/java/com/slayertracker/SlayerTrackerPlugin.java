@@ -90,19 +90,25 @@ import org.apache.commons.lang3.ArrayUtils;
 // DEVELOPMENT STARTED 12/05/21
 //
 // TERMINOLOGY
-// Assignment: An assignment given by a Slayer Master, ie "Trolls", "Fire giants"
-// Variant: A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)"
-// Group: A group of monsters that is tracked together by the plugin. Both of the above are Groups
-//		"Trolls" Assignment is a Group encompassing all trolls
-//		"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles
-// Record: The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group
-// Target Name: The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female"
-// Interactor: An individual on-assignment monster which is interacting with the player
+// Assignment:		An assignment given by a Slayer Master, ie "Trolls", "Fire giants".
+// Variant:			A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)".
+// Group:			A group of monsters that is tracked together by the plugin. Both of the above are Groups.
+//						"Trolls" Assignment is a Group encompassing all trolls.
+//						"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles.
+// Record:			The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group.
+// Target Name:		The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female".
+// Interactor:		An individual on-assignment monster which is interacting with the player.
+// Combat Instant: 	The time at which interaction began for a record.
+// 						If there are multiple interactors for a given record,
+// 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
 
 // TODO
+// Initial Release (minus Analysis):
 // Test logging out during interaction
 // Last kill of task - kc and xp are counted but gp is not.
-// Add all Variants (Category:Slayer monster)
+// RecordManager?
+//
+// Analysis:
 // Add task weight and average quantity for each task, with extensions as necessary
 // To config, add:
 // 		Slayer Master combo box
@@ -261,7 +267,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 					Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
 						this.currentAssignment = assignment);
 
-					// Clear interactors for all records, as no more active kills will be on-task
+					// Clear interactors for all records, as no more active interactors will be on-task
 					assignmentRecords.values().forEach(assignmentRecord -> {
 						assignmentRecord.getInteractors().clear();
 						assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
@@ -272,7 +278,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 	}
 
-	// True if a Player-NPC interaction does not exist with the given NPC
+	// True if no Player-NPC interaction exists with the given NPC
 	private final Predicate<NPC> isNotInteracting = interactor ->
 		!client.getNpcs().contains(interactor)
 			|| client.getLocalPlayer() == null
@@ -287,8 +293,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		// When an interactor is no longer interacting, add the duration from the last combat instant
-		// to the record, then set the last combat instant to now.
+		// When an interactor is no longer interacting, we have just ended combat (kill or ran away).
+		// Log the duration from the last combat instant to the record.
+		// In case there are other simultaneous interactors, set the last combat instant to now,
+		// so the next interaction time is logged appropriately.
 		final Instant now = Instant.now();
 		assignmentRecords.values().forEach(assignmentRecord -> {
 			assignmentRecord.getInteractors().stream()
@@ -358,11 +366,16 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		final Instant now = Instant.now();
 
+		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
+
 		// If Assignment Record for this npc doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
-		// If this is the first interactor in the record, set last combat instant to now
-		if (assignmentRecord.getInteractors().isEmpty())
+
+		// If this is the first interactor in the record and recording mode is In Combat, set last combat instant to now
+		if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
+			|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(assignmentRecord.getCombatInstant()))
+			&& assignmentRecord.getInteractors().isEmpty())
 		{
 			assignmentRecord.setCombatInstant(now);
 		}
@@ -373,7 +386,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record());
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			if (variantRecord.getInteractors().isEmpty())
+			if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
+				|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(variantRecord.getCombatInstant()))
+				&& variantRecord.getInteractors().isEmpty())
 			{
 				variantRecord.setCombatInstant(now);
 			}
@@ -384,7 +399,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
-				if (customRecord.getInteractors().isEmpty())
+				if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
+					|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(customRecord.getCombatInstant()))
+					&& customRecord.getInteractors().isEmpty())
 				{
 					customRecord.setCombatInstant(now);
 				}
@@ -413,6 +430,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		{
 			return;
 		}
+
+		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
 		// Add NPC to set of those who will be allotted xp from the next xp drop
 		xpShareInteractors.add(npc);

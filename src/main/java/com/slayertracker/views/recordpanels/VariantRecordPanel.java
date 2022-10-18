@@ -28,19 +28,52 @@ import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.GroupListPanel;
+import java.awt.Dimension;
 import javax.swing.Box;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import lombok.Getter;
 
 @Getter
 public class VariantRecordPanel extends RecordPanel
 {
+
+	Variant variant;
+
 	public VariantRecordPanel(Variant variant,
 							  RecordMap<Variant, Record> variantRecords,
 							  GroupListPanel groupListPanel)
 	{
-		super(variant, variantRecords, groupListPanel);
+		super(variantRecords.get(variant), groupListPanel);
+		this.variant = variant;
+
+		// Header panel
+
+		JLabel titleLabel = new JLabel(variant.getName());
+		titleLabel.setMinimumSize(new Dimension(1, titleLabel.getPreferredSize().height));
+		headerPanel.add(titleLabel);
 		headerPanel.add(Box.createHorizontalGlue());
 
+		// Right-click menu
+
+		// Delete button
+		resetMenuItem.addActionListener(e ->
+		{
+			final int selection = JOptionPane.showOptionDialog(this,
+				"<html>This will delete the record: <b>" + variant.getName().toUpperCase() + "</b></html>",
+				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+				null, new String[]{"Yes", "No"}, "No");
+			if (selection == JOptionPane.YES_OPTION)
+			{
+				variantRecords.remove(variant);
+			}
+		});
+
+		// Stats panel
+
 		bodyPanel.add(statsPanel);
+
+		add(headerPanel);
+		add(bodyPanel);
 	}
 }

@@ -62,8 +62,10 @@ public class SlayerTrackerPanel extends PluginPanel
 	private final SlayerTrackerConfig config;
 
 	private final PluginErrorPanel welcomeText;
+	private final PluginErrorPanel welcomeText2;
 	private final JButton resetAllButton;
 	private final JButton resetCustomButton;
+	private final RecordingModePanel recordingModePanel;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
 	private final Set<GroupListPanel> groupListPanels = new HashSet<>();
@@ -132,6 +134,10 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
 
+		// Recording Mode
+		recordingModePanel = new RecordingModePanel();
+		add(recordingModePanel);
+
 		// Assignment list panel
 		assignmentListPanel = new JPanel();
 		assignmentListPanel.setLayout(new DynamicGridLayout(0, 1, 0, VERTICAL_GAP));
@@ -139,7 +145,14 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		// Welcome text
 		welcomeText = new PluginErrorPanel();
-		welcomeText.setContent("Slayer Tracker", "Compare XP and GP rates for each Slayer task.");
+		welcomeText.setContent(
+			"Slayer Tracker BETA",
+			"Compare XP and GP rates for each Slayer task.");
+
+		welcomeText2 = new PluginErrorPanel();
+		welcomeText2.setContent(
+			"",
+			"For help, click below to view the README on GitHub.");
 
 		// Reset All button
 		resetAllButton = new JButton("Delete All");
@@ -203,6 +216,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		{
 			// Welcome text
 			assignmentListPanel.add(welcomeText);
+			assignmentListPanel.add(welcomeText2);
 		}
 		else
 		{
