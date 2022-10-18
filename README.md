@@ -5,10 +5,9 @@
 ---
 Latest Updates:
 
+* 10/17/22 – Implement Continuous Recording Mode
 * 01/24/22 – Add Variants to all Assignments
 * 01/14/22 – Add "Copy to Custom Record" right-click option
-* 01/10/22 – Add Custom Records
-    * **SAVE FILE MUST BE UPDATED – Contact Jeremy or reset it by deleting .runelite/slayer-tracker/**
 
 ---
 Compare XP and GP rates for each Slayer task given your actual performance. Determine which tasks to do, skip, and
