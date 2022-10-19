@@ -56,6 +56,8 @@ public class RecordingModePanel extends JPanel
 		"In Combat",
 		"Continuous"
 	);
+	private final String inCombatToolTipText = "Only log combat time. Recommended for most tasks, to normalize for varying focus level.";
+	private final String continuousToolTipText = "Log time between kills, until paused. Recommended for tasks where banking is significant, such as Bosses.";
 
 	RecordingModePanel()
 	{
@@ -78,6 +80,7 @@ public class RecordingModePanel extends JPanel
 			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
 			setContinuousRecordingMode("Continuous".equals(String.valueOf(recordingModeComboBox.getSelectedItem())));
 		});
+		recordingModeComboBox.setToolTipText(inCombatToolTipText);
 		add(recordingModeComboBox);
 		// Record button
 		recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_active_icon.png"));
@@ -86,6 +89,7 @@ public class RecordingModePanel extends JPanel
 		recordingBreakButton.addActionListener(l -> setContinuousRecording(false));
 		recordingBreakButton.setPreferredSize(new Dimension(16, 16));
 		recordingBreakButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		recordingBreakButton.setToolTipText("Pause Continuous Recording");
 		recordButtonBorderPanel = new JPanel();
 		recordButtonBorderPanel.setLayout(new BoxLayout(recordButtonBorderPanel, BoxLayout.X_AXIS));
 		recordButtonBorderPanel.setBorder(new EmptyBorder(3, 4, 3, 4));
@@ -112,6 +116,9 @@ public class RecordingModePanel extends JPanel
 		if (!b)
 		{
 			setContinuousRecording(false);
+			recordingModeComboBox.setToolTipText(inCombatToolTipText);
+		} else {
+			recordingModeComboBox.setToolTipText(continuousToolTipText);
 		}
 	}
 }

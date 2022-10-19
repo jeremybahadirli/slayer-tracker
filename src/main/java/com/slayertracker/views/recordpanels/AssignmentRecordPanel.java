@@ -67,6 +67,7 @@ public class AssignmentRecordPanel extends RecordPanel
 		addCustomRecordButton.setPreferredSize(new Dimension(16, 16));
 		addCustomRecordButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		addCustomRecordButton.setFocusPainted(false);
+		addCustomRecordButton.setToolTipText("New Custom Record");
 		Component hg = Box.createHorizontalGlue();
 		hg.setBackground(Color.red);
 		headerPanel.add(hg);

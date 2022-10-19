@@ -73,8 +73,7 @@ public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 		{
 			@Override
 			public void focusGained(FocusEvent e)
-			{
-			}
+			{}
 
 			@Override
 			public void focusLost(FocusEvent e)
@@ -86,26 +85,27 @@ public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 		// Record button
 		ImageIcon recordIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_icon.png"));
 		ImageIcon recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_active_icon.png"));
-		JToggleButton addCustomRecordButton = new JToggleButton(recordIcon);
-		addCustomRecordButton.addActionListener(l -> {
-			if (addCustomRecordButton.isSelected())
+		JToggleButton recordButton = new JToggleButton(recordIcon);
+		recordButton.addActionListener(l -> {
+			if (recordButton.isSelected())
 			{
 				record.setRecording(true);
-				addCustomRecordButton.setIcon(recordActiveIcon);
+				recordButton.setIcon(recordActiveIcon);
 			}
 			else
 			{
 				record.setRecording(false);
 				record.getInteractors().clear();
-				addCustomRecordButton.setIcon(recordIcon);
+				recordButton.setIcon(recordIcon);
 			}
 		});
-		addCustomRecordButton.setBorder(new EmptyBorder(0, 0, 0, 0));
-		addCustomRecordButton.setPreferredSize(new Dimension(16, 16));
-		addCustomRecordButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		addCustomRecordButton.setFocusPainted(false);
+		recordButton.setBorder(new EmptyBorder(0, 0, 0, 0));
+		recordButton.setPreferredSize(new Dimension(16, 16));
+		recordButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		recordButton.setFocusPainted(false);
+		recordButton.setToolTipText("Start/Stop logging to this Custom Record.");
 		headerPanel.add(Box.createHorizontalGlue());
-		headerPanel.add(addCustomRecordButton);
+		headerPanel.add(recordButton);
 
 		// Right-click menu
 
