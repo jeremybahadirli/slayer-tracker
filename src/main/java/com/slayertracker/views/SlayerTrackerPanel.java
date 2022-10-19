@@ -146,7 +146,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		// Welcome text
 		welcomeText = new PluginErrorPanel();
 		welcomeText.setContent(
-			"Slayer Tracker BETA",
+			"Slayer Tracker",
 			"Compare XP and GP rates for each Slayer task.");
 
 		welcomeText2 = new PluginErrorPanel();
