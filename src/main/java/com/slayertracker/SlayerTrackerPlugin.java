@@ -172,8 +172,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		gson = new GsonBuilder()
 			// Only serialize fields with @Expose
 			.excludeFieldsWithoutExposeAnnotation()
-			// When building records from JSON, these classes get
-			// SlayerTrackerPlugin as a property change listener
+			// Save as human-readable JSON (newlines/tabs)
+			.setPrettyPrinting()
+			// When reconstructing records from JSON, apply property change listeners
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
 			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(this))
@@ -240,6 +241,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				xpShareInteractors.clear();
 				// Reset slayer xp
 				cachedXp = -1;
+				slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
 				break;
 		}
 	}
