@@ -117,7 +117,9 @@ public class RecordingModePanel extends JPanel
 		{
 			setContinuousRecording(false);
 			recordingModeComboBox.setToolTipText(inCombatToolTipText);
-		} else {
+		}
+		else
+		{
 			recordingModeComboBox.setToolTipText(continuousToolTipText);
 		}
 	}

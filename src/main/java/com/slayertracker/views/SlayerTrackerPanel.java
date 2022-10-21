@@ -62,7 +62,6 @@ public class SlayerTrackerPanel extends PluginPanel
 	private final SlayerTrackerConfig config;
 
 	private final PluginErrorPanel welcomeText;
-	private final PluginErrorPanel welcomeText2;
 	private final JButton resetAllButton;
 	private final JButton resetCustomButton;
 	private final RecordingModePanel recordingModePanel;
@@ -149,11 +148,6 @@ public class SlayerTrackerPanel extends PluginPanel
 			"Slayer Tracker",
 			"Compare XP and GP rates for each Slayer task.");
 
-		welcomeText2 = new PluginErrorPanel();
-		welcomeText2.setContent(
-			"",
-			"For help, click below to view the README on GitHub.");
-
 		// Reset All button
 		resetAllButton = new JButton("Delete All");
 		resetAllButton.addActionListener(event -> {
@@ -216,7 +210,6 @@ public class SlayerTrackerPanel extends PluginPanel
 		{
 			// Welcome text
 			assignmentListPanel.add(welcomeText);
-			assignmentListPanel.add(welcomeText2);
 		}
 		else
 		{
