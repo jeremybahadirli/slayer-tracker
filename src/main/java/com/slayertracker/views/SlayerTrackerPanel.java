@@ -32,7 +32,6 @@ import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.KeyboardFocusManager;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -104,7 +103,6 @@ public class SlayerTrackerPanel extends PluginPanel
 		});
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
 		sorterComboBox.addActionListener(l -> {
-			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
 			switch (String.valueOf(sorterComboBox.getSelectedItem()))
 			{
 				case "XP Rate":
@@ -130,6 +128,7 @@ public class SlayerTrackerPanel extends PluginPanel
 			}
 			update();
 		});
+		sorterComboBox.setFocusable(false);
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
 

@@ -27,7 +27,6 @@ package com.slayertracker.views;
 import com.google.common.collect.ImmutableList;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.KeyboardFocusManager;
 import java.time.Instant;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -76,10 +75,9 @@ public class RecordingModePanel extends JPanel
 			}
 		});
 		RECORDING_MODES.forEach(recordingModeComboBox::addItem);
-		recordingModeComboBox.addActionListener(l -> {
-			KeyboardFocusManager.getCurrentKeyboardFocusManager().focusNextComponent();
-			setContinuousRecordingMode("Continuous".equals(String.valueOf(recordingModeComboBox.getSelectedItem())));
-		});
+		recordingModeComboBox.addActionListener(l ->
+			setContinuousRecordingMode("Continuous".equals(String.valueOf(recordingModeComboBox.getSelectedItem()))));
+		recordingModeComboBox.setFocusable(false);
 		recordingModeComboBox.setToolTipText(inCombatToolTipText);
 		add(recordingModeComboBox);
 		// Record button
