@@ -237,7 +237,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			case LOGIN_SCREEN:
 				saveRecordsToDisk();
 
-				// xpShareInteractors could theoretically retain an npc
+				// xpShareInteractors could theoretically retain an NPC
 				// if the player logs out at exactly the right instant
 				xpShareInteractors.clear();
 				// Reset slayer xp
@@ -347,7 +347,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		// Determine whether this is a Player-NPC interaction
-		// Assign the source or target as appropriate to npc
+		// Assign the source or target as appropriate to NPC
 		final NPC npc;
 		if (event.getSource() == client.getLocalPlayer() && event.getTarget() instanceof NPC)
 		{
@@ -371,7 +371,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
-		// If Assignment Record for this npc doesn't exist, create one
+		// If Assignment Record for this NPC doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 
@@ -382,7 +382,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		{
 			assignmentRecord.setCombatInstant(now);
 		}
-		// Add the npc to the record's interactors
+		// Add the NPC to the record's interactors
 		assignmentRecord.getInteractors().add(npc);
 
 		// Do the same as above for the Variant, if one exists
