@@ -93,7 +93,7 @@ import org.apache.commons.lang3.ArrayUtils;
  * TERMINOLOGY
  * Assignment:		An assignment given by a Slayer Master, ie "Trolls", "Fire giants".
  * Variant:			A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)".
- * Group:				A group of monsters that is tracked together by the plugin. Both of the above are Groups.
+ * Group:			A group of monsters that is tracked together by the plugin. Both of the above are Groups.
  *						"Trolls" Assignment is a Group encompassing all trolls.
  *						"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles.
  * Record:			The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group.
