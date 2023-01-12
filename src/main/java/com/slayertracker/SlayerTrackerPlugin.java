@@ -88,33 +88,33 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 /*
- DEVELOPMENT STARTED 12/05/21
-
- TERMINOLOGY
- Assignment:		An assignment given by a Slayer Master, ie "Trolls", "Fire giants".
- Variant:			A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)".
- Group:			A group of monsters that is tracked together by the plugin. Both of the above are Groups.
-						"Trolls" Assignment is a Group encompassing all trolls.
-						"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles.
- Record:			The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group.
- Target Name:		The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female".
- Interactor:		An individual on-assignment monster which is interacting with the player.
- Combat Instant: 	The time at which interaction began for a record.
- 						If there are multiple interactors for a given record,
- 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
- TODO
- Initial Release (minus Analysis):
- Test logging out during interaction
- Last kill of task - kc and xp are counted but gp is not.
- RecordManager?
-
- Analysis:
- Add task weight and average quantity for each task, with extensions as necessary
- To config, add:
- 		Slayer Master combo box
-		Active task extension checkboxes
- To Side Panel, add Slayer Master view combo box, with option for "All"
-*/
+ * DEVELOPMENT STARTED 12/05/21
+ *
+ * TERMINOLOGY
+ * Assignment:		An assignment given by a Slayer Master, ie "Trolls", "Fire giants".
+ * Variant:			A subset of the Assignment which is fought together, ie "Ice trolls", "Fire giant (Catacombs)".
+ * Group:				A group of monsters that is tracked together by the plugin. Both of the above are Groups.
+ *						"Trolls" Assignment is a Group encompassing all trolls.
+ *						"Ice trolls" Variant is a Group encompassing the trolls fought on the Fremennik Isles.
+ * Record:			The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group.
+ * Target Name:		The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female".
+ * Interactor:		An individual on-assignment monster which is interacting with the player.
+ * Combat Instant: 	The time at which interaction began for a record.
+ * 						If there are multiple interactors for a given record,
+ * 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
+ * TODO
+ * Initial Release (minus Analysis):
+ * Test logging out during interaction
+ * Last kill of task - kc and xp are counted but gp is not.
+ * RecordManager?
+ *
+ * Analysis:
+ * Add task weight and average quantity for each task, with extensions as necessary
+ * To config, add:
+ * 		Slayer Master combo box
+ *		Active task extension checkboxes
+ * To Side Panel, add Slayer Master view combo box, with option for "All"
+ */
 
 @Slf4j
 @PluginDescriptor(
