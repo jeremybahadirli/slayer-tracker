@@ -529,8 +529,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		int newSlayerXp = event.getXp();
 		if (newSlayerXp <= cachedXp)
 		{
-			log.error("Hey it's that weird xp case: " + newSlayerXp + " " + cachedXp);
-			notifier.notify("Hey it's that weird Slayer xp case.");
+			log.error(      "Hey it's that weird xp case: " + newSlayerXp + " " + cachedXp);
+			notifier.notify("Hey it's that weird xp case: " + newSlayerXp + " " + cachedXp);
 			return;
 		}
 
