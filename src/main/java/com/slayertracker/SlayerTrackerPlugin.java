@@ -181,7 +181,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
 			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
 			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(this))
-			// GSON doesn't recognize Instance, so serialize/deserialize as a long
+			// GSON doesn't recognize Instant, so serialize/deserialize as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
 			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
