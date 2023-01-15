@@ -194,6 +194,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			cachedXp = client.getSkillExperience(Skill.SLAYER);
+			configManager.setRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY, "rats");
 		}
 	}
 
@@ -438,6 +439,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		deadInteractors.addFirst(npc);
+		log.info("Post-add");
+		log.info(deadInteractors.toString());
 
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
@@ -474,6 +477,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		int thisNpcIndex = deadInteractors.indexOf(npc);
 		deadInteractors.subList(thisNpcIndex, deadInteractors.size()).clear();
+
+		log.info("Post-remove");
+		log.info(deadInteractors.toString());
+		log.info("");
 
 		// Sum the GE item price of each dropped item
 		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
