@@ -52,6 +52,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiPredicate;
@@ -146,6 +147,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	private Assignment currentAssignment;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
+
+	private final LinkedList<NPC> deadInteractors = new LinkedList<>();
 	private final Set<NPC> xpShareInteractors = new HashSet<>();
 	private int cachedXp = -1;
 
@@ -434,6 +437,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
+		deadInteractors.addFirst(npc);
+
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
 		// Add NPC to set of those who will be allotted xp from the next xp drop
@@ -461,16 +466,14 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onNpcLootReceived(NpcLootReceived event)
 	{
-		if (currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
-		{
+		NPC npc = event.getNpc();
+
+		if (!deadInteractors.contains(npc)) {
 			return;
 		}
 
-		NPC npc = event.getNpc();
-		if (!isOnAssignment.test(currentAssignment, npc))
-		{
-			return;
-		}
+		int thisNpcIndex = deadInteractors.indexOf(npc);
+		deadInteractors.subList(thisNpcIndex, deadInteractors.size()).clear();
 
 		// Sum the GE item price of each dropped item
 		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
