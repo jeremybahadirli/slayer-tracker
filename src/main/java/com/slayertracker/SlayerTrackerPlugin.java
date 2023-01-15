@@ -70,7 +70,6 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
-import net.runelite.client.Notifier;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -139,8 +138,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private ClientToolbar clientToolbar;
 	@Inject
 	private ScheduledExecutorService executor;
-	@Inject
-	private Notifier notifier;
 
 	public static final String DATA_FOLDER_NAME = "slayer-tracker";
 	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
@@ -529,8 +526,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		int newSlayerXp = event.getXp();
 		if (newSlayerXp <= cachedXp)
 		{
-			log.error(      "Hey it's that weird xp case: " + newSlayerXp + " " + cachedXp);
-			notifier.notify("Hey it's that weird xp case: " + newSlayerXp + " " + cachedXp);
 			return;
 		}
 
