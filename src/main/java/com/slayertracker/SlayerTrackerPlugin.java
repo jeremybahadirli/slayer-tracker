@@ -371,7 +371,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
-		// If Assignment Record for this NPC doesn't exist, create one
+		// If Assignment Record for this npc doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 
