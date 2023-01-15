@@ -52,7 +52,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.BiPredicate;
@@ -70,6 +69,7 @@ import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
+import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -148,8 +148,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private Assignment currentAssignment;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
 
-	private final LinkedList<NPC> deadInteractors = new LinkedList<>();
 	private final Set<NPC> xpShareInteractors = new HashSet<>();
+	private final Set<NPC> deadInteractors = new HashSet<>();
+	private final Set<NPC> despawnedInteractors = new HashSet<>();
 	private int cachedXp = -1;
 
 	private SlayerTrackerPanel slayerTrackerPanel;
@@ -244,6 +245,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				// xpShareInteractors could theoretically retain an NPC
 				// if the player logs out at exactly the right instant
 				xpShareInteractors.clear();
+				deadInteractors.clear();
+				despawnedInteractors.clear();
 				// Reset slayer xp
 				cachedXp = -1;
 				slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
@@ -340,6 +343,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			assignmentRecord.getCustomRecords().forEach(customRecord ->
 				customRecord.getInteractors().removeIf(isNotInteracting));
 		});
+
+		despawnedInteractors.forEach(deadInteractors::remove);
+		despawnedInteractors.clear();
 	}
 
 	@Subscribe
@@ -438,14 +444,12 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		deadInteractors.addFirst(npc);
-		log.info("Post-add");
-		log.info(deadInteractors.toString());
-
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
 		// Add NPC to set of those who will be allotted xp from the next xp drop
 		xpShareInteractors.add(npc);
+		// Add NPC to set of those who owe loot
+		deadInteractors.add(npc);
 
 		// Increment kc in assignment record
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
@@ -467,20 +471,23 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	}
 
 	@Subscribe
+	private void onNpcDespawned(NpcDespawned event)
+	{
+		if (deadInteractors.contains(event.getNpc()))
+		{
+			despawnedInteractors.add(event.getNpc());
+		}
+	}
+
+	@Subscribe
 	private void onNpcLootReceived(NpcLootReceived event)
 	{
 		NPC npc = event.getNpc();
 
-		if (!deadInteractors.contains(npc)) {
+		if (!deadInteractors.contains(npc))
+		{
 			return;
 		}
-
-		int thisNpcIndex = deadInteractors.indexOf(npc);
-		deadInteractors.subList(thisNpcIndex, deadInteractors.size()).clear();
-
-		log.info("Post-remove");
-		log.info(deadInteractors.toString());
-		log.info("");
 
 		// Sum the GE item price of each dropped item
 		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
