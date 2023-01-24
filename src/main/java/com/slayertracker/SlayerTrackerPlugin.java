@@ -99,8 +99,7 @@ import org.apache.commons.lang3.ArrayUtils;
  * Record:			The data tracked by the plugin for each Group. A Record contains the Player's kc, xp, etc. for a Group.
  * Target Name:		The exact in-game name of a monster in a Group, ie "Ice troll male", "Ice troll female".
  * Interactor:		An individual on-assignment monster which is interacting with the player.
- * Combat Instant: 	The time at which interaction began for a record.
- * 						If there are multiple interactors for a given record,
+ * Combat Instant: 	The time at which interaction began for a record. If there are multiple interactors for a given record,
  * 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
  * TODO
  * Initial Release (minus Analysis):
@@ -524,6 +523,10 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		int newSlayerXp = event.getXp();
+
+		// cachedXp is -1 prior to login, and is set on each Slayer XP gain.
+		// cachedXp, being the previous XP amount, should never be larger than newSlayerXp,
+		// but they are equal when receiving the XP drop when hopping worlds.
 		if (newSlayerXp <= cachedXp)
 		{
 			return;
