@@ -24,37 +24,22 @@
  */
 package com.slayertracker;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.InstanceCreator;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializer;
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Provides;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.groups.Variant;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.CustomRecord;
-import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.SlayerTrackerPanel;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
@@ -70,7 +55,6 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
-import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -138,17 +122,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Inject
 	private ScheduledExecutorService executor;
 
-	public static final String DATA_FOLDER_NAME = "slayer-tracker";
-	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
-	private String dataFileName;
-	private Gson gson;
-
 	private Assignment currentAssignment;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
 	private final Set<NPC> xpShareInteractors = new HashSet<>();
 	private int cachedXp = -1;
 
 	private SlayerTrackerPanel slayerTrackerPanel;
+	private SlayerTrackerSaveManager saveManager;
 
 	private boolean loggingIn = false;
 
@@ -168,22 +148,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			.build();
 		clientToolbar.addNavigation(navButton);
 
-		// GSON serializes record data to JSON for disk storage
-		gson = new GsonBuilder()
-			// Only serialize fields with @Expose
-			.excludeFieldsWithoutExposeAnnotation()
-			// Save as human-readable JSON (newlines/tabs)
-			.setPrettyPrinting()
-			// When reconstructing records from JSON, apply property change listeners
-			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(this))
-			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(this))
-			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(this))
-			// GSON doesn't recognize Instant, so serialize/deserialize as a long
-			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
-				new JsonPrimitive(instant.getEpochSecond()))
-			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
-				Instant.ofEpochSecond(json.getAsLong()))
-			.create();
+		saveManager = new SlayerTrackerSaveManager(this);
 
 		// If already logged in on plugin startup, store current Slayer xp for xp drop calculation
 		// If not logged in, Player will receive xp drop on login, so we will store it then
@@ -196,14 +161,34 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Override
 	protected void shutDown()
 	{
-		saveRecordsToDisk();
+		try
+		{
+			saveManager.saveRecordsToDisk(assignmentRecords);
+		}
+		catch (Exception e)
+		{
+			// If data folder could not be created, display user-facing error in the Side Panel
+			slayerTrackerPanel.displayFileError();
+			e.printStackTrace();
+		}
 	}
 
 	@Subscribe
 	public void onClientShutdown(ClientShutdown event)
 	{
 		// Ask client to allow us to save our groups to disk before shutting down.
-		event.waitFor(executor.submit(this::saveRecordsToDisk));
+		event.waitFor(executor.submit(() -> {
+			try
+			{
+				saveManager.saveRecordsToDisk(assignmentRecords);
+			}
+			catch (Exception e)
+			{
+				// If data folder could not be created, display user-facing error in the Side Panel
+				slayerTrackerPanel.displayFileError();
+				e.printStackTrace();
+			}
+		}));
 	}
 
 	@Subscribe
@@ -230,11 +215,29 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 				// Set data file name
 				// This will be remembered for saving after logout
-				dataFileName = configManager.getRSProfileKey().split("\\.")[1] + ".json";
-				loadRecordsFromDisk();
+				saveManager.setDataFileName(configManager.getRSProfileKey().split("\\.")[1] + ".json");
+				assignmentRecords.clear();
+				try
+				{
+					assignmentRecords.putAll(saveManager.loadRecordsFromDisk());
+				}
+				catch (Exception e)
+				{
+					slayerTrackerPanel.displayFileError();
+					e.printStackTrace();
+				}
 				break;
 			case LOGIN_SCREEN:
-				saveRecordsToDisk();
+				try
+				{
+					saveManager.saveRecordsToDisk(assignmentRecords);
+				}
+				catch (Exception e)
+				{
+					// If data folder could not be created, display user-facing error in the Side Panel
+					slayerTrackerPanel.displayFileError();
+					e.printStackTrace();
+				}
 
 				// xpShareInteractors could theoretically retain an NPC
 				// if the player logs out at exactly the right instant
@@ -361,7 +364,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		if (!isOnAssignment.test(currentAssignment, npc))
+		if (!isOnAssignment(currentAssignment, npc))
 		{
 			return;
 		}
@@ -466,7 +469,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		NPC npc = event.getNpc();
-		if (!isOnAssignment.test(currentAssignment, npc))
+		if (!isOnAssignment(currentAssignment, npc))
 		{
 			return;
 		}
@@ -607,82 +610,25 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		divideXp(slayerXpDrop, xpShareInteractors);
 	}
 
-	private void loadRecordsFromDisk()
+	private boolean isOnAssignment(Assignment a, NPC n)
 	{
-		try
+		if (n.getTransformedComposition() == null)
 		{
-			if (dataFileName == null)
-			{
-				return;
-			}
-			File dataFile = getDataFile();
-
-			// If data file doesn't exist, create one with an empty assignment RecordMap
-			if (!dataFile.exists())
-			{
-				Writer writer = new FileWriter(dataFile);
-				writer.write("{}");
-				writer.close();
-			}
-
-			// Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
-			// then copy it into assignmentRecords
-			// Must copy it in, because the ui has already received this RecordMap instance
-			HashMap<Assignment, AssignmentRecord> dataFromDisk = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
-			{
-			}.getType());
-			assignmentRecords.clear();
-			assignmentRecords.putAll(dataFromDisk);
+			return false;
 		}
-		catch (Exception e)
-		{
-			slayerTrackerPanel.displayFileError();
-			e.printStackTrace();
-		}
+
+		boolean npcNameMatchesATargetName =
+			a.getTargetNames().stream()
+				.anyMatch(n.getTransformedComposition().getName()
+					.replace('\u00A0', ' ')
+					.toLowerCase()
+					::contains);
+
+		boolean attackable = ArrayUtils.contains(n.getTransformedComposition().getActions(), "Attack")
+			|| ArrayUtils.contains(n.getTransformedComposition().getActions(), "Pick");
+
+		return npcNameMatchesATargetName && attackable;
 	}
-
-	private void saveRecordsToDisk()
-	{
-		try
-		{
-			if (dataFileName == null)
-			{
-				return;
-			}
-			File dataFile = getDataFile();
-
-			// Serialize assignmentRecords to json and write to the data file
-			Writer writer = new FileWriter(dataFile);
-			gson.toJson(assignmentRecords, writer);
-			writer.flush();
-			writer.close();
-		}
-		catch (Exception e)
-		{
-			// If data folder could not be created, display user-facing error in the Side Panel
-			slayerTrackerPanel.displayFileError();
-			e.printStackTrace();
-		}
-	}
-
-	private File getDataFile() throws IOException
-	{
-		// Throw exception if data folder could not be created
-		if (!DATA_FOLDER.exists() && !DATA_FOLDER.mkdirs())
-		{
-			throw new IOException("Could not create data folder: .runelite/slayer-tracker");
-		}
-		return new File(DATA_FOLDER, dataFileName);
-	}
-
-	// True if formatted NPC name contains any of the Assignment's target names,
-	// AND NPC has an Attack OR Pick action (pick action is for Zygomite)
-	private static final BiPredicate<Assignment, NPC> isOnAssignment = (assignment, npc) ->
-		npc.getTransformedComposition() != null
-			&& assignment.getTargetNames().stream()
-			.anyMatch(npc.getTransformedComposition().getName().replace('\u00A0', ' ').toLowerCase()::contains)
-			&& (ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Attack")
-			|| ArrayUtils.contains(npc.getTransformedComposition().getActions(), "Pick"));
 
 	@Override
 	public void propertyChange(PropertyChangeEvent evt)
