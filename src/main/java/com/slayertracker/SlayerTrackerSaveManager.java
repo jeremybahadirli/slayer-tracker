@@ -57,7 +57,6 @@ public class SlayerTrackerSaveManager
 
 	public SlayerTrackerSaveManager(SlayerTrackerPlugin plugin)
 	{
-
 		// GSON serializes record data to JSON for disk storage
 		gson = new GsonBuilder()
 			// Only serialize fields with @Expose
@@ -74,7 +73,6 @@ public class SlayerTrackerSaveManager
 			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
 				Instant.ofEpochSecond(json.getAsLong()))
 			.create();
-
 	}
 
 	public void setDataFileName(String dataFileName)
@@ -114,6 +112,10 @@ public class SlayerTrackerSaveManager
 
 	void saveRecordsToDisk(RecordMap<Assignment, AssignmentRecord> assignmentRecords) throws Exception
 	{
+		if (dataFileName == null)
+		{
+			return;
+		}
 		File dataFile = getDataFile();
 
 		// Serialize assignmentRecords to json and write to the data file
@@ -121,10 +123,5 @@ public class SlayerTrackerSaveManager
 		gson.toJson(assignmentRecords, writer);
 		writer.flush();
 		writer.close();
-	}
-
-	void fun()
-	{
-
 	}
 }
