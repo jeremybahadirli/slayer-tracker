@@ -214,9 +214,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				loggingIn = false;
 
 				// Set current assignment from Slayer Plugin config file
-				Assignment.getAssignmentByName(
-						configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
-					.ifPresent(assignment -> this.currentAssignment = assignment);
+				Assignment.getAssignmentByName(slayerPluginService.getTask()).ifPresent(assignment -> this.currentAssignment = assignment);
 
 				// Set data file name
 				// This will be remembered for saving after logout
@@ -274,7 +272,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				{
 					// Set current assignment to null, or the new value if it is valid
 					currentAssignment = null;
-					Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
+					Assignment.getAssignmentByName(slayerPluginService.getTask()).ifPresent(assignment ->
 						this.currentAssignment = assignment);
 
 					// Clear interactors for all records, as no more active interactors will be on-task
@@ -369,7 +367,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		if (!isOnAssignment(currentAssignment, npc))
+		if (!slayerPluginService.getTargets().contains(npc))
 		{
 			return;
 		}
@@ -474,7 +472,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		}
 
 		NPC npc = event.getNpc();
-		if (!isOnAssignment(currentAssignment, npc))
+		if (!slayerPluginService.getTargets().contains(npc))
 		{
 			return;
 		}
@@ -615,25 +613,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		divideXp(slayerXpDrop, xpShareInteractors);
 	}
 
-	private boolean isOnAssignment(Assignment a, NPC n)
-	{
-		if (n.getTransformedComposition() == null)
-		{
-			return false;
-		}
-
-		boolean npcNameMatchesATargetName =
-			a.getTargetNames().stream()
-				.anyMatch(n.getTransformedComposition().getName()
-					.replace('\u00A0', ' ')
-					.toLowerCase()
-					::contains);
-
-		boolean attackable = ArrayUtils.contains(n.getTransformedComposition().getActions(), "Attack")
-			|| ArrayUtils.contains(n.getTransformedComposition().getActions(), "Pick");
-
-		return npcNameMatchesATargetName && attackable;
-	}
 
 	@Override
 	public void propertyChange(PropertyChangeEvent evt)
