@@ -64,12 +64,14 @@ import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.slayer.SlayerConfig;
+import net.runelite.client.plugins.slayer.SlayerPlugin;
+import net.runelite.client.plugins.slayer.SlayerPluginService;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.util.ImageUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 /*
  * DEVELOPMENT STARTED 12/05/21
@@ -103,6 +105,7 @@ import org.apache.commons.lang3.ArrayUtils;
 @PluginDescriptor(
 	name = "Slayer Tracker"
 )
+@PluginDependency(SlayerPlugin.class)
 public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListener
 {
 	@Inject
@@ -121,6 +124,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private ClientToolbar clientToolbar;
 	@Inject
 	private ScheduledExecutorService executor;
+	@Inject
+	private SlayerPluginService slayerPluginService;
 
 	private Assignment currentAssignment;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
