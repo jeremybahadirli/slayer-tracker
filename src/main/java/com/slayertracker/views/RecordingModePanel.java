@@ -56,7 +56,7 @@ public class RecordingModePanel extends JPanel
 		"Continuous"
 	);
 	private final String inCombatToolTipText = "Only log combat time. Recommended for most tasks, to normalize for varying focus level.";
-	private final String continuousToolTipText = "Log time between kills, until paused. Recommended for tasks where banking is significant, such as Bosses.";
+	private final String continuousToolTipText = "Log time between kills, until paused. Recommended for tasks where banking is significant, such as bosses.";
 
 	RecordingModePanel()
 	{
