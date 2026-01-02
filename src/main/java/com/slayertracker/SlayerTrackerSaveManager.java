@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.time.Instant;
 import java.util.HashMap;
+import lombok.Setter;
 import net.runelite.client.RuneLite;
 
 public class SlayerTrackerSaveManager
@@ -53,6 +54,7 @@ public class SlayerTrackerSaveManager
 
 	public static final String DATA_FOLDER_NAME = "slayer-tracker";
 	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
+	@Setter
 	private String dataFileName;
 
 	public SlayerTrackerSaveManager(SlayerTrackerPlugin plugin)
@@ -73,11 +75,6 @@ public class SlayerTrackerSaveManager
 			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
 				Instant.ofEpochSecond(json.getAsLong()))
 			.create();
-	}
-
-	public void setDataFileName(String dataFileName)
-	{
-		this.dataFileName = dataFileName;
 	}
 
 	private File getDataFile() throws IOException
