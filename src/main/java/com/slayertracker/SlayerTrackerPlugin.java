@@ -47,7 +47,6 @@ import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.ItemID;
 import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
@@ -55,6 +54,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -174,7 +174,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		{
 			// If data folder could not be created, display user-facing error in the Side Panel
 			slayerTrackerPanel.displayFileError();
-			e.printStackTrace();
 		}
 	}
 
@@ -191,7 +190,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			{
 				// If data folder could not be created, display user-facing error in the Side Panel
 				slayerTrackerPanel.displayFileError();
-				e.printStackTrace();
 			}
 		}));
 	}
@@ -214,10 +212,13 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				loggingIn = false;
 
 				// Set current assignment from Slayer Plugin config file
-				Assignment.getAssignmentByName(slayerPluginService.getTask()).ifPresent(assignment -> this.currentAssignment = assignment);
+				Assignment.getAssignmentByName(
+						configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
+					.ifPresent(assignment -> this.currentAssignment = assignment);
 
 				// Set data file name
 				// This will be remembered for saving after logout
+				assert configManager.getRSProfileKey() != null;
 				saveManager.setDataFileName(configManager.getRSProfileKey().split("\\.")[1] + ".json");
 				assignmentRecords.clear();
 				try
@@ -227,7 +228,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				catch (Exception e)
 				{
 					slayerTrackerPanel.displayFileError();
-					e.printStackTrace();
 				}
 				break;
 			case LOGIN_SCREEN:
@@ -239,7 +239,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				{
 					// If data folder could not be created, display user-facing error in the Side Panel
 					slayerTrackerPanel.displayFileError();
-					e.printStackTrace();
 				}
 
 				// xpShareInteractors could theoretically retain an NPC
@@ -272,7 +271,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				{
 					// Set current assignment to null, or the new value if it is valid
 					currentAssignment = null;
-					Assignment.getAssignmentByName(slayerPluginService.getTask()).ifPresent(assignment ->
+					Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
 						this.currentAssignment = assignment);
 
 					// Clear interactors for all records, as no more active interactors will be on-task
@@ -288,10 +287,11 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	// True if no Player-NPC interaction exists with the given NPC
 	private final Predicate<NPC> isNotInteracting = interactor ->
-		!client.getNpcs().contains(interactor)
+		client.getTopLevelWorldView().npcs().stream().noneMatch(npc -> npc.equals(interactor))
 			|| client.getLocalPlayer() == null
-			|| client.getLocalPlayer().getInteracting() != interactor
-			&& interactor.getInteracting() != client.getLocalPlayer();
+			|| (client.getLocalPlayer().getInteracting() != interactor
+			&& interactor.getInteracting() != client.getLocalPlayer());
+
 
 	@Subscribe
 	public void onGameTick(GameTick event)
@@ -466,13 +466,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	@Subscribe
 	private void onNpcLootReceived(NpcLootReceived event)
 	{
-		if (currentAssignment == null || !assignmentRecords.containsKey(currentAssignment))
-		{
-			return;
-		}
-
 		NPC npc = event.getNpc();
-		if (!slayerPluginService.getTargets().contains(npc))
+		if (!slayerPluginService.getTargets().contains(npc) || !assignmentRecords.containsKey(currentAssignment))
 		{
 			return;
 		}
@@ -485,7 +480,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// Sum the HA item price of each dropped item
 		final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
 				// Since coins have 0 HA value instead of 1, use the coin item stack quantity as its value
-				if (itemStack.getId() == ItemID.COINS_995)
+				if (itemStack.getId() == ItemID.COINS)
 				{
 					return itemStack.getQuantity();
 				}
