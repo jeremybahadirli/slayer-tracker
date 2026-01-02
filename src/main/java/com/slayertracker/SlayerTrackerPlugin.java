@@ -90,8 +90,8 @@ import net.runelite.client.util.ImageUtil;
  * TODO
  * Initial Release (minus Analysis):
  * Test logging out during interaction
- * Last kill of task - kc and xp are counted but gp is not.
- * RecordManager?
+ * BUG Last kill of task - kc and xp are counted but gp is not.
+ * BUG Running to kill monster, when someone else killed it. Gave me 1kc, but 0 xp/gp
  *
  * Analysis:
  * Add task weight and average quantity for each task, with extensions as necessary
@@ -557,7 +557,8 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	// Determines the slayer xp value of a given NPC
 	// If variant has defined custom Slayer XP value, use that, otherwise use NPC's HP
 	private final Function<NPC, Integer> getSlayerXp = npc ->
-		currentAssignment.getVariantMatchingNpc(npc).map(Variant::getSlayerXp)
+		currentAssignment.getVariantMatchingNpc(npc)
+			.flatMap(Variant::getSlayerXp)
 			.orElse(npcManager.getHealth(npc.getId()));
 
 	private void divideXp(int slayerXpDrop, Set<NPC> xpShareInteractors)
@@ -571,7 +572,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			return;
 		}
 
-		// The sum of the slayer xp value of each NPC remaining in the queue
+		// The sum of the slayer xp values of all NPCs remaining in the queue
 		final int npcXpTotal = xpShareInteractors.stream().mapToInt(getSlayerXp::apply).sum();
 
 		// Choose the next NPC to allocate xp to
@@ -581,7 +582,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		// times the xp received, rounded to an integer. Then, remove the amount allocated from the total
 		// Calculating in this way allows for distributing xp from the actual amount received,
 		// without fear of error in the total caused by the rounding of the individual NPCs
-		final int thisNpcsXpShare = slayerXpDrop * getSlayerXp.apply(npc) / npcXpTotal;
+		final int thisNpcsXpShare = slayerXpDrop * (getSlayerXp.apply(npc) / npcXpTotal);
 		slayerXpDrop -= thisNpcsXpShare;
 
 		// Add the xp share to the assignment record
@@ -607,7 +608,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		xpShareInteractors.remove(npc);
 		divideXp(slayerXpDrop, xpShareInteractors);
 	}
-
 
 	@Override
 	public void propertyChange(PropertyChangeEvent evt)

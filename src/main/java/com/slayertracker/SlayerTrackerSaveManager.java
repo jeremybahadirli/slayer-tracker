@@ -33,6 +33,8 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.slayertracker.groups.Assignment;
+import com.slayertracker.groups.Variant;
+import com.slayertracker.groups.VariantTypeAdapter;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.CustomRecordSet;
@@ -69,6 +71,7 @@ public class SlayerTrackerSaveManager
 			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(plugin))
 			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(plugin))
 			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(plugin))
+			.registerTypeAdapter(Variant.class, new VariantTypeAdapter())
 			// GSON doesn't recognize Instant, so serialize/deserialize as a long
 			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
 				new JsonPrimitive(instant.getEpochSecond()))
@@ -102,9 +105,33 @@ public class SlayerTrackerSaveManager
 		// Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
 		// then copy it into assignmentRecords
 		// Must copy it in, because the ui has already received this RecordMap instance
-		return gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
+		HashMap<Assignment, AssignmentRecord> records = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
 		{
 		}.getType());
+
+		if (records != null)
+		{
+			records.forEach((assignment, record) -> {
+				if (assignment == null || record == null)
+				{
+					return;
+				}
+
+				if (record.getVariantRecords().isEmpty())
+				{
+					return;
+				}
+
+				HashMap<Variant, Record> remappedRecords = new HashMap<>(record.getVariantRecords());
+				record.getVariantRecords().clear();
+
+				remappedRecords.forEach((variant, variantRecord) ->
+					record.getVariantRecords()
+						.put(assignment.getVariantById(variant.getId()).orElse(variant), variantRecord));
+			});
+		}
+
+		return records;
 	}
 
 	void saveRecordsToDisk(RecordMap<Assignment, AssignmentRecord> assignmentRecords) throws Exception

@@ -24,207 +24,86 @@
  */
 package com.slayertracker.groups;
 
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 import lombok.Getter;
+import net.runelite.api.NPC;
 
-@Getter
-public enum Variant implements Group
+public final class Variant
 {
-	//<editor-fold desc="Enums">
-	// Aberrant spectres
-	ABERRANT_SPECTRE("Aberrant spectre", "Aberrant spectre", "Abhorrent spectre"),
-	DEVIANT_SPECTRE("Deviant spectre", "Deviant spectre", "Repugnant spectre"),
-	// Abyssal demons
-	ABYSSAL_DEMON("Abyssal demon"),
-	SIRE("Abyssal sire"),
-	// Ankous
-	ANKOU_NORMAL("Normal", new int[]{75, 82, 86}),
-	ANKOU_CATACOMBS("Catacombs", new int[]{95}),
-	ANKOU_WILDY_CAVE("Wildy Slayer Cave", new int[]{98}),
-	// Aviansies
-	AVIANSIE_NORMAL("Aviansie"),
-	KREEARRA("Kree'arra", new int[]{580, 159, 149, 143}),
-	// Banshees
-	BANSHEE_SLAYER_TOWER("Slayer Tower", new int[]{23}),
-	BANSHEE_CATACOMBS("Catacombs", new int[]{89}),
-	// Basilisks
-	BASILISK_NORMAL("Basilisk"),
-	BASILISK_KNIGHT("Basilisk Knight", "Basilisk Knight"),
-	// Bats
-	BAT_NORMAL("Bat", "Bat", "Giant bat"),
-	BAT_ALBINO("Albino bat"),
-	DEATHWING("Deathwing"),
-	// Bears
-	BEAR_NORMAL("Normal", "Bear cub", "Black bear", "Grizzly bear", "Grizzly bear cub"),
-	CALLISTO("Callisto"),
-	// Black demons
-	BLACK_DEMON("Black demon"),
-	BLACK_DEMON_GORILLA("Demonic gorilla"),
-	// Black dragons
-	BLACK_DRAG_NORMAL("Black dragon"),
-	BLACK_DRAG_BABY("Baby black dragon"),
-	BLACK_DRAG_BRUTAL("Brutal black dragon"),
-	// Bloodvelds
-	BLOODVELD_WEAK("(level-76)", new int[]{76}),
-	BLOODVELD_STRONG("God Wars Dungeon (level-81)", new int[]{81}),
-	MUTATED_BLOODVELD("Mutated Bloodveld"),
-	// Blue dragons
-	BLUE_DRAG_NORMAL("Blue dragon"),
-	BLUE_DRAG_BABY("Baby blue dragon"),
-	BLUE_DRAG_BRUTAL("Brutal blue dragon"),
-	VORKATH("Vorkath"),
-	// Bronze dragon
-	BRONZE_DRAG_NORMAL("Normal", new int[]{131}),
-	BRONZE_DRAG_CATACOMBS("Catacombs", new int[]{143}),
-	// Cave kraken
-	CAVE_KRAKEN("Cave kraken"),
-	KRAKEN("Kraken"),
-	// Chaos druids
-	CHAOS_DRUIDS("Chaos druid"),
-	CHAOS_DRUIDS_ELDER("Elder", "Elder chaos druid"),
-	// Dagannoth
-	DAGANNOTH_NORMAL("(level-74/92)", new int[]{74, 92}),
-	DAGANNOTH_WATERBIRTH("Waterbirth", new int[]{42, 70, 88, 90}),
-	DAGANNOTH_KINGS("Kings", "Dagannoth Rex", "Dagannoth Prime", "Dagannoth Supreme"),
-	// Dark warriors
-	DARK_WARRIOR_FORTRESS("Fortress", new int[]{8, 145}),
-	DARK_WARRIOR_KOUREND("Kourend", new int[]{37, 51, 62}),
-	// Dust devils
-	DUST_DEVIL_WEAK("Smoke Dungeon", new int[]{93}),
-	DUST_DEVIL_STRONG("Catacombs of Kourend", new int[]{110}),
-	// Fire giants
-	FIRE_GIANT_WEAK("(level-86)", new int[]{86}),
-	FIRE_GIANT_STRONG("Catacombs of Kourend", new int[]{104, 109}),
-	// Gargoyles
-	GARGOYLES("Gargoyle"),
-	GROTESQUE_GUARDIANS("Grotesque guardians", 1350, "Dusk"),
-	// Greater demons
-	GREATER_DEMON_NORMAL("Normal", new int[]{92}),
-	GREATER_DEMON_CATACOMBS("Catacombs", new int[]{100, 101, 113}),
-	GREATER_DEMON_WILDY_CAVE("Wildy Slayer Cave", new int[]{104}),
-	KRIL("K'ril Tsutsaroth", new int[]{145, 650}),
-	SKOTIZO("Skotizo"),
-	// Green dragons
-	GREEN_DRAG_NORMAL("Green dragon"),
-	GREEN_DRAG_BABY("Baby green dragon"),
-	GREEN_DRAG_BRUTAL("Brutal green dragon"),
-	// Hellhounds
-	CERBERUS("Cerberus", "Cerberus"),
-	HELLHOUND("Hellhound", "Hellhound"),
-	// Hydras
-	HYDRA("Hydra"),
-	ALCHEMICAL("Alchemical Hydra"),
-	// Ice giants
-	ICE_GIANT_NORMAL("Normal", new int[]{53}),
-	ICE_GIANT_WILDY_CAVE("Wildy Slayer Cave", new int[]{67}),
-	// Ice warriors
-	ICE_WARRIOR("Ice warrior"),
-	ICELORD("Icelord"),
-	// Iron dragons
-	IRON_DRAG_NORMAL("Normal", new int[]{189}),
-	IRON_DRAG_CATACOMBS("Catacombs", new int[]{215}),
-	// Jad
-	JAD("Jad", 25250, "TzTok-Jad"),
-	FIGHT_CAVE_OTHERS("Other", "Tz-Kih", "Tz-Kek", "Tok-Xil", "Yt-MekKok", "Ket-Zek", "Yt-HurKot"),
-	// Jellies
-	JELLY("Jelly"),
-	WARPED_JELLY("Warped jelly"),
-	// Kalphite
-	KALPHITE_WORKER("Worker", "Kalphite Worker"),
-	KALPHITE_SOLDIER("Soldier", "Kalphite Soldier"),
-	KALPHITE_GUARDIAN("Guardian", "Kalphite Guardian"),
-	KALPHITE_QUEEN("Queen", "Kalphite Queen"),
-	// Lesser demons
-	LESSER_DEMON_NORMAL("Normal", new int[]{82}),
-	LESSER_DEMON_WILDY_CATACOMBS("Catacombs/Wildy Cave", new int[]{87, 94}),
-	// Lizardmen
-	LIZARDMAN("Lizardman"),
-	LIZARDMAN_BRUTE("Lizardman brute"),
-	LIZARDMAN_SHAMAN("Lizardman shaman"),
-	// Lizards
-	LIZARD_DESERT("Desert", "Lizard", "Desert lizard", "Small lizard"),
-	LIZARD_SULFUR("Sulfur", "Sulfur lizard"),
-	// Monkeys
-	MONKEY_NORMAL("Normal", "Monkey"),
-	MONKEY_APE_ATOLL("Ape Atoll", "Monkey guard", "Monkey archer", "Monkey zombie", "Padulah"),
-	// Pyrefiend
-	PYREFIEND("Pyrefiend"),
-	PYRELORD("Pyrelord"),
-	// Red dragons
-	RED_DRAGON_NORMAL("Red dragon"),
-	RED_DRAGON_BABY("Baby red dragon"),
-	RED_DRAGON_BRUTAL("Brutal red dragon"),
-	// Skeletons
-	SKELETON("Skeleton"),
-	VETION("Vet'ion", new int[]{454}),
-	// Smoke devils
-	SMOKE_DEVIL_NORMAL("Smoke devil", new int[]{160, 280}),
-	THERMONUCLEAR("Thermonuclear", new int[]{301}),
-	// Trolls
-	ICE_TROLL("Ice troll", "Ice troll runt", "Ice troll grunt", "Ice troll male", "Ice troll female"),
-	MOUNTAIN_TROLL("Mountain troll"),
-	// Turoth
-	TUROTH_SMALL("Small", new int[]{83, 85}),
-	TUROTH_LARGE("Large", new int[]{87, 89}),
-	// Tzhaar
-	TZHAAR_KET("Tzhaar-Ket"),
-	TZHAAR_XIL("Tzhaar-Xil"),
-	TZHAAR_MEJ("Tzhaar-Mej"),
-	TZHAAR_HUR("Tzhaar-Hur"),
-	// Zygomite
-	ZYGOMITE_MUTATED("Mutated zygomite", new int[]{74, 86}),
-	ZYGOMITE_ANCIENT("Ancient zygomite", new int[]{109});
-	//</editor-fold>
+	private static final int DEFAULT_SLAYER_XP = -1;
 
+	@Getter
+	private final String id;
+	@Getter
 	private final String name;
-	private final String[] targetNames;
-	private final int[] combatLevels;
 	private final int slayerXp;
+	private final Match[] matchers;
 
-	Variant(String nameAndTargetName)
+	private Variant(String id, String name, int slayerXp, Match... matches)
 	{
-		this.name = nameAndTargetName;
-		this.targetNames = new String[]{nameAndTargetName};
-		this.combatLevels = new int[0];
-		this.slayerXp = -1;
-	}
-
-	Variant(String name, String... targetNames)
-	{
+		this.id = id;
 		this.name = name;
-		this.targetNames = targetNames;
-		this.combatLevels = new int[0];
-		this.slayerXp = -1;
-	}
-
-	Variant(String name, int[] combatLevels)
-	{
-		this.name = name;
-		this.targetNames = new String[]{};
-		this.combatLevels = combatLevels;
-		this.slayerXp = -1;
-	}
-
-	Variant(String displayAndTargetName, int slayerXp)
-	{
-		this.name = displayAndTargetName;
-		this.targetNames = new String[]{displayAndTargetName};
-		this.combatLevels = new int[0];
 		this.slayerXp = slayerXp;
+		this.matchers = matches == null ? new Match[0] : Arrays.copyOf(matches, matches.length);
 	}
 
-	Variant(String name, int slayerXp, String... targetNames)
+	public static Variant of(String id, String name, Match... matches)
 	{
-		this.name = name;
-		this.targetNames = targetNames;
-		this.combatLevels = new int[0];
-		this.slayerXp = slayerXp;
+		return new Variant(id, name, DEFAULT_SLAYER_XP, matches);
 	}
 
-	Variant(String name, int slayerXp, int[] combatLevels)
+	public static Variant of(String id, String name, int slayerXp, Match... matches)
 	{
-		this.name = name;
-		this.targetNames = new String[]{};
-		this.combatLevels = combatLevels;
-		this.slayerXp = slayerXp;
+		return new Variant(id, name, slayerXp, matches);
 	}
+
+	public static Variant of(String name, Match... matches)
+	{
+		return new Variant(name, name, DEFAULT_SLAYER_XP, matches);
+	}
+
+	boolean matches(NPC npc)
+	{
+		if (matchers.length == 0)
+		{
+			return false;
+		}
+
+		return Arrays.stream(matchers).anyMatch(match -> match.matches(npc));
+	}
+
+	public Optional<Integer> getSlayerXp()
+	{
+		return slayerXp > 0 ? Optional.of(slayerXp) : Optional.empty();
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o)
+		{
+			return true;
+		}
+		if (!(o instanceof Variant))
+		{
+			return false;
+		}
+		Variant variant = (Variant) o;
+		return id.equalsIgnoreCase(variant.id);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(id.toLowerCase());
+	}
+
+	@Override
+	public String toString()
+	{
+		return name;
+	}
+
 }
