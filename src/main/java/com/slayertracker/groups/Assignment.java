@@ -44,14 +44,8 @@ public enum Assignment
 	ABERRANT_SPECTRES(
 		"Aberrant spectres",
 		ItemID.SLAYERGUIDE_ABERRANTSPECTER,
-		Variant.of(
-			"Aberrant spectre",
-			Match.byNpcNames("Aberrant spectre", "Abhorrent spectre")
-		),
-		Variant.of(
-			"Deviant spectre",
-			Match.byNpcNames("Deviant spectre", "Repugnant spectre")
-		)
+		Variant.of( "Aberrant spectre", Match.byNpcNames("Aberrant spectre", "Abhorrent spectre") ),
+		Variant.of( "Deviant spectre", Match.byNpcNames("Deviant spectre", "Repugnant spectre") )
 	),
 	ABYSSAL_DEMONS(
 		"Abyssal demons",

@@ -90,8 +90,11 @@ import net.runelite.client.util.ImageUtil;
  * TODO
  * Initial Release (minus Analysis):
  * Test logging out during interaction
+ * Add and/or match predicates
  * BUG Last kill of task - kc and xp are counted but gp is not.
  * BUG Running to kill monster, when someone else killed it. Gave me 1kc, but 0 xp/gp
+ * - Slayer xp drop 1 tick after actor death. Both these problems may be solvable together. on actor death, save actor
+ * - and increment kc on slayer xp drop?
  *
  * Analysis:
  * Add task weight and average quantity for each task, with extensions as necessary
