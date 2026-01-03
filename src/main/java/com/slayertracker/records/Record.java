@@ -49,7 +49,6 @@ public class Record
 	@Expose
 	private int ha;
 	@Setter
-	@Expose
 	private Instant combatInstant;
 
 	private final Set<NPC> interactors = new HashSet<>();

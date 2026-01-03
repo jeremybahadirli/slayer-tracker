@@ -25,6 +25,7 @@
 package com.slayertracker.groups;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -47,7 +48,7 @@ public final class Match
 
 		return new Match((npc) -> {
 			String name = npc.getName();
-			return name != null && lowerNames.contains(name.toLowerCase());
+			return name != null && lowerNames.contains(name.toLowerCase(Locale.ROOT));
 		});
 	}
 
@@ -60,7 +61,7 @@ public final class Match
 		return new Match((npc) -> levelSet.contains(npc.getCombatLevel()));
 	}
 
-	boolean matches(NPC npc)
+	boolean test(NPC npc)
 	{
 		return predicate.test(npc);
 	}

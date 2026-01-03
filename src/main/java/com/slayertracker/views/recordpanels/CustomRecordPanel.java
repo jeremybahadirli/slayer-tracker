@@ -33,6 +33,7 @@ import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.util.Locale;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
@@ -114,7 +115,7 @@ public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
-				"<html>This will delete the record: <b>" + titleField.getText().toUpperCase() + "</b></html>",
+				"<html>This will delete the record: <b>" + titleField.getText().toUpperCase(Locale.ROOT) + "</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)

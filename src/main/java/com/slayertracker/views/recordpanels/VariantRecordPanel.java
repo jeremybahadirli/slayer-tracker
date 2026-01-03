@@ -29,6 +29,7 @@ import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.GroupListPanel;
 import java.awt.Dimension;
+import java.util.Locale;
 import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -60,7 +61,7 @@ public class VariantRecordPanel extends RecordPanel
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
-				"<html>This will delete the record: <b>" + variant.getName().toUpperCase() + "</b></html>",
+				"<html>This will delete the record: <b>" + variant.getName().toUpperCase(Locale.ROOT) + "</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)

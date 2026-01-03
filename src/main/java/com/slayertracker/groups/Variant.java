@@ -25,6 +25,9 @@
 package com.slayertracker.groups;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.Getter;
@@ -33,6 +36,7 @@ import net.runelite.api.NPC;
 public final class Variant
 {
 	private static final int DEFAULT_SLAYER_XP = -1;
+	private static final Map<String, Variant> REGISTRY = new HashMap<>();
 
 	@Getter
 	private final String id;
@@ -49,19 +53,61 @@ public final class Variant
 		this.matchers = matches == null ? new Match[0] : Arrays.copyOf(matches, matches.length);
 	}
 
-	public static Variant of(String id, String name, Match... matches)
-	{
-		return new Variant(id, name, DEFAULT_SLAYER_XP, matches);
-	}
-
-	public static Variant of(String id, String name, int slayerXp, Match... matches)
-	{
-		return new Variant(id, name, slayerXp, matches);
-	}
-
 	public static Variant of(String name, Match... matches)
 	{
-		return new Variant(name, name, DEFAULT_SLAYER_XP, matches);
+		return new Variant(null, name, DEFAULT_SLAYER_XP, matches);
+	}
+
+	public static Variant of(String name, int slayerXp, Match... matches)
+	{
+		return new Variant(null, name, slayerXp, matches);
+	}
+
+	static Variant scopeToAssignment(String assignmentKey, Variant template)
+	{
+		String scopedId = generateScopedId(assignmentKey, template.name);
+		Variant scopedVariant = new Variant(scopedId, template.name, template.slayerXp, template.matchers);
+		register(scopedVariant);
+		return scopedVariant;
+	}
+
+	public static Optional<Variant> getById(String id)
+	{
+		if (id == null)
+		{
+			return Optional.empty();
+		}
+
+		return Optional.ofNullable(REGISTRY.get(id.toUpperCase(Locale.ROOT)));
+	}
+
+	private static void register(Variant variant)
+	{
+		String key = variant.id.toUpperCase(Locale.ROOT);
+		Variant existing = REGISTRY.putIfAbsent(key, variant);
+		if (existing != null)
+		{
+			throw new IllegalStateException("Duplicate variant id: " + variant.id);
+		}
+	}
+
+	private static String generateScopedId(String assignmentKey, String variantName)
+	{
+		String assignmentSlug = slugify(assignmentKey);
+		String variantSlug = slugify(variantName);
+		return assignmentSlug + "__" + variantSlug;
+	}
+
+	private static String slugify(String value)
+	{
+		if (value == null)
+		{
+			return "";
+		}
+
+		String slug = value.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "_");
+		slug = slug.replaceAll("^_+", "").replaceAll("_+$", "");
+		return slug.isEmpty() ? "variant" : slug;
 	}
 
 	boolean matches(NPC npc)
@@ -71,7 +117,7 @@ public final class Variant
 			return false;
 		}
 
-		return Arrays.stream(matchers).anyMatch(match -> match.matches(npc));
+		return Arrays.stream(matchers).anyMatch(match -> match.test(npc));
 	}
 
 	public Optional<Integer> getSlayerXp()
@@ -91,6 +137,10 @@ public final class Variant
 			return false;
 		}
 		Variant variant = (Variant) o;
+		if (id == null || variant.id == null)
+		{
+			return false;
+		}
 		return id.equalsIgnoreCase(variant.id);
 	}
 

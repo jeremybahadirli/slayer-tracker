@@ -33,6 +33,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.Locale;
 import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -79,7 +80,7 @@ public class AssignmentRecordPanel extends RecordPanel
 		resetMenuItem.addActionListener(e ->
 		{
 			final int selection = JOptionPane.showOptionDialog(this,
-				"<html>This will delete the record: <b>" + assignment.getName().toUpperCase() + "</b></html>",
+				"<html>This will delete the record: <b>" + assignment.getName().toUpperCase(Locale.ROOT) + "</b></html>",
 				"Are you sure?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)

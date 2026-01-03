@@ -78,7 +78,6 @@ public class SlayerTrackerSaveManager
 			.registerTypeAdapter(RecordMap.class, recordMapCreator(plugin))
 			.registerTypeAdapter(CustomRecordSet.class, customRecordSetCreator(plugin))
 			.registerTypeAdapter(Variant.class, new VariantAdapter())
-			.registerTypeAdapter(Instant.class, new InstantAdapter())
 			.create();
 	}
 
@@ -102,27 +101,7 @@ public class SlayerTrackerSaveManager
 			writer.close();
 		}
 
-		HashMap<Assignment, AssignmentRecord> records = gson.fromJson(new FileReader(dataFile), ASSIGNMENT_RECORD_MAP_TYPE);
-		records.forEach((assignment, record) -> {
-			if (assignment == null || record == null)
-			{
-				return;
-			}
-
-			if (record.getVariantRecords().isEmpty())
-			{
-				return;
-			}
-
-			HashMap<Variant, Record> remappedRecords = new HashMap<>(record.getVariantRecords());
-			record.getVariantRecords().clear();
-
-			remappedRecords.forEach((variant, variantRecord) ->
-				record.getVariantRecords()
-					.put(assignment.getVariantById(variant.getId()).orElse(variant), variantRecord));
-		});
-
-		return records;
+		return gson.fromJson(new FileReader(dataFile), ASSIGNMENT_RECORD_MAP_TYPE);
 	}
 
 	void saveRecordsToDisk(RecordMap<Assignment, AssignmentRecord> assignmentRecords) throws Exception
@@ -178,22 +157,7 @@ public class SlayerTrackerSaveManager
 			}
 
 			String id = in.nextString();
-			return Variant.of(id, id);
-		}
-	}
-
-	private static class InstantAdapter implements JsonSerializer<Instant>, JsonDeserializer<Instant>
-	{
-		@Override
-		public JsonElement serialize(Instant src, Type typeOfSrc, JsonSerializationContext context)
-		{
-			return new JsonPrimitive(src.getEpochSecond());
-		}
-
-		@Override
-		public Instant deserialize(JsonElement json, Type typeOfT, com.google.gson.JsonDeserializationContext context) throws JsonParseException
-		{
-			return Instant.ofEpochSecond(json.getAsLong());
+			return Variant.getById(id).orElseThrow(() -> new IOException("Unknown variant id: " + id));
 		}
 	}
 }
