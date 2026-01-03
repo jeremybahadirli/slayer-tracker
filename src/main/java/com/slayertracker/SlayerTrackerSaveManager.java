@@ -28,12 +28,18 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.groups.Variant;
-import com.slayertracker.groups.VariantTypeAdapter;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.CustomRecordSet;
@@ -44,6 +50,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.HashMap;
 import lombok.Setter;
@@ -51,37 +58,32 @@ import net.runelite.client.RuneLite;
 
 public class SlayerTrackerSaveManager
 {
-	private final Gson gson;
-
 	public static final String DATA_FOLDER_NAME = "slayer-tracker";
 	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
+
+	private static final Type ASSIGNMENT_RECORD_MAP_TYPE = new TypeToken<HashMap<Assignment, AssignmentRecord>>()
+	{
+	}.getType();
+
+	private final Gson gson;
 	@Setter
 	private String dataFileName;
 
 	public SlayerTrackerSaveManager(SlayerTrackerPlugin plugin)
 	{
-		// GSON serializes record data to JSON for disk storage
 		gson = new GsonBuilder()
-			// Only serialize fields with @Expose
 			.excludeFieldsWithoutExposeAnnotation()
-			// Save as human-readable JSON (newlines/tabs)
 			.setPrettyPrinting()
-			// When reconstructing records from JSON, apply property change listeners
-			.registerTypeAdapter(AssignmentRecord.class, (InstanceCreator<Record>) type -> new AssignmentRecord(plugin))
-			.registerTypeAdapter(RecordMap.class, (InstanceCreator<RecordMap<?, ? extends Record>>) type -> new RecordMap<>(plugin))
-			.registerTypeAdapter(CustomRecordSet.class, (InstanceCreator<CustomRecordSet<CustomRecord>>) type -> new CustomRecordSet<>(plugin))
-			.registerTypeAdapter(Variant.class, new VariantTypeAdapter())
-			// GSON doesn't recognize Instant, so serialize/deserialize as a long
-			.registerTypeAdapter(Instant.class, (JsonSerializer<Instant>) (instant, type, context) ->
-				new JsonPrimitive(instant.getEpochSecond()))
-			.registerTypeAdapter(Instant.class, (JsonDeserializer<Instant>) (json, type, context) ->
-				Instant.ofEpochSecond(json.getAsLong()))
+			.registerTypeAdapter(AssignmentRecord.class, assignmentRecordCreator(plugin))
+			.registerTypeAdapter(RecordMap.class, recordMapCreator(plugin))
+			.registerTypeAdapter(CustomRecordSet.class, customRecordSetCreator(plugin))
+			.registerTypeAdapter(Variant.class, new VariantAdapter())
+			.registerTypeAdapter(Instant.class, new InstantAdapter())
 			.create();
 	}
 
 	private File getDataFile() throws IOException
 	{
-		// Throw exception if data folder could not be created
 		if (!DATA_FOLDER.exists() && !DATA_FOLDER.mkdirs())
 		{
 			throw new IOException("Could not create data folder: .runelite/slayer-tracker");
@@ -93,7 +95,6 @@ public class SlayerTrackerSaveManager
 	{
 		File dataFile = getDataFile();
 
-		// If data file doesn't exist, create one with an empty assignment RecordMap
 		if (!dataFile.exists())
 		{
 			Writer writer = new FileWriter(dataFile);
@@ -101,34 +102,25 @@ public class SlayerTrackerSaveManager
 			writer.close();
 		}
 
-		// Deserialize json from data file, as HashMap<Assignment, AssignmentRecord>
-		// then copy it into assignmentRecords
-		// Must copy it in, because the ui has already received this RecordMap instance
-		HashMap<Assignment, AssignmentRecord> records = gson.fromJson(new FileReader(dataFile), new TypeToken<HashMap<Assignment, AssignmentRecord>>()
-		{
-		}.getType());
+		HashMap<Assignment, AssignmentRecord> records = gson.fromJson(new FileReader(dataFile), ASSIGNMENT_RECORD_MAP_TYPE);
+		records.forEach((assignment, record) -> {
+			if (assignment == null || record == null)
+			{
+				return;
+			}
 
-		if (records != null)
-		{
-			records.forEach((assignment, record) -> {
-				if (assignment == null || record == null)
-				{
-					return;
-				}
+			if (record.getVariantRecords().isEmpty())
+			{
+				return;
+			}
 
-				if (record.getVariantRecords().isEmpty())
-				{
-					return;
-				}
+			HashMap<Variant, Record> remappedRecords = new HashMap<>(record.getVariantRecords());
+			record.getVariantRecords().clear();
 
-				HashMap<Variant, Record> remappedRecords = new HashMap<>(record.getVariantRecords());
-				record.getVariantRecords().clear();
-
-				remappedRecords.forEach((variant, variantRecord) ->
-					record.getVariantRecords()
-						.put(assignment.getVariantById(variant.getId()).orElse(variant), variantRecord));
-			});
-		}
+			remappedRecords.forEach((variant, variantRecord) ->
+				record.getVariantRecords()
+					.put(assignment.getVariantById(variant.getId()).orElse(variant), variantRecord));
+		});
 
 		return records;
 	}
@@ -141,10 +133,67 @@ public class SlayerTrackerSaveManager
 		}
 		File dataFile = getDataFile();
 
-		// Serialize assignmentRecords to json and write to the data file
 		Writer writer = new FileWriter(dataFile);
 		gson.toJson(assignmentRecords, writer);
 		writer.flush();
 		writer.close();
+	}
+
+	private static InstanceCreator<Record> assignmentRecordCreator(SlayerTrackerPlugin plugin)
+	{
+		return type -> new AssignmentRecord(plugin);
+	}
+
+	private static InstanceCreator<RecordMap<?, ? extends Record>> recordMapCreator(SlayerTrackerPlugin plugin)
+	{
+		return type -> new RecordMap<>(plugin);
+	}
+
+	private static InstanceCreator<CustomRecordSet<CustomRecord>> customRecordSetCreator(SlayerTrackerPlugin plugin)
+	{
+		return type -> new CustomRecordSet<>(plugin);
+	}
+
+	public static class VariantAdapter extends TypeAdapter<Variant>
+	{
+		@Override
+		public void write(JsonWriter out, Variant variant) throws IOException
+		{
+			if (variant == null)
+			{
+				out.nullValue();
+				return;
+			}
+
+			out.value(variant.getId());
+		}
+
+		@Override
+		public Variant read(JsonReader in) throws IOException
+		{
+			if (in.peek() == JsonToken.NULL)
+			{
+				in.nextNull();
+				return null;
+			}
+
+			String id = in.nextString();
+			return Variant.of(id, id);
+		}
+	}
+
+	private static class InstantAdapter implements JsonSerializer<Instant>, JsonDeserializer<Instant>
+	{
+		@Override
+		public JsonElement serialize(Instant src, Type typeOfSrc, JsonSerializationContext context)
+		{
+			return new JsonPrimitive(src.getEpochSecond());
+		}
+
+		@Override
+		public Instant deserialize(JsonElement json, Type typeOfT, com.google.gson.JsonDeserializationContext context) throws JsonParseException
+		{
+			return Instant.ofEpochSecond(json.getAsLong());
+		}
 	}
 }

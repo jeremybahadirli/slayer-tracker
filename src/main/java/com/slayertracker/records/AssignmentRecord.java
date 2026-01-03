@@ -43,4 +43,13 @@ public class AssignmentRecord extends Record
 		variantRecords = new RecordMap<>(pcl);
 		customRecords = new CustomRecordSet<>(pcl);
 	}
+
+	@Override
+	public String toString()
+	{
+		return "AssignmentRecord{" +
+			"variantRecords=" + variantRecords +
+			", customRecords=" + customRecords +
+			'}';
+	}
 }

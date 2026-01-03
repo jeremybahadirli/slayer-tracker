@@ -103,7 +103,6 @@ public final class Variant
 	@Override
 	public String toString()
 	{
-		return name;
+		return id;
 	}
-
 }

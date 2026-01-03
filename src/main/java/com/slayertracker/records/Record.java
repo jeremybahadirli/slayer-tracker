@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.api.NPC;
 
 @Getter
@@ -47,6 +48,7 @@ public class Record
 	private int ge;
 	@Expose
 	private int ha;
+	@Setter
 	@Expose
 	private Instant combatInstant;
 
@@ -114,8 +116,15 @@ public class Record
 		support.firePropertyChange("Record ha", oldVal, ha);
 	}
 
-	public void setCombatInstant(Instant instant)
+	@Override
+	public String toString()
 	{
-		combatInstant = instant;
+		return "Record{" +
+			"kc=" + kc +
+			", hours=" + hours +
+			", xp=" + xp +
+			", ge=" + ge +
+			", ha=" + ha +
+			'}';
 	}
 }
