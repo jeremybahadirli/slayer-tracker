@@ -90,10 +90,13 @@ import net.runelite.client.util.ImageUtil;
  * Combat Instant: 	The time at which interaction began for a record. If there are multiple interactors for a given record,
  * 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
  *
- * TODO
- * Initial Release (minus Analysis):
- * Test logging out during interaction
+ * TODO:
+ * Initial Release:
  * Add and/or match predicates
+ * Save file versioning/update path
+ * Check NPCQueue retention
+ *     Determine when to clear, especially lootNPCQueue
+ * Create TrackerState and TrackerService to handle state management
  *
  * Analysis:
  * Add task weight and average quantity for each task, with extensions as necessary
@@ -245,6 +248,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 					slayerTrackerPanel.displayFileError();
 				}
 
+				loggingIn = false;
 				kcNPCQueue.clear();
 				xpNPCQueue.clear();
 				lootNPCQueue.clear();
@@ -261,29 +265,30 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		{
 			case SlayerTrackerConfig.GROUP_NAME:
 				// User has changed loot unit in the settings. Update the Side Panel
-				if (event.getKey().equals(SlayerTrackerConfig.LOOT_UNIT_KEY))
+				if (!event.getKey().equals(SlayerTrackerConfig.LOOT_UNIT_KEY))
 				{
-					clientThread.invokeLater(() ->
-						SwingUtilities.invokeLater(() ->
-							slayerTrackerPanel.update()));
+					break;
 				}
+				clientThread.invokeLater(() ->
+					SwingUtilities.invokeLater(() ->
+						slayerTrackerPanel.update()));
 				break;
 			case SlayerConfig.GROUP_NAME:
-				// Slayer Plugin task name has changed
-				if (event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
+				if (!event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
 				{
-					// Set current assignment to null, or the new value if it is valid
-					currentAssignment = null;
-					Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
-						this.currentAssignment = assignment);
-
-					// Clear interactors for all records, as no more active interactors will be on-task
-					assignmentRecords.values().forEach(assignmentRecord -> {
-						assignmentRecord.getInteractors().clear();
-						assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
-						assignmentRecord.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
-					});
+					break;
 				}
+				// Set current assignment to null, or the new value if it is valid
+				currentAssignment = null;
+				Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
+					this.currentAssignment = assignment);
+
+				// Clear interactors for all records, as no more active interactors will be on-task
+				assignmentRecords.values().forEach(assignmentRecord -> {
+					assignmentRecord.getInteractors().clear();
+					assignmentRecord.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
+					assignmentRecord.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
+				});
 				break;
 		}
 	}
@@ -294,7 +299,6 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 			|| client.getLocalPlayer() == null
 			|| (client.getLocalPlayer().getInteracting() != interactor
 			&& interactor.getInteracting() != client.getLocalPlayer());
-
 
 	@Subscribe
 	public void onGameTick(GameTick event)
