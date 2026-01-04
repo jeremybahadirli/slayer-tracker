@@ -52,6 +52,7 @@ import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
@@ -143,6 +144,18 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 	private SlayerTrackerSaveManager saveManager;
 
 	private boolean loggingIn = false;
+
+	// TESTING
+	@Subscribe
+	public void onCommandExecuted(CommandExecuted commandExecuted) {
+		if (commandExecuted.getCommand().equals("ttt")) {
+			System.out.println(xpNPCQueue.size());
+			System.out.println(kcNPCQueue.size());
+			System.out.println(lootNPCQueue.size());
+		}
+	}
+	// TESTING
+
 
 	@Override
 	protected void startUp()
@@ -280,6 +293,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				}
 				// Set current assignment to null, or the new value if it is valid
 				currentAssignment = null;
+				xpNPCQueue.clear();
+				kcNPCQueue.clear();
+				lootNPCQueue.clear();
 				Assignment.getAssignmentByName(event.getNewValue()).ifPresent(assignment ->
 					this.currentAssignment = assignment);
 
@@ -383,27 +399,24 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
-		// If Assignment Record for this npc doesn't exist, create one
 		assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
 
-		// If this is the first interactor in the record and recording mode is In Combat, set last combat instant to now
-		if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
-			|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(assignmentRecord.getCombatInstant()))
-			&& assignmentRecord.getInteractors().isEmpty())
+		Predicate<Record> shouldSetCombatInstant = r -> (!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
+			|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(r.getCombatInstant()))
+			&& r.getInteractors().isEmpty();
+
+		if (shouldSetCombatInstant.test(assignmentRecord))
 		{
 			assignmentRecord.setCombatInstant(now);
 		}
-		// Add the NPC to the record's interactors
 		assignmentRecord.getInteractors().add(npc);
 
 		// Do the same as above for the Variant, if one exists
 		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
 			assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record());
 			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
-				|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(variantRecord.getCombatInstant()))
-				&& variantRecord.getInteractors().isEmpty())
+			if (shouldSetCombatInstant.test(variantRecord))
 			{
 				variantRecord.setCombatInstant(now);
 			}
@@ -414,9 +427,7 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
-				if ((!slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode()
-					|| slayerTrackerPanel.getRecordingModePanel().getContinuousRecordingStartInstant().isAfter(customRecord.getCombatInstant()))
-					&& customRecord.getInteractors().isEmpty())
+				if (shouldSetCombatInstant.test(customRecord))
 				{
 					customRecord.setCombatInstant(now);
 				}
