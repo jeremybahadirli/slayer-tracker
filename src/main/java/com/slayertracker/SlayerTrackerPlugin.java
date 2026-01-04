@@ -37,7 +37,9 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -87,14 +89,11 @@ import net.runelite.client.util.ImageUtil;
  * Interactor:		An individual on-assignment monster which is interacting with the player.
  * Combat Instant: 	The time at which interaction began for a record. If there are multiple interactors for a given record,
  * 						Combat Instant is reset each time interaction with an individual ends (kill or otherwise).
+ *
  * TODO
  * Initial Release (minus Analysis):
  * Test logging out during interaction
  * Add and/or match predicates
- * BUG Last kill of task - kc and xp are counted but gp is not.
- * BUG Running to kill monster, when someone else killed it. Gave me 1kc, but 0 xp/gp
- * - Slayer xp drop 1 tick after actor death. Both these problems may be solvable together. on actor death, save actor
- * - and increment kc on slayer xp drop?
  *
  * Analysis:
  * Add task weight and average quantity for each task, with extensions as necessary
@@ -132,7 +131,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 	private Assignment currentAssignment;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords = new RecordMap<>(this);
-	private final Set<NPC> xpShareInteractors = new HashSet<>();
+	private final Set<NPC> xpNPCQueue = new HashSet<>();
+	private final Set<NPC> kcNPCQueue = new HashSet<>();
+	private final Map<NPC, Assignment> lootNPCQueue = new HashMap<>();
 	private int cachedXp = -1;
 
 	private SlayerTrackerPanel slayerTrackerPanel;
@@ -244,10 +245,9 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 					slayerTrackerPanel.displayFileError();
 				}
 
-				// xpShareInteractors could theoretically retain an NPC
-				// if the player logs out at exactly the right instant
-				xpShareInteractors.clear();
-				// Reset slayer xp
+				kcNPCQueue.clear();
+				xpNPCQueue.clear();
+				lootNPCQueue.clear();
 				cachedXp = -1;
 				slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
 				break;
@@ -444,80 +444,12 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 
 		slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(slayerTrackerPanel.getRecordingModePanel().isContinuousRecordingMode());
 
-		// Add NPC to set of those who will be allotted xp from the next xp drop
-		xpShareInteractors.add(npc);
-
-		// Increment kc in assignment record
-		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
-		assignmentRecord.incrementKc();
-
-		// Increment kc in any variant record which contains this NPC in its interactors
-		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			if (variantRecord != null && variantRecord.getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
-			{
-				variantRecord.incrementKc();
-			}
-		});
-
-		// Increment kc in any recording custom records
-		assignmentRecord.getCustomRecords().stream()
-			.filter(CustomRecord::isRecording)
-			.forEach(Record::incrementKc);
+		kcNPCQueue.add(npc);
+		xpNPCQueue.add(npc);
+		lootNPCQueue.put(npc, currentAssignment);
 	}
 
-	@Subscribe
-	private void onNpcLootReceived(NpcLootReceived event)
-	{
-		NPC npc = event.getNpc();
-		if (!slayerPluginService.getTargets().contains(npc) || !assignmentRecords.containsKey(currentAssignment))
-		{
-			return;
-		}
-
-		// Sum the GE item price of each dropped item
-		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
-				itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
-			.sum();
-
-		// Sum the HA item price of each dropped item
-		final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
-				// Since coins have 0 HA value instead of 1, use the coin item stack quantity as its value
-				if (itemStack.getId() == ItemID.COINS)
-				{
-					return itemStack.getQuantity();
-				}
-				else
-				{
-					return itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
-				}
-			})
-			.sum();
-
-		// Add GE/HA values to assignment record
-		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
-		assignmentRecord.addToGe(lootGe);
-		assignmentRecord.addToHa(lootHa);
-
-		// Add GE/HA values to the variant record, if one exists
-		currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			if (variantRecord != null)
-			{
-				variantRecord.addToGe(lootGe);
-				variantRecord.addToHa(lootHa);
-			}
-		});
-
-		// Add GE/HA values to any recording custom records
-		assignmentRecord.getCustomRecords().stream()
-			.filter(CustomRecord::isRecording)
-			.forEach(customRecord -> {
-				customRecord.addToGe(lootGe);
-				customRecord.addToHa(lootHa);
-			});
-	}
-
+	// Actor Death tick + 1
 	@Subscribe
 	private void onStatChanged(StatChanged event)
 	{
@@ -554,39 +486,66 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 		final int slayerXpDrop = newSlayerXp - cachedXp;
 		cachedXp = newSlayerXp;
 
-		divideXp(slayerXpDrop, xpShareInteractors);
+		processDeathQueue();
+		divideXp(slayerXpDrop);
 	}
 
-	// Determines the slayer xp value of a given NPC
-	// If variant has defined custom Slayer XP value, use that, otherwise use NPC's HP
-	private final Function<NPC, Integer> getSlayerXp = npc ->
-		currentAssignment.getVariantMatchingNpc(npc)
-			.flatMap(Variant::getSlayerXp)
-			.orElse(npcManager.getHealth(npc.getId()));
+	private void processDeathQueue()
+	{
+		for (NPC npc : kcNPCQueue)
+		{
+			// Increment kc in assignment record
+			AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
+			assignmentRecord.incrementKc();
 
-	private void divideXp(int slayerXpDrop, Set<NPC> xpShareInteractors)
+			// Increment kc in any variant record which contains this NPC in its interactors
+			currentAssignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+				Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+				if (variantRecord != null && variantRecord.getInteractors().stream().anyMatch(interactor -> interactor.equals(npc)))
+				{
+					variantRecord.incrementKc();
+				}
+			});
+
+			// Increment kc in any recording custom records
+			assignmentRecord.getCustomRecords().stream()
+				.filter(CustomRecord::isRecording)
+				.forEach(Record::incrementKc);
+
+		}
+		kcNPCQueue.clear();
+	}
+
+	private void divideXp(int xpToAllocate)
 	{
 		// Recursively allocate xp to each monster in the queue for this xp drop
 		// This method will allow for safe rounding to whole xp amounts
 
 		// Final case to break recursion
-		if (xpShareInteractors.isEmpty())
+		if (xpNPCQueue.isEmpty())
 		{
 			return;
 		}
 
+		// Determines the slayer xp value of a given NPC
+		// If variant has defined custom Slayer XP value, use that, otherwise use NPC's HP
+		final Function<NPC, Integer> getSlayerXp = npc ->
+			currentAssignment.getVariantMatchingNpc(npc)
+				.flatMap(Variant::getSlayerXp)
+				.orElse(npcManager.getHealth(npc.getId()));
+
 		// The sum of the slayer xp values of all NPCs remaining in the queue
-		final int npcXpTotal = xpShareInteractors.stream().mapToInt(getSlayerXp::apply).sum();
+		final int npcXpTotal = xpNPCQueue.stream().mapToInt(getSlayerXp::apply).sum();
 
 		// Choose the next NPC to allocate xp to
-		NPC npc = xpShareInteractors.iterator().next();
+		NPC npc = xpNPCQueue.iterator().next();
 
 		// Amount allocated is equal to the proportion of this NPC's xp value to the total value of the queue,
 		// times the xp received, rounded to an integer. Then, remove the amount allocated from the total
 		// Calculating in this way allows for distributing xp from the actual amount received,
 		// without fear of error in the total caused by the rounding of the individual NPCs
-		final int thisNpcsXpShare = slayerXpDrop * (getSlayerXp.apply(npc) / npcXpTotal);
-		slayerXpDrop -= thisNpcsXpShare;
+		final int thisNpcsXpShare = xpToAllocate * (getSlayerXp.apply(npc) / npcXpTotal);
+		xpToAllocate -= thisNpcsXpShare;
 
 		// Add the xp share to the assignment record
 		AssignmentRecord assignmentRecord = assignmentRecords.get(currentAssignment);
@@ -608,8 +567,65 @@ public class SlayerTrackerPlugin extends Plugin implements PropertyChangeListene
 				customRecord.addToXp(thisNpcsXpShare));
 
 		// Remove this NPC from the queue and recursively repeat with every NPC in the queue
-		xpShareInteractors.remove(npc);
-		divideXp(slayerXpDrop, xpShareInteractors);
+		xpNPCQueue.remove(npc);
+		divideXp(xpToAllocate);
+	}
+
+	// Actor Death tick + death animation tick count
+	@Subscribe
+	private void onNpcLootReceived(NpcLootReceived event)
+	{
+		NPC npc = event.getNpc();
+		if (!lootNPCQueue.containsKey(npc))
+		{
+			return;
+		}
+
+		Assignment assignment = lootNPCQueue.get(npc);
+
+		// Sum the GE item price of each dropped item
+		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
+				itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
+			.sum();
+
+		// Sum the HA item price of each dropped item
+		final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
+				// Since coins have 0 HA value instead of 1, use the coin item stack quantity as its value
+				if (itemStack.getId() == ItemID.COINS)
+				{
+					return itemStack.getQuantity();
+				}
+				else
+				{
+					return itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
+				}
+			})
+			.sum();
+
+		// Add GE/HA values to assignment record
+		AssignmentRecord assignmentRecord = assignmentRecords.get(assignment);
+		assignmentRecord.addToGe(lootGe);
+		assignmentRecord.addToHa(lootHa);
+
+		// Add GE/HA values to the variant record, if one exists
+		assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+			if (variantRecord != null)
+			{
+				variantRecord.addToGe(lootGe);
+				variantRecord.addToHa(lootHa);
+			}
+		});
+
+		// Add GE/HA values to any recording custom records
+		assignmentRecord.getCustomRecords().stream()
+			.filter(CustomRecord::isRecording)
+			.forEach(customRecord -> {
+				customRecord.addToGe(lootGe);
+				customRecord.addToHa(lootHa);
+			});
+
+		lootNPCQueue.remove(npc);
 	}
 
 	@Override
