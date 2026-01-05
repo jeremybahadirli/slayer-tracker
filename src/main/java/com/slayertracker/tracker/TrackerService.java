@@ -217,9 +217,7 @@ public class TrackerService
 			return;
 		}
 
-		final Instant now = Instant.now();
-
-		refreshContinuousRecordingState();
+		triggerContinuousRecording();
 
 		state.getAssignmentRecords().putIfAbsent(state.getCurrentAssignment(), new AssignmentRecord(state));
 		AssignmentRecord assignmentRecord = state.getAssignmentRecords().get(state.getCurrentAssignment());
@@ -228,6 +226,7 @@ public class TrackerService
 			|| getContinuousRecordingStartInstant().isAfter(r.getCombatInstant()))
 			&& r.getInteractors().isEmpty();
 
+		final Instant now = Instant.now();
 		if (shouldSetCombatInstant.test(assignmentRecord))
 		{
 			assignmentRecord.setCombatInstant(now);
@@ -273,7 +272,7 @@ public class TrackerService
 			return;
 		}
 
-		refreshContinuousRecordingState();
+		triggerContinuousRecording();
 
 		state.getKcNpcQueue().add(npc);
 		state.getXpNpcQueue().add(npc);
@@ -454,7 +453,7 @@ public class TrackerService
 		return recordingModeController == null ? Instant.EPOCH : recordingModeController.getContinuousRecordingStartInstant();
 	}
 
-	private void refreshContinuousRecordingState()
+	private void triggerContinuousRecording()
 	{
 		if (recordingModeController != null)
 		{
