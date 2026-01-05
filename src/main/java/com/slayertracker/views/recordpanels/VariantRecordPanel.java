@@ -39,7 +39,7 @@ import lombok.Getter;
 public class VariantRecordPanel extends RecordPanel
 {
 
-	Variant variant;
+	private final Variant variant;
 
 	public VariantRecordPanel(Variant variant,
 							  RecordMap<Variant, Record> variantRecords,

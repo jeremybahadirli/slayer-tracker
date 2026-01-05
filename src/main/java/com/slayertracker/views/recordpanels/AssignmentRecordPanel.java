@@ -38,11 +38,15 @@ import javax.swing.Box;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.LinkBrowser;
+import okhttp3.HttpUrl;
 
 @Getter
 public class AssignmentRecordPanel extends RecordPanel
@@ -91,7 +95,25 @@ public class AssignmentRecordPanel extends RecordPanel
 
 		// Stats panel
 
-		bodyPanel.add(new JLabel(new ImageIcon(groupListPanel.getItemManager().getImage(assignment.getItemSpriteId()))));
+		JLabel iconLabel = new JLabel(new ImageIcon(groupListPanel.getItemManager().getImage(assignment.getItemSpriteId())));
+		JPopupMenu iconPopupMenu = getComponentPopupMenu();
+		if (iconPopupMenu == null)
+		{
+			iconPopupMenu = new JPopupMenu();
+			iconPopupMenu.setBorder(new EmptyBorder(5, 5, 5, 5));
+			iconLabel.setComponentPopupMenu(iconPopupMenu);
+		}
+		JMenuItem wikiMenuItem = new JMenuItem("Wiki");
+		wikiMenuItem.addActionListener(e -> {
+			final HttpUrl WIKI_BASE = HttpUrl.get("https://oldschool.runescape.wiki");
+			LinkBrowser.browse(WIKI_BASE.newBuilder()
+				.addQueryParameter("search", "Slayer_task/" + assignment.getName())
+				.build()
+				.toString());
+		});
+		iconPopupMenu.add(wikiMenuItem);
+		iconLabel.add(iconPopupMenu);
+		bodyPanel.add(iconLabel);
 		bodyPanel.add(statsPanel);
 
 		add(headerPanel);

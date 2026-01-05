@@ -26,12 +26,11 @@ package com.slayertracker.views;
 
 import com.google.common.collect.ImmutableList;
 import com.slayertracker.RecordingModeController;
+import com.slayertracker.views.components.DarkComboBoxRenderer;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.time.Instant;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -46,7 +45,7 @@ import net.runelite.client.util.ImageUtil;
 public class RecordingModePanel extends JPanel implements RecordingModeController
 {
 
-	Instant continuousRecordingStartInstant;
+	private Instant continuousRecordingStartInstant;
 	private boolean isContinuousRecordingMode = false;
 	private final JComboBox<String> recordingModeComboBox;
 	private final JButton recordingBreakButton;
@@ -66,15 +65,7 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 		add(Box.createRigidArea(new Dimension(24, 0)));
 		// Recording mode combo box
 		recordingModeComboBox = new JComboBox<>();
-		recordingModeComboBox.setRenderer(new DefaultListCellRenderer()
-		{
-			@Override
-			public void paint(Graphics g)
-			{
-				setBackground(ColorScheme.DARK_GRAY_COLOR);
-				super.paint(g);
-			}
-		});
+		recordingModeComboBox.setRenderer(new DarkComboBoxRenderer());
 		RECORDING_MODES.forEach(recordingModeComboBox::addItem);
 		recordingModeComboBox.addActionListener(l ->
 			setContinuousRecordingMode("Continuous".equals(String.valueOf(recordingModeComboBox.getSelectedItem()))));

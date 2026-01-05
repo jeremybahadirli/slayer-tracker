@@ -40,8 +40,14 @@ public interface SlayerTrackerConfig extends Config
 		name = "Loot Unit",
 		description = "Display loot as Grand Exchange or High Alchemy value."
 	)
-	default SlayerTrackerLootUnit lootUnit()
+	default LootUnit lootUnit()
 	{
-		return SlayerTrackerLootUnit.GRAND_EXCHANGE;
+		return LootUnit.GRAND_EXCHANGE;
+	}
+
+	enum LootUnit
+	{
+		GRAND_EXCHANGE,
+		HIGH_ALCHEMY
 	}
 }

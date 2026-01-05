@@ -30,7 +30,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.Expose;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
@@ -48,7 +47,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Type;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.client.RuneLite;
@@ -59,10 +57,6 @@ public class SlayerTrackerSaveManager implements RecordRepository
 	public static final String DATA_FOLDER_NAME = "slayer-tracker";
 	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
 	private static final int CURRENT_SCHEMA_VERSION = 1;
-
-	private static final Type ASSIGNMENT_RECORD_MAP_TYPE = new TypeToken<RecordMap<Assignment, AssignmentRecord>>()
-	{
-	}.getType();
 
 	private final Gson gson;
 	private final PropertyChangeListener changeListener;

@@ -26,20 +26,18 @@ package com.slayertracker.views;
 
 import com.google.common.collect.ImmutableList;
 import com.slayertracker.SlayerTrackerConfig;
-import com.slayertracker.SlayerTrackerLootUnit;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.state.TrackerState;
+import com.slayertracker.views.components.DarkComboBoxRenderer;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -47,7 +45,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.PluginErrorPanel;
@@ -75,8 +72,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		"XP Rate",
 		"GP Rate"
 	);
-	private Function<? super RecordListPanel, Long> sortFunction = recordPanel ->
-		(long) -1 * recordPanel.getRecord().getCombatInstant().getEpochSecond();
+	private Function<? super RecordListPanel, Long> sortFunction;
 
 	public SlayerTrackerPanel(TrackerState trackerState,
 							  SlayerTrackerConfig config,
@@ -95,40 +91,11 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(new JLabel("Sort by:"));
 		sorterPanel.add(Box.createRigidArea(new Dimension(39, 0)));
 		sorterComboBox = new JComboBox<>();
-		sorterComboBox.setRenderer(new DefaultListCellRenderer()
-		{
-			@Override
-			public void paint(Graphics g)
-			{
-				setBackground(ColorScheme.DARK_GRAY_COLOR);
-				super.paint(g);
-			}
-		});
+		sorterComboBox.setRenderer(new DarkComboBoxRenderer());
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
+		sortFunction = sortFunctionFor(String.valueOf(sorterComboBox.getSelectedItem()));
 		sorterComboBox.addActionListener(l -> {
-			switch (String.valueOf(sorterComboBox.getSelectedItem()))
-			{
-				case "XP Rate":
-					sortFunction = panel ->
-						(long) Math.round(-1 * panel.getRecord().getXp() / panel.getRecord().getHours());
-					break;
-				case "GP Rate":
-					if (config.lootUnit().equals(SlayerTrackerLootUnit.GRAND_EXCHANGE))
-					{
-						sortFunction = panel ->
-							(long) Math.round(-1 * panel.getRecord().getGe() / panel.getRecord().getHours());
-					}
-					else
-					{
-						sortFunction = panel ->
-							(long) Math.round(-1 * panel.getRecord().getHa() / panel.getRecord().getHours());
-					}
-					break;
-				default:
-					sortFunction = panel ->
-						-1 * panel.getRecord().getCombatInstant().getEpochSecond();
-					break;
-			}
+			sortFunction = sortFunctionFor(String.valueOf(sorterComboBox.getSelectedItem()));
 			update();
 		});
 		sorterComboBox.setFocusable(false);
@@ -148,7 +115,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		welcomeText = new PluginErrorPanel();
 		welcomeText.setContent(
 			"Slayer Tracker",
-			"<br>Compare XP and GP rates for each Slayer task.<br><br><br>Slayer Tracker requires the default Slayer plugin to be enabled.");
+			"Compare XP and GP rates for each Slayer task.<br><br>Slayer Tracker requires the default Slayer plugin to be enabled.");
 
 		// Reset All button
 		resetAllButton = new JButton("Delete All");
@@ -239,5 +206,26 @@ public class SlayerTrackerPanel extends PluginPanel
 		PluginErrorPanel fileErrorPanel = new PluginErrorPanel();
 		fileErrorPanel.setContent("Error: Could not create save file", "Slayer Tracker needs access to .runelite/slayer-tracker");
 		assignmentListPanel.add(fileErrorPanel);
+	}
+
+	private Function<? super RecordListPanel, Long> sortFunctionFor(String selectedSort)
+	{
+		switch (selectedSort)
+		{
+			case "XP Rate":
+				return panel ->
+					(long) Math.round(-1 * panel.getRecord().getXp() / panel.getRecord().getHours());
+			case "GP Rate":
+				if (config.lootUnit().equals(SlayerTrackerConfig.LootUnit.GRAND_EXCHANGE))
+				{
+					return panel ->
+						(long) Math.round(-1 * panel.getRecord().getGe() / panel.getRecord().getHours());
+				}
+				return panel ->
+					(long) Math.round(-1 * panel.getRecord().getHa() / panel.getRecord().getHours());
+			default:
+				return panel ->
+					-1 * panel.getRecord().getCombatInstant().getEpochSecond();
+		}
 	}
 }

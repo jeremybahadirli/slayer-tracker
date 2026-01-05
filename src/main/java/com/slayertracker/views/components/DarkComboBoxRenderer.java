@@ -22,10 +22,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker;
 
-public enum SlayerTrackerLootUnit
+package com.slayertracker.views.components;
+
+import java.awt.Graphics;
+import javax.swing.DefaultListCellRenderer;
+import net.runelite.client.ui.ColorScheme;
+
+public class DarkComboBoxRenderer extends DefaultListCellRenderer
 {
-	GRAND_EXCHANGE,
-	HIGH_ALCHEMY
+	@Override
+	public void paint(Graphics g)
+	{
+		setBackground(ColorScheme.DARK_GRAY_COLOR);
+		super.paint(g);
+	}
 }

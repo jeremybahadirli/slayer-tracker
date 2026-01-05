@@ -24,7 +24,7 @@
  */
 package com.slayertracker.views.recordpanels.components;
 
-import com.slayertracker.SlayerTrackerLootUnit;
+import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.records.Record;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -37,118 +37,89 @@ import net.runelite.client.ui.FontManager;
 public class StatsPanel extends JPanel
 {
 
-	public StatsPanel(Record record, SlayerTrackerLootUnit lootUnit)
+	public StatsPanel(Record record, SlayerTrackerConfig.LootUnit lootUnit)
 	{
-		// Format data
-
 		NumberFormat formatter = NumberFormat.getInstance();
-
-		String kc = formatter.format(record.getKc());
-		String kcRate = formatter.format(Math.round(record.getKc() / record.getHours()));
-		String xp = formatter.format(record.getXp());
-		String xpRate = formatter.format(Math.round(record.getXp() / record.getHours()));
-
-		String gpString;
-		String gp;
-		String gpRate;
-		if (lootUnit.equals(SlayerTrackerLootUnit.HIGH_ALCHEMY))
-		{
-			gpString = "ha";
-			gp = formatter.format(record.getHa());
-			gpRate = formatter.format(Math.round(record.getHa() / record.getHours()));
-		}
-		else
-		{
-			gpString = "ge";
-			gp = formatter.format(record.getGe());
-			gpRate = formatter.format(Math.round(record.getGe() / record.getHours()));
-		}
-
-		// Lay out panel
+		GpValues gpValues = new GpValues(record, lootUnit, formatter);
 
 		setLayout(new GridLayout());
 		setOpaque(false);
 
-		JPanel leftStats = new JPanel();
-		leftStats.setLayout(new GridBagLayout());
-		leftStats.setOpaque(false);
+		add(buildStatColumn(new String[][]{
+			{"kc: ", formatter.format(record.getKc())},
+			{"xp: ", formatter.format(record.getXp())},
+			{gpValues.label, gpValues.value}
+		}));
 
-		JPanel rightStats = new JPanel();
-		rightStats.setLayout(new GridBagLayout());
-		rightStats.setOpaque(false);
+		add(buildStatColumn(new String[][]{
+			{"kc/h: ", formatter.format(Math.round(record.getKc() / record.getHours()))},
+			{"xp/h: ", formatter.format(Math.round(record.getXp() / record.getHours()))},
+			{gpValues.rateLabel, gpValues.rateValue}
+		}));
+	}
 
-		GridBagConstraints c = new GridBagConstraints();
+	private JPanel buildStatColumn(String[][] rows)
+	{
+		JPanel stats = new JPanel();
+		stats.setLayout(new GridBagLayout());
+		stats.setOpaque(false);
 
-		// All
-		c.anchor = GridBagConstraints.LINE_START;
+		GridBagConstraints baseConstraints = new GridBagConstraints();
+		baseConstraints.anchor = GridBagConstraints.LINE_START;
 
-		// Labels
-		c.weightx = 0;
+		for (int rowIndex = 0; rowIndex < rows.length; rowIndex++)
+		{
+			addRow(stats, baseConstraints, rowIndex, rows[rowIndex][0], rows[rowIndex][1]);
+		}
 
-		c.gridx = 0;
-		c.gridy = 0;
-		JLabel kcLabel = new JLabel("kc: ");
-		kcLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(kcLabel, c);
+		return stats;
+	}
 
-		JLabel kcRateLabel = new JLabel("kc/h: ");
-		kcRateLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(kcRateLabel, c);
+	private void addRow(JPanel panel, GridBagConstraints template, int row, String labelText, String valueText)
+	{
+		GridBagConstraints labelConstraints = (GridBagConstraints) template.clone();
+		labelConstraints.weightx = 0;
+		labelConstraints.gridx = 0;
+		labelConstraints.gridy = row;
+		panel.add(createStatLabel(labelText), labelConstraints);
 
-		c.gridx = 0;
-		c.gridy = 1;
-		JLabel xpLabel = new JLabel("xp: ");
-		xpLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(xpLabel, c);
+		GridBagConstraints valueConstraints = (GridBagConstraints) template.clone();
+		valueConstraints.weightx = 1;
+		valueConstraints.gridx = 1;
+		valueConstraints.gridy = row;
+		panel.add(createStatLabel(valueText), valueConstraints);
+	}
 
-		JLabel xpRateLabel = new JLabel("xp/h: ");
-		xpRateLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(xpRateLabel, c);
+	private JLabel createStatLabel(String text)
+	{
+		JLabel label = new JLabel(text);
+		label.setFont(FontManager.getRunescapeSmallFont());
+		return label;
+	}
 
-		c.gridx = 0;
-		c.gridy = 2;
-		JLabel gpLabel = new JLabel(gpString + ": ");
-		gpLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(gpLabel, c);
+	private static class GpValues
+	{
+		private final String label;
+		private final String value;
+		private final String rateLabel;
+		private final String rateValue;
 
-		JLabel gpRateLabel = new JLabel(gpString + "/h: ");
-		gpRateLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(gpRateLabel, c);
-
-		// Values
-		c.weightx = 1;
-
-		c.gridx = 1;
-		c.gridy = 0;
-		JLabel kcValueLabel = new JLabel(kc);
-		kcValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(kcValueLabel, c);
-
-		JLabel kcRateValueLabel = new JLabel(kcRate);
-		kcRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(kcRateValueLabel, c);
-
-		c.gridx = 1;
-		c.gridy = 1;
-		JLabel xpValueLabel = new JLabel(xp);
-		xpValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(xpValueLabel, c);
-
-		JLabel xpRateValueLabel = new JLabel(xpRate);
-		xpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(xpRateValueLabel, c);
-
-		c.gridx = 1;
-		c.gridy = 2;
-		JLabel gpValueLabel = new JLabel(gp);
-		gpValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		leftStats.add(gpValueLabel, c);
-
-		JLabel gpRateValueLabel = new JLabel(gpRate);
-		gpRateValueLabel.setFont(FontManager.getRunescapeSmallFont());
-		rightStats.add(gpRateValueLabel, c);
-
-		add(leftStats);
-		add(rightStats);
+		private GpValues(Record record, SlayerTrackerConfig.LootUnit lootUnit, NumberFormat formatter)
+		{
+			if (lootUnit.equals(SlayerTrackerConfig.LootUnit.HIGH_ALCHEMY))
+			{
+				label = "ha: ";
+				value = formatter.format(record.getHa());
+				rateLabel = "ha/h: ";
+				rateValue = formatter.format(Math.round(record.getHa() / record.getHours()));
+			}
+			else
+			{
+				label = "ge: ";
+				value = formatter.format(record.getGe());
+				rateLabel = "ge/h: ";
+				rateValue = formatter.format(Math.round(record.getGe() / record.getHours()));
+			}
+		}
 	}
 }

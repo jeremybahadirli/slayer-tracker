@@ -74,6 +74,16 @@ public class TrackerState implements PropertyChangeListener
 		lootNpcQueue.clear();
 	}
 
+	public void clear()
+	{
+		assignmentRecords.clear();
+		clearQueues();
+		currentAssignment = null;
+		cachedXp = -1;
+		loggingIn = false;
+		profileFileName = null;
+	}
+
 	public void addPropertyChangeListener(PropertyChangeListener listener)
 	{
 		support.addPropertyChangeListener(listener);

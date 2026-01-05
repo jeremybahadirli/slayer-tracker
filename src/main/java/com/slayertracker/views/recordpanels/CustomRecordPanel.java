@@ -27,7 +27,6 @@ package com.slayertracker.views.recordpanels;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.views.GroupListPanel;
-import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
@@ -45,10 +44,8 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
 @Getter
-public class CustomRecordPanel extends RecordPanel implements RecordListPanel
+public class CustomRecordPanel extends RecordPanel
 {
-	private final GroupListPanel groupListPanel;
-
 	private final CustomRecord record;
 
 	private final JTextField titleField;
@@ -59,7 +56,6 @@ public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 	{
 		super(record, groupListPanel);
 		this.record = record;
-		this.groupListPanel = groupListPanel;
 
 		// Header Panel
 
@@ -127,7 +123,7 @@ public class CustomRecordPanel extends RecordPanel implements RecordListPanel
 
 		// Stats Panel
 
-		statsPanel = new StatsPanel(record, groupListPanel.getConfig().lootUnit());
+		statsPanel = new StatsPanel(record, getGroupListPanel().getConfig().lootUnit());
 		bodyPanel.add(statsPanel);
 
 		add(headerPanel);

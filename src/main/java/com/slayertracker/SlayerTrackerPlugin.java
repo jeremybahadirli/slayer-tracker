@@ -37,6 +37,7 @@ import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.GameState;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
@@ -202,16 +203,16 @@ public class SlayerTrackerPlugin extends Plugin
 	}
 
 	// TESTING
-//	@Subscribe
-//	public void onCommandExecuted(CommandExecuted commandExecuted)
-//	{
-//		if (commandExecuted.getCommand().equals("ttt") && trackerState != null)
-//		{
-//			System.out.println(trackerState.getXpNpcQueue().size());
-//			System.out.println(trackerState.getKcNpcQueue().size());
-//			System.out.println(trackerState.getLootNpcQueue().size());
-//		}
-//	}
+	@Subscribe
+	public void onCommandExecuted(CommandExecuted commandExecuted)
+	{
+		if (commandExecuted.getCommand().equals("ttt") && trackerState != null)
+		{
+			System.out.println(trackerState.getXpNpcQueue().size());
+			System.out.println(trackerState.getKcNpcQueue().size());
+			System.out.println(trackerState.getLootNpcQueue().size());
+		}
+	}
 
 	@Provides
 	SlayerTrackerConfig provideConfig(ConfigManager configManager)

@@ -129,7 +129,7 @@ public class TrackerService
 				break;
 			case LOGIN_SCREEN:
 				saveRecords();
-				resetForLogout();
+				reset();
 				break;
 		}
 	}
@@ -141,9 +141,13 @@ public class TrackerService
 			return;
 		}
 
+		// Slayer task changed
+
 		state.setCurrentAssignment(null);
-		state.clearQueues();
-		Assignment.getAssignmentByName(event.getNewValue()).ifPresent(state::setCurrentAssignment);
+		Assignment.getAssignmentByName(event.getNewValue()).ifPresent((a) -> {
+			state.setCurrentAssignment(a);
+			state.clearQueues();
+		});
 
 		state.getAssignmentRecords().values().forEach(ar -> {
 			ar.getInteractors().clear();
@@ -373,11 +377,9 @@ public class TrackerService
 			.ifPresent(state::setCurrentAssignment);
 	}
 
-	private void resetForLogout()
+	private void reset()
 	{
-		state.setLoggingIn(false);
-		state.clearQueues();
-		state.setCachedXp(-1);
+		state.clear();
 	}
 
 	private void processDeathQueue()
