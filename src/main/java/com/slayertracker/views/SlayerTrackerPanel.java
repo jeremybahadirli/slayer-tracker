@@ -148,7 +148,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		welcomeText = new PluginErrorPanel();
 		welcomeText.setContent(
 			"Slayer Tracker",
-			"Compare XP and GP rates for each Slayer task.");
+			"<br>Compare XP and GP rates for each Slayer task.<br><br><br>Slayer Tracker requires the default Slayer plugin to be enabled.");
 
 		// Reset All button
 		resetAllButton = new JButton("Delete All");
