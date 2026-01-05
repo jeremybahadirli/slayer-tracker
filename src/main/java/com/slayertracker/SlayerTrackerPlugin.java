@@ -37,7 +37,6 @@ import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.GameState;
 import net.runelite.api.events.ActorDeath;
-import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
@@ -81,6 +80,7 @@ public class SlayerTrackerPlugin extends Plugin
 	private TrackerService trackerService;
 
 	private SlayerTrackerPanel slayerTrackerPanel;
+	private NavigationButton navButton;
 
 	@Override
 	protected void startUp()
@@ -93,7 +93,7 @@ public class SlayerTrackerPlugin extends Plugin
 		trackerService.setRecordingModeController(slayerTrackerPanel.getRecordingModePanel());
 
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
-		NavigationButton navButton = NavigationButton.builder()
+		navButton = NavigationButton.builder()
 			.panel(slayerTrackerPanel)
 			.tooltip("Slayer Tracker")
 			.icon(icon)
@@ -110,6 +110,7 @@ public class SlayerTrackerPlugin extends Plugin
 		try
 		{
 			trackerService.saveRecords();
+			clientToolbar.removeNavigation(navButton);
 		}
 		catch (Exception e)
 		{
