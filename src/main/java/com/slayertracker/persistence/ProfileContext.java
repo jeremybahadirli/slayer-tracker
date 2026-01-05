@@ -27,12 +27,19 @@ package com.slayertracker.persistence;
 
 import java.util.Optional;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import net.runelite.client.config.ConfigManager;
 
+@Singleton
 public class ProfileContext
 {
+	private final ConfigManager configManager;
+
 	@Inject
-	private ConfigManager configManager;
+	public ProfileContext(ConfigManager configManager)
+	{
+		this.configManager = configManager;
+	}
 
 	public Optional<String> getProfileFileName()
 	{

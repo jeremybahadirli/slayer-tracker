@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2026, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,11 +35,11 @@ import com.slayertracker.views.recordpanels.RecordPanel;
 import com.slayertracker.views.recordpanels.VariantRecordPanel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.beans.PropertyChangeListener;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
-import java.beans.PropertyChangeListener;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;

@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2026, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 package com.slayertracker.tracker;
 
 import com.slayertracker.RecordingModeController;
@@ -15,6 +40,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -23,7 +49,6 @@ import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.config.ConfigManager;
@@ -35,19 +60,14 @@ import net.runelite.client.plugins.slayer.SlayerConfig;
 import net.runelite.client.plugins.slayer.SlayerPluginService;
 
 @Slf4j
+@Singleton
 public class TrackerService
 {
-	@Inject
-	private Client client;
-	@Inject
-	private ConfigManager configManager;
-	@Inject
-	private ItemManager itemManager;
-	@Inject
-	private NPCManager npcManager;
-	@Inject
-	private SlayerPluginService slayerPluginService;
-
+	private final Client client;
+	private final ConfigManager configManager;
+	private final ItemManager itemManager;
+	private final NPCManager npcManager;
+	private final SlayerPluginService slayerPluginService;
 	private final TrackerState state;
 	private final RecordRepository recordRepository;
 	private final ProfileContext profileContext;
@@ -55,24 +75,28 @@ public class TrackerService
 	@Setter
 	private RecordingModeController recordingModeController;
 
-	private final Predicate<NPC> isNotInteracting = interactor ->
-		client.getTopLevelWorldView().npcs().stream().noneMatch(npc -> npc.equals(interactor))
-			|| client.getLocalPlayer() == null
-			|| (client.getLocalPlayer().getInteracting() != interactor
-			&& interactor.getInteracting() != client.getLocalPlayer());
-
+	@Inject
 	public TrackerService(TrackerState state,
 						  RecordRepository recordRepository,
-						  ProfileContext profileContext)
+						  ProfileContext profileContext,
+						  Client client,
+						  ConfigManager configManager,
+						  ItemManager itemManager,
+						  NPCManager npcManager,
+						  SlayerPluginService slayerPluginService)
 	{
 		this.state = state;
 		this.recordRepository = recordRepository;
 		this.profileContext = profileContext;
+		this.client = client;
+		this.configManager = configManager;
+		this.itemManager = itemManager;
+		this.npcManager = npcManager;
+		this.slayerPluginService = slayerPluginService;
 	}
 
 	public void onPluginStart()
 	{
-		System.out.println(client);
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			state.setCachedXp(client.getSkillExperience(Skill.SLAYER));
@@ -94,13 +118,13 @@ public class TrackerService
 				state.setLoggingIn(false);
 
 				refreshCurrentAssignmentFromConfig();
-
 				state.getAssignmentRecords().clear();
-				Optional<String> profileFile = profileContext.getProfileFileName();
-				state.setProfileFileName(profileFile.orElse(null));
-				if (profileFile.isPresent())
+
+				Optional<String> fileName = profileContext.getProfileFileName();
+				state.setProfileFileName(fileName.orElse(null));
+				if (fileName.isPresent())
 				{
-					state.getAssignmentRecords().putAll(recordRepository.load(profileFile.get()));
+					state.getAssignmentRecords().putAll(recordRepository.load(fileName.get()));
 				}
 				break;
 			case LOGIN_SCREEN:
@@ -134,6 +158,12 @@ public class TrackerService
 		{
 			return;
 		}
+
+		final Predicate<NPC> isNotInteracting = interactor ->
+			client.getTopLevelWorldView().npcs().stream().noneMatch(npc -> npc.equals(interactor))
+				|| client.getLocalPlayer() == null
+				|| (client.getLocalPlayer().getInteracting() != interactor
+				&& interactor.getInteracting() != client.getLocalPlayer());
 
 		final Instant now = Instant.now();
 		state.getAssignmentRecords().values().forEach(ar -> {

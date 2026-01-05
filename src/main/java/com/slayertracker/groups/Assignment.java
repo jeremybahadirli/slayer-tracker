@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017, Tyler <https://github.com/tylerthardy>
  * Copyright (c) 2018, Shaun Dreclin <shaundreclin@gmail.com>
- * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2026, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@ public enum Assignment
 	ABERRANT_SPECTRES(
 		"Aberrant spectres",
 		ItemID.SLAYERGUIDE_ABERRANTSPECTER,
-		Variant.of( "Aberrant spectre", Match.byNpcNames("Aberrant spectre", "Abhorrent spectre") ),
-		Variant.of( "Deviant spectre", Match.byNpcNames("Deviant spectre", "Repugnant spectre") )
+		Variant.of("Aberrant spectre", Match.byNpcNames("Aberrant spectre", "Abhorrent spectre")),
+		Variant.of("Deviant spectre", Match.byNpcNames("Deviant spectre", "Repugnant spectre"))
 	),
 	ABYSSAL_DEMONS(
 		"Abyssal demons",

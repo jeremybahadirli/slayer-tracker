@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2026, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,6 @@
 package com.slayertracker;
 
 import com.google.inject.Provides;
-import com.slayertracker.persistence.ProfileContext;
 import com.slayertracker.persistence.RecordRepository;
 import com.slayertracker.persistence.SlayerTrackerSaveManager;
 import com.slayertracker.state.TrackerState;
@@ -36,7 +35,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.CommandExecuted;
@@ -68,8 +66,6 @@ import net.runelite.client.util.ImageUtil;
 public class SlayerTrackerPlugin extends Plugin
 {
 	@Inject
-	private Client client;
-	@Inject
 	private ClientThread clientThread;
 	@Inject
 	private SlayerTrackerConfig config;
@@ -79,20 +75,16 @@ public class SlayerTrackerPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 	@Inject
 	private ScheduledExecutorService executor;
-
+	@Inject
 	private TrackerState trackerState;
+	@Inject
 	private TrackerService trackerService;
+
 	private SlayerTrackerPanel slayerTrackerPanel;
 
 	@Override
 	protected void startUp()
 	{
-		System.out.println(client);
-		trackerState = new TrackerState();
-		ProfileContext profileContext = new ProfileContext();
-		RecordRepository recordRepository = new SlayerTrackerSaveManager(trackerState);
-		trackerService = new TrackerService(trackerState, recordRepository, profileContext);
-
 		slayerTrackerPanel = new SlayerTrackerPanel(trackerState, config, itemManager);
 		trackerState.addPropertyChangeListener(evt ->
 			clientThread.invokeLater(() ->
@@ -149,6 +141,7 @@ public class SlayerTrackerPlugin extends Plugin
 		}
 		catch (Exception e)
 		{
+			e.printStackTrace();
 			slayerTrackerPanel.displayFileError();
 		}
 
@@ -224,5 +217,11 @@ public class SlayerTrackerPlugin extends Plugin
 	SlayerTrackerConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(SlayerTrackerConfig.class);
+	}
+
+	@Provides
+	RecordRepository provideRecordRepository(SlayerTrackerSaveManager saveManager)
+	{
+		return saveManager;
 	}
 }
