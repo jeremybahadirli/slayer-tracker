@@ -141,7 +141,6 @@ public class SlayerTrackerPlugin extends Plugin
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
 			slayerTrackerPanel.displayFileError();
 		}
 
