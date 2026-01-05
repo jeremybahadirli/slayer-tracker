@@ -29,6 +29,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.InstanceCreator;
 import com.google.gson.TypeAdapter;
+import com.google.gson.annotations.Expose;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -57,16 +58,19 @@ public class SlayerTrackerSaveManager implements RecordRepository
 {
 	public static final String DATA_FOLDER_NAME = "slayer-tracker";
 	public static final File DATA_FOLDER = new File(RuneLite.RUNELITE_DIR, DATA_FOLDER_NAME);
+	private static final int CURRENT_SCHEMA_VERSION = 1;
 
 	private static final Type ASSIGNMENT_RECORD_MAP_TYPE = new TypeToken<RecordMap<Assignment, AssignmentRecord>>()
 	{
 	}.getType();
 
 	private final Gson gson;
+	private final PropertyChangeListener changeListener;
 
 	@Inject
 	public SlayerTrackerSaveManager(TrackerState trackerState)
 	{
+		this.changeListener = trackerState;
 		gson = new GsonBuilder()
 			.excludeFieldsWithoutExposeAnnotation()
 			.setPrettyPrinting()
@@ -102,7 +106,26 @@ public class SlayerTrackerSaveManager implements RecordRepository
 			writer.close();
 		}
 
-		return gson.fromJson(new FileReader(dataFile), ASSIGNMENT_RECORD_MAP_TYPE);
+		try (FileReader reader = new FileReader(dataFile))
+		{
+			SaveFile saveFile = gson.fromJson(reader, SaveFile.class);
+			if (saveFile == null)
+			{
+				return new RecordMap<>(changeListener);
+			}
+
+			// Legacy support: if no schema/version, treat the file as a raw map (v0)
+			if (saveFile.records == null)
+			{
+				try (FileReader legacyReader = new FileReader(dataFile))
+				{
+					RecordMap<Assignment, AssignmentRecord> legacyRecords = gson.fromJson(legacyReader, ASSIGNMENT_RECORD_MAP_TYPE);
+					return legacyRecords == null ? new RecordMap<>(changeListener) : legacyRecords;
+				}
+			}
+
+			return migrateIfNeeded(saveFile.schemaVersion, saveFile.records);
+		}
 	}
 
 	@Override
@@ -114,10 +137,14 @@ public class SlayerTrackerSaveManager implements RecordRepository
 		}
 		File dataFile = getDataFile(dataFileName);
 
-		Writer writer = new FileWriter(dataFile);
-		gson.toJson(assignmentRecords, writer);
-		writer.flush();
-		writer.close();
+		SaveFile saveFile = new SaveFile();
+		saveFile.schemaVersion = CURRENT_SCHEMA_VERSION;
+		saveFile.records = assignmentRecords;
+
+		try (Writer writer = new FileWriter(dataFile))
+		{
+			gson.toJson(saveFile, writer);
+		}
 	}
 
 	private static InstanceCreator<Record> assignmentRecordCreator(PropertyChangeListener propertyChangeListener)
@@ -133,6 +160,12 @@ public class SlayerTrackerSaveManager implements RecordRepository
 	private static InstanceCreator<CustomRecordSet<CustomRecord>> customRecordSetCreator(PropertyChangeListener propertyChangeListener)
 	{
 		return type -> new CustomRecordSet<>(propertyChangeListener);
+	}
+
+	private RecordMap<Assignment, AssignmentRecord> migrateIfNeeded(int schemaVersion, RecordMap<Assignment, AssignmentRecord> records)
+	{
+		// Placeholder for future migrations; for now, just ensure the map is non-null
+		return records == null ? new RecordMap<>(changeListener) : records;
 	}
 
 	public static class VariantAdapter extends TypeAdapter<Variant>
@@ -161,5 +194,13 @@ public class SlayerTrackerSaveManager implements RecordRepository
 			String id = in.nextString();
 			return Variant.getById(id).orElseThrow(() -> new IOException("Unknown variant id: " + id));
 		}
+	}
+
+	private static class SaveFile
+	{
+		@Expose
+		int schemaVersion = CURRENT_SCHEMA_VERSION;
+		@Expose
+		RecordMap<Assignment, AssignmentRecord> records;
 	}
 }
