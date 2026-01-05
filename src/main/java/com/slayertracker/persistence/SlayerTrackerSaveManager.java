@@ -114,16 +114,6 @@ public class SlayerTrackerSaveManager implements RecordRepository
 				return new RecordMap<>(changeListener);
 			}
 
-			// Legacy support: if no schema/version, treat the file as a raw map (v0)
-			if (saveFile.records == null)
-			{
-				try (FileReader legacyReader = new FileReader(dataFile))
-				{
-					RecordMap<Assignment, AssignmentRecord> legacyRecords = gson.fromJson(legacyReader, ASSIGNMENT_RECORD_MAP_TYPE);
-					return legacyRecords == null ? new RecordMap<>(changeListener) : legacyRecords;
-				}
-			}
-
 			return migrateIfNeeded(saveFile.schemaVersion, saveFile.records);
 		}
 	}
