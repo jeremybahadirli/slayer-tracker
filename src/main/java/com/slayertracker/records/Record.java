@@ -80,6 +80,12 @@ public class Record
 		support.addPropertyChangeListener(pcl);
 	}
 
+	public Record(Record record, PropertyChangeListener pcl)
+	{
+		this(record);
+		support.addPropertyChangeListener(pcl);
+	}
+
 	public void incrementKc()
 	{
 		int oldVal = kc;

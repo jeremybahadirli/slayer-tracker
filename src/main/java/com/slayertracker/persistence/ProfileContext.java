@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Jeremy Bahadirli <https://github.com/jeremybahadirli>
+ * Copyright (c) 2026, Jeremy Bahadirli <https://github.com/jeremybahadirli>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,28 +22,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.slayertracker.records;
 
-import com.google.gson.annotations.Expose;
-import java.beans.PropertyChangeListener;
-import lombok.Getter;
-import lombok.Setter;
+package com.slayertracker.persistence;
 
-@Getter
-@Setter
-public class CustomRecord extends Record
+import java.util.Optional;
+import javax.inject.Inject;
+import net.runelite.client.config.ConfigManager;
+
+public class ProfileContext
 {
-	@Expose
-	private String name = "New Custom Record";
-	private boolean recording = false;
+	@Inject
+	private ConfigManager configManager;
 
-	public CustomRecord(PropertyChangeListener pcl)
+	public Optional<String> getProfileFileName()
 	{
-		super(pcl);
-	}
+		String profileKey = configManager.getRSProfileKey();
+		if (profileKey == null)
+		{
+			return Optional.empty();
+		}
 
-	public CustomRecord(Record record, PropertyChangeListener pcl)
-	{
-		super(record, pcl);
+		String[] parts = profileKey.split("\\.");
+		if (parts.length < 2)
+		{
+			return Optional.empty();
+		}
+
+		return Optional.of(parts[1] + ".json");
 	}
 }

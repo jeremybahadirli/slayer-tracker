@@ -56,6 +56,18 @@ public class RecordMap<G, R extends Record> extends HashMap<G, R>
 	}
 
 	@Override
+	public R putIfAbsent(G key, R value)
+	{
+		boolean missing = !containsKey(key);
+		R r = super.putIfAbsent(key, value);
+		if (missing)
+		{
+			support.firePropertyChange("RecordMap putIfAbsent", null, value);
+		}
+		return r;
+	}
+
+	@Override
 	public R remove(Object group)
 	{
 		R r = super.remove(group);

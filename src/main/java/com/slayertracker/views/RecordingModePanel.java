@@ -25,6 +25,7 @@
 package com.slayertracker.views;
 
 import com.google.common.collect.ImmutableList;
+import com.slayertracker.RecordingModeController;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.time.Instant;
@@ -42,7 +43,7 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
 @Getter
-public class RecordingModePanel extends JPanel
+public class RecordingModePanel extends JPanel implements RecordingModeController
 {
 
 	Instant continuousRecordingStartInstant;

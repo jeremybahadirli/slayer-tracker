@@ -39,6 +39,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
+import java.beans.PropertyChangeListener;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -57,8 +58,10 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	private final AssignmentRecordPanel assignmentRecordPanel;
 	private final Set<VariantRecordPanel> variantRecordPanels = new HashSet<>();
 	private final Set<CustomRecordPanel> customRecordPanels = new HashSet<>();
+	private final PropertyChangeListener changeListener;
 
 	GroupListPanel(Assignment assignment,
+				   PropertyChangeListener changeListener,
 				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 				   SlayerTrackerConfig config,
 				   ItemManager itemManager,
@@ -68,6 +71,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		this.config = config;
 		this.itemManager = itemManager;
 		this.record = assignmentRecords.get(assignment);
+		this.changeListener = changeListener;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
@@ -85,7 +89,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			}
 		});
 		assignmentRecordPanel.getAddCustomRecordButton().addActionListener(l ->
-			record.getCustomRecords().add(new CustomRecord()));
+			record.getCustomRecords().add(new CustomRecord(changeListener)));
 
 		update(sortFunction);
 	}

@@ -74,7 +74,7 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		// Copy to custom record button
 		final JMenuItem copyToCustomRecordMenuItem = new JMenuItem("Copy to Custom Record");
 		copyToCustomRecordMenuItem.addActionListener(e ->
-			groupListPanel.getRecord().getCustomRecords().add(new CustomRecord(record)));
+			groupListPanel.getRecord().getCustomRecords().add(new CustomRecord(record, groupListPanel.getChangeListener())));
 		popupMenu = getComponentPopupMenu();
 		if (popupMenu == null)
 		{

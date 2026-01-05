@@ -30,6 +30,7 @@ import com.slayertracker.SlayerTrackerLootUnit;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
+import com.slayertracker.state.TrackerState;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.util.Comparator;
@@ -56,6 +57,7 @@ public class SlayerTrackerPanel extends PluginPanel
 {
 	private final int VERTICAL_GAP = 6;
 
+	private final TrackerState trackerState;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 	private final ItemManager itemManager;
 	private final SlayerTrackerConfig config;
@@ -76,11 +78,12 @@ public class SlayerTrackerPanel extends PluginPanel
 	private Function<? super RecordListPanel, Long> sortFunction = recordPanel ->
 		(long) -1 * recordPanel.getRecord().getCombatInstant().getEpochSecond();
 
-	public SlayerTrackerPanel(RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+	public SlayerTrackerPanel(TrackerState trackerState,
 							  SlayerTrackerConfig config,
 							  ItemManager itemManager)
 	{
-		this.assignmentRecords = assignmentRecords;
+		this.trackerState = trackerState;
+		this.assignmentRecords = trackerState.getAssignmentRecords();
 		this.itemManager = itemManager;
 		this.config = config;
 
@@ -196,7 +199,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		assignmentRecords.keySet().forEach(assignment -> {
 			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignment().equals(assignment)))
 			{
-				GroupListPanel groupListPanel = new GroupListPanel(assignment, assignmentRecords, config, itemManager, sortFunction);
+				GroupListPanel groupListPanel = new GroupListPanel(assignment, trackerState, assignmentRecords, config, itemManager, sortFunction);
 				groupListPanels.add(groupListPanel);
 			}
 		});
