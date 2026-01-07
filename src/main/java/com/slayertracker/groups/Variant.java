@@ -24,12 +24,12 @@
  */
 package com.slayertracker.groups;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.Getter;
 import net.runelite.api.NPC;
 
@@ -43,30 +43,30 @@ public final class Variant
 	@Getter
 	private final String name;
 	private final int slayerXp;
-	private final Match[] matchers;
+	private final Predicate<NPC> npcPredicate;
 
-	private Variant(String id, String name, int slayerXp, Match... matches)
+	private Variant(String id, String name, int slayerXp, Predicate<NPC> npcPredicate)
 	{
 		this.id = id;
 		this.name = name;
 		this.slayerXp = slayerXp;
-		this.matchers = matches == null ? new Match[0] : Arrays.copyOf(matches, matches.length);
+		this.npcPredicate = npcPredicate;
 	}
 
-	public static Variant of(String name, Match... matches)
+	public static Variant of(String name, Predicate<NPC> npcPredicate)
 	{
-		return new Variant(null, name, DEFAULT_SLAYER_XP, matches);
+		return new Variant(null, name, DEFAULT_SLAYER_XP, npcPredicate);
 	}
 
-	public static Variant of(String name, int slayerXp, Match... matches)
+	public static Variant of(String name, int slayerXp, Predicate<NPC> npcPredicate)
 	{
-		return new Variant(null, name, slayerXp, matches);
+		return new Variant(null, name, slayerXp, npcPredicate);
 	}
 
 	static Variant scopeToAssignment(String assignmentKey, Variant template)
 	{
 		String scopedId = generateScopedId(assignmentKey, template.name);
-		Variant scopedVariant = new Variant(scopedId, template.name, template.slayerXp, template.matchers);
+		Variant scopedVariant = new Variant(scopedId, template.name, template.slayerXp, template.npcPredicate);
 		register(scopedVariant);
 		return scopedVariant;
 	}
@@ -112,12 +112,7 @@ public final class Variant
 
 	boolean matches(NPC npc)
 	{
-		if (matchers.length == 0)
-		{
-			return false;
-		}
-
-		return Arrays.stream(matchers).anyMatch(match -> match.test(npc));
+		return npcPredicate.test(npc);
 	}
 
 	public Optional<Integer> getSlayerXp()
