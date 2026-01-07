@@ -43,6 +43,7 @@ public final class Variant
 	@Getter
 	private final String name;
 	private final int slayerXp;
+	@Getter
 	private final Predicate<NPC> npcPredicate;
 
 	private Variant(String id, String name, int slayerXp, Predicate<NPC> npcPredicate)
@@ -108,11 +109,6 @@ public final class Variant
 		String slug = value.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "_");
 		slug = slug.replaceAll("^_+", "").replaceAll("_+$", "");
 		return slug.isEmpty() ? "variant" : slug;
-	}
-
-	boolean matches(NPC npc)
-	{
-		return npcPredicate.test(npc);
 	}
 
 	public Optional<Integer> getSlayerXp()

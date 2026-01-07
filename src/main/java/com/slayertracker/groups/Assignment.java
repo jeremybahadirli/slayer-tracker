@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import lombok.Getter;
 import net.runelite.api.NPC;
-import net.runelite.api.NPCComposition;
 import net.runelite.api.gameval.ItemID;
 
 @Getter
@@ -464,14 +463,8 @@ public enum Assignment
 
 	public Optional<Variant> getVariantMatchingNpc(NPC npc)
 	{
-		final NPCComposition composition = npc.getTransformedComposition();
-		if (composition == null)
-		{
-			return Optional.empty();
-		}
-
 		return Arrays.stream(this.getVariants())
-			.filter(variant -> variant.matches(npc))
+			.filter(variant -> variant.getNpcPredicate().test(npc))
 			.findAny();
 	}
 }
