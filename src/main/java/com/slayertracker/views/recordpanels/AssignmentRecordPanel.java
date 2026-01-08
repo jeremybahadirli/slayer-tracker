@@ -107,7 +107,7 @@ public class AssignmentRecordPanel extends RecordPanel
 		wikiMenuItem.addActionListener(e -> {
 			final HttpUrl WIKI_BASE = HttpUrl.get("https://oldschool.runescape.wiki");
 			LinkBrowser.browse(WIKI_BASE.newBuilder()
-				.addQueryParameter("search", "Slayer_task/" + assignment.getName())
+				.addQueryParameter("search", assignment.getName())
 				.build()
 				.toString());
 		});
