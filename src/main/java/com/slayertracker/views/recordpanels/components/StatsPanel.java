@@ -29,31 +29,30 @@ import com.slayertracker.records.Record;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.text.NumberFormat;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.util.QuantityFormatter;
 
 public class StatsPanel extends JPanel
 {
 
 	public StatsPanel(Record record, SlayerTrackerConfig.LootUnit lootUnit)
 	{
-		NumberFormat formatter = NumberFormat.getInstance();
-		GpValues gpValues = new GpValues(record, lootUnit, formatter);
+		GpValues gpValues = new GpValues(record, lootUnit);
 
 		setLayout(new GridLayout());
 		setOpaque(false);
 
 		add(buildStatColumn(new String[][]{
-			{"kc: ", formatter.format(record.getKc())},
-			{"xp: ", formatter.format(record.getXp())},
+			{"kc: ", QuantityFormatter.formatNumber(record.getKc())},
+			{"xp: ", QuantityFormatter.formatNumber(record.getXp())},
 			{gpValues.label, gpValues.value}
 		}));
 
 		add(buildStatColumn(new String[][]{
-			{"kc/h: ", formatter.format(Math.round(record.getKc() / record.getHours()))},
-			{"xp/h: ", formatter.format(Math.round(record.getXp() / record.getHours()))},
+			{"kc/h: ", QuantityFormatter.formatNumber(Math.round(record.getKc() / record.getHours()))},
+			{"xp/h: ", QuantityFormatter.formatNumber(Math.round(record.getXp() / record.getHours()))},
 			{gpValues.rateLabel, gpValues.rateValue}
 		}));
 	}
@@ -104,21 +103,21 @@ public class StatsPanel extends JPanel
 		private final String rateLabel;
 		private final String rateValue;
 
-		private GpValues(Record record, SlayerTrackerConfig.LootUnit lootUnit, NumberFormat formatter)
+		private GpValues(Record record, SlayerTrackerConfig.LootUnit lootUnit)
 		{
 			if (lootUnit.equals(SlayerTrackerConfig.LootUnit.HIGH_ALCHEMY))
 			{
 				label = "ha: ";
-				value = formatter.format(record.getHa());
+				value = QuantityFormatter.formatNumber(record.getHa());
 				rateLabel = "ha/h: ";
-				rateValue = formatter.format(Math.round(record.getHa() / record.getHours()));
+				rateValue = QuantityFormatter.formatNumber(Math.round(record.getHa() / record.getHours()));
 			}
 			else
 			{
 				label = "ge: ";
-				value = formatter.format(record.getGe());
+				value = QuantityFormatter.formatNumber(record.getGe());
 				rateLabel = "ge/h: ";
-				rateValue = formatter.format(Math.round(record.getGe() / record.getHours()));
+				rateValue = QuantityFormatter.formatNumber(Math.round(record.getGe() / record.getHours()));
 			}
 		}
 	}
