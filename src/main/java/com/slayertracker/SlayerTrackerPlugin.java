@@ -36,6 +36,7 @@ import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -103,7 +104,7 @@ public class SlayerTrackerPlugin extends Plugin
 			.build();
 		clientToolbar.addNavigation(navButton);
 
-		trackerService.onPluginStart();
+		trackerService.handlePluginStart();
 	}
 
 	@Override
@@ -180,52 +181,56 @@ public class SlayerTrackerPlugin extends Plugin
 						slayerTrackerPanel.update()));
 				break;
 			case SlayerConfig.GROUP_NAME:
-				trackerService.onSlayerConfigChanged(event);
+				if (!event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
+				{
+					break;
+				}
+				trackerService.handleSlayerTaskChange(event.getNewValue());
 				break;
 		}
 	}
 
 	@Subscribe
-	public void onGameTick(GameTick event)
+	public void onInteractingChanged(InteractingChanged event)
 	{
-		trackerService.onGameTick();
+		trackerService.handleInteractionStart(event);
 	}
 
 	@Subscribe
-	public void onInteractingChanged(InteractingChanged event)
+	public void onGameTick(GameTick event)
 	{
-		trackerService.onInteractingChanged(event);
+		trackerService.handleInteractionEnd();
 	}
 
 	@Subscribe
 	public void onActorDeath(ActorDeath event)
 	{
-		trackerService.onActorDeath(event);
+		trackerService.handleActorDeath(event);
 	}
 
 	@Subscribe
 	private void onStatChanged(StatChanged event)
 	{
-		trackerService.onStatChanged(event);
+		trackerService.handleStatChanged(event);
 	}
 
 	@Subscribe
 	private void onNpcLootReceived(NpcLootReceived event)
 	{
-		trackerService.onNpcLootReceived(event);
+		trackerService.handleNpcLootReceived(event);
+	}
+
+	@Subscribe
+	private void onChatMessage(ChatMessage event)
+	{
+		trackerService.handleChatMessage(event);
 	}
 
 	// TESTING
 	@Subscribe
-	public void onCommandExecuted(CommandExecuted commandExecuted)
+	public void onCommandExecuted(CommandExecuted event)
 	{
-		if (commandExecuted.getCommand().equals("ttt") && trackerState != null)
-		{
-			System.out.println(trackerState.getXpNpcQueue().size());
-			System.out.println(trackerState.getKcNpcQueue().size());
-			System.out.println(trackerState.getLootNpcQueue().size());
-			System.out.println(trackerState.getCurrentAssignment());
-		}
+		trackerService.handleCommandExecuted(event);
 	}
 
 	@Provides

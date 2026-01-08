@@ -28,6 +28,7 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class RecordMap<G, R extends Record> extends HashMap<G, R>
 {
@@ -64,6 +65,21 @@ public class RecordMap<G, R extends Record> extends HashMap<G, R>
 		{
 			support.firePropertyChange("RecordMap putIfAbsent", null, value);
 		}
+		return r;
+	}
+
+	@Override
+	public R computeIfAbsent(G key, Function<? super G, ? extends R> mappingFunction)
+	{
+		boolean missingBefore = !containsKey(key);
+
+		R r = super.computeIfAbsent(key, mappingFunction);
+
+		if (missingBefore && r != null)
+		{
+			support.firePropertyChange("RecordMap computeIfAbsent", null, r);
+		}
+
 		return r;
 	}
 
