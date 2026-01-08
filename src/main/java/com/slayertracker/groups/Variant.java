@@ -27,7 +27,6 @@ package com.slayertracker.groups;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
@@ -139,12 +138,6 @@ public final class Variant
 			return false;
 		}
 		return id.equalsIgnoreCase(variant.id);
-	}
-
-	@Override
-	public int hashCode()
-	{
-		return Objects.hash(id.toLowerCase());
 	}
 
 	@Override
