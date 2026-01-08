@@ -39,6 +39,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Setter;
@@ -48,6 +50,7 @@ import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.config.ConfigManager;
@@ -57,6 +60,7 @@ import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.plugins.slayer.SlayerConfig;
 import net.runelite.client.plugins.slayer.SlayerPluginService;
+import net.runelite.client.util.Text;
 
 @Slf4j
 @Singleton
@@ -130,11 +134,10 @@ public class TrackerService
 
 		// Slayer task changed
 
-		state.setCurrentAssignment(null);
-		Assignment.getAssignmentByName(event.getNewValue()).ifPresent((a) -> {
+		Assignment.getAssignmentByName(event.getNewValue()).ifPresentOrElse((a) -> {
 			state.setCurrentAssignment(a);
 			state.clearQueues();
-		});
+		}, () -> state.setCurrentAssignment(null));
 
 		state.getAssignmentRecords().values().forEach(ar -> {
 			ar.getInteractors().clear();
@@ -240,8 +243,23 @@ public class TrackerService
 			});
 	}
 
+	public void onChatMessage(ChatMessage event)
+	{
+		final Pattern BOSSKILL_MESSAGE_PATTERN = Pattern.compile("Your (.+) (?:kill|success) count is: ?<col=[0-9a-f]{6}>([0-9,]+)</col>");
+
+		Matcher m = BOSSKILL_MESSAGE_PATTERN.matcher(event.getMessage());
+		if (m.find())
+		{
+			String bossName = Text.removeTags(m.group(1));
+
+			System.out.println("CME " + client.getTickCount());
+		}
+
+	}
+
 	public void onActorDeath(ActorDeath event)
 	{
+		System.out.println("ADE " + client.getTickCount());
 		if (state.getCurrentAssignment() == null || !state.getAssignmentRecords().containsKey(state.getCurrentAssignment()))
 		{
 			return;
@@ -266,12 +284,18 @@ public class TrackerService
 		state.getLootNpcQueue().put(npc, state.getCurrentAssignment());
 	}
 
+	// Well probably need to check all interactors to see if they have "noActorDeath" property and set a flag, assuming
+	// tick misorder.
+	// If death queue contains NPCs, process death queue, otherwise add KC/XP to queue to be processed on chatmessage for bosses,
+	// assuming tick misorder.
+	// Actually, just manually program all XP values.
 	public void onStatChanged(StatChanged event)
 	{
 		if (event.getSkill() != Skill.SLAYER)
 		{
 			return;
 		}
+		System.out.println("SCE " + client.getTickCount());
 
 		int newSlayerXp = event.getXp();
 
@@ -300,6 +324,7 @@ public class TrackerService
 
 	public void onNpcLootReceived(NpcLootReceived event)
 	{
+		System.out.println("NLE " + client.getTickCount());
 		NPC npc = event.getNpc();
 		if (!state.getLootNpcQueue().containsKey(npc))
 		{
@@ -349,6 +374,7 @@ public class TrackerService
 
 	public void saveRecords() throws Exception
 	{
+		System.out.println("Saving records" + state.getProfileFileName());
 		if (state.getProfileFileName() == null)
 		{
 			return;

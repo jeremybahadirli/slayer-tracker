@@ -35,7 +35,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.GameState;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
@@ -83,7 +82,7 @@ public class SlayerTrackerPlugin extends Plugin
 	private SlayerTrackerPanel slayerTrackerPanel;
 	private NavigationButton navButton;
 
-	private GameState prevGameState;
+	private boolean loggingIn = false;
 
 	@Override
 	protected void startUp()
@@ -143,11 +142,15 @@ public class SlayerTrackerPlugin extends Plugin
 		{
 			switch (event.getGameState())
 			{
+				case LOGGING_IN:
+					loggingIn = true;
+					break;
 				case LOGGED_IN:
-					if (prevGameState != GameState.LOGGING_IN)
+					if (!loggingIn)
 					{
 						return;
 					}
+					loggingIn = false;
 					trackerService.handleLogin();
 					break;
 				case LOGIN_SCREEN:
@@ -160,7 +163,6 @@ public class SlayerTrackerPlugin extends Plugin
 		{
 			slayerTrackerPanel.displayFileError();
 		}
-		prevGameState = event.getGameState();
 	}
 
 	@Subscribe
@@ -222,6 +224,7 @@ public class SlayerTrackerPlugin extends Plugin
 			System.out.println(trackerState.getXpNpcQueue().size());
 			System.out.println(trackerState.getKcNpcQueue().size());
 			System.out.println(trackerState.getLootNpcQueue().size());
+			System.out.println(trackerState.getCurrentAssignment());
 		}
 	}
 

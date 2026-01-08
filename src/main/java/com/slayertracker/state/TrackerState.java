@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Getter;
@@ -52,7 +53,6 @@ public class TrackerState implements PropertyChangeListener
 	private final Set<NPC> kcNpcQueue = new HashSet<>();
 	private final Map<NPC, Assignment> lootNpcQueue = new HashMap<>();
 
-	@Setter
 	private Assignment currentAssignment;
 	@Setter
 	private int cachedXp = -1;
@@ -79,6 +79,15 @@ public class TrackerState implements PropertyChangeListener
 		currentAssignment = null;
 		cachedXp = -1;
 		profileFileName = null;
+	}
+
+	public void setCurrentAssignment(@Nullable Assignment assignment)
+	{
+		this.currentAssignment = assignment;
+		if (currentAssignment != null)
+		{
+			assignmentRecords.putIfAbsent(currentAssignment, new AssignmentRecord(this));
+		}
 	}
 
 	public void addPropertyChangeListener(PropertyChangeListener listener)
