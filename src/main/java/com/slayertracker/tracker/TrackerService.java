@@ -108,7 +108,6 @@ public class TrackerService
 
 	public void handleLogin() throws Exception
 	{
-		refreshCurrentAssignmentFromConfig();
 		state.getAssignmentRecords().clear();
 
 		Optional<String> fileName = profileContext.getProfileFileName();
@@ -117,6 +116,8 @@ public class TrackerService
 		{
 			state.getAssignmentRecords().putAll(recordRepository.load(fileName.get()));
 		}
+
+		refreshCurrentAssignmentFromConfig();
 	}
 
 	public void handleLogout() throws Exception
@@ -224,7 +225,8 @@ public class TrackerService
 		assignmentRecord.getInteractors().add(npc);
 
 		state.getCurrentAssignment().getVariantMatchingNpc(npc).ifPresent(variant -> {
-			Record variantRecord = assignmentRecord.getVariantRecords().computeIfAbsent(variant, v -> new Record(state));
+			assignmentRecord.getVariantRecords().putIfAbsent(variant, new Record(state));
+			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
 			if (shouldSetCombatInstant.test(variantRecord))
 			{
 				variantRecord.setCombatInstant(now);

@@ -47,6 +47,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.client.RuneLite;
@@ -71,6 +73,7 @@ public class SlayerTrackerSaveManager implements RecordRepository
 			.registerTypeAdapter(AssignmentRecord.class, assignmentRecordCreator(trackerState))
 			.registerTypeAdapter(RecordMap.class, recordMapCreator(trackerState))
 			.registerTypeAdapter(CustomRecordSet.class, customRecordSetCreator(trackerState))
+			.registerTypeAdapter(Instant.class, new InstantAdapter())
 			.registerTypeAdapter(Variant.class, new VariantAdapter())
 			.create();
 	}
@@ -152,7 +155,7 @@ public class SlayerTrackerSaveManager implements RecordRepository
 		return records == null ? new RecordMap<>(changeListener) : records;
 	}
 
-	public static class VariantAdapter extends TypeAdapter<Variant>
+	private static class VariantAdapter extends TypeAdapter<Variant>
 	{
 		@Override
 		public void write(JsonWriter out, Variant variant) throws IOException
@@ -186,5 +189,48 @@ public class SlayerTrackerSaveManager implements RecordRepository
 		int schemaVersion = CURRENT_SCHEMA_VERSION;
 		@Expose
 		RecordMap<Assignment, AssignmentRecord> records;
+	}
+
+	private static class InstantAdapter extends TypeAdapter<Instant>
+	{
+		@Override
+		public void write(JsonWriter out, Instant instant) throws IOException
+		{
+			if (instant == null)
+			{
+				out.nullValue();
+				return;
+			}
+
+			out.value(instant.toString());
+		}
+
+		@Override
+		public Instant read(JsonReader in) throws IOException
+		{
+			if (in.peek() == JsonToken.NULL)
+			{
+				in.nextNull();
+				return Instant.now();
+			}
+
+			String value = in.nextString();
+
+			try
+			{
+				return Instant.parse(value);
+			}
+			catch (DateTimeParseException e)
+			{
+				try
+				{
+					return Instant.ofEpochMilli(Long.parseLong(value));
+				}
+				catch (NumberFormatException ignored)
+				{
+					throw new IOException("Invalid instant value: " + value, e);
+				}
+			}
+		}
 	}
 }
