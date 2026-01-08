@@ -57,8 +57,6 @@ public class TrackerState implements PropertyChangeListener
 	@Setter
 	private int cachedXp = -1;
 	@Setter
-	private boolean loggingIn = false;
-	@Setter
 	private String profileFileName;
 
 	@Inject
@@ -80,7 +78,6 @@ public class TrackerState implements PropertyChangeListener
 		clearQueues();
 		currentAssignment = null;
 		cachedXp = -1;
-		loggingIn = false;
 		profileFileName = null;
 	}
 

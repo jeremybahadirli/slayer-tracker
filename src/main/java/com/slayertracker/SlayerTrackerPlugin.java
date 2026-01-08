@@ -83,6 +83,8 @@ public class SlayerTrackerPlugin extends Plugin
 	private SlayerTrackerPanel slayerTrackerPanel;
 	private NavigationButton navButton;
 
+	private GameState prevGameState;
+
 	@Override
 	protected void startUp()
 	{
@@ -139,17 +141,26 @@ public class SlayerTrackerPlugin extends Plugin
 	{
 		try
 		{
-			trackerService.onGameStateChanged(event);
+			switch (event.getGameState())
+			{
+				case LOGGED_IN:
+					if (prevGameState != GameState.LOGGING_IN)
+					{
+						return;
+					}
+					trackerService.handleLogin();
+					break;
+				case LOGIN_SCREEN:
+					trackerService.handleLogout();
+					slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
+					break;
+			}
 		}
 		catch (Exception e)
 		{
 			slayerTrackerPanel.displayFileError();
 		}
-
-		if (event.getGameState() == GameState.LOGIN_SCREEN)
-		{
-			slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
-		}
+		prevGameState = event.getGameState();
 	}
 
 	@Subscribe

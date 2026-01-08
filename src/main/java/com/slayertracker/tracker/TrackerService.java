@@ -48,7 +48,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ActorDeath;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.config.ConfigManager;
@@ -103,35 +102,23 @@ public class TrackerService
 		}
 	}
 
-	public void onGameStateChanged(GameStateChanged event) throws Exception
+	public void handleLogin() throws Exception
 	{
-		switch (event.getGameState())
+		refreshCurrentAssignmentFromConfig();
+		state.getAssignmentRecords().clear();
+
+		Optional<String> fileName = profileContext.getProfileFileName();
+		state.setProfileFileName(fileName.orElse(null));
+		if (fileName.isPresent())
 		{
-			case LOGGING_IN:
-				state.setLoggingIn(true);
-				break;
-			case LOGGED_IN:
-				if (!state.isLoggingIn())
-				{
-					return;
-				}
-				state.setLoggingIn(false);
-
-				refreshCurrentAssignmentFromConfig();
-				state.getAssignmentRecords().clear();
-
-				Optional<String> fileName = profileContext.getProfileFileName();
-				state.setProfileFileName(fileName.orElse(null));
-				if (fileName.isPresent())
-				{
-					state.getAssignmentRecords().putAll(recordRepository.load(fileName.get()));
-				}
-				break;
-			case LOGIN_SCREEN:
-				saveRecords();
-				reset();
-				break;
+			state.getAssignmentRecords().putAll(recordRepository.load(fileName.get()));
 		}
+	}
+
+	public void handleLogout() throws Exception
+	{
+		saveRecords();
+		reset();
 	}
 
 	public void onSlayerConfigChanged(ConfigChanged event)
