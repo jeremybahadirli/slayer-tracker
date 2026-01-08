@@ -465,6 +465,6 @@ public enum Assignment
 	{
 		return Arrays.stream(this.getVariants())
 			.filter(variant -> variant.getNpcPredicate().test(npc))
-			.findAny();
+			.findFirst();
 	}
 }

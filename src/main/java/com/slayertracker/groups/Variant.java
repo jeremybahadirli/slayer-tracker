@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import net.runelite.api.NPC;
 
@@ -46,7 +47,7 @@ public final class Variant
 	@Getter
 	private final Predicate<NPC> npcPredicate;
 
-	private Variant(String id, String name, int slayerXp, Predicate<NPC> npcPredicate)
+	private Variant(@Nullable String id, String name, int slayerXp, Predicate<NPC> npcPredicate)
 	{
 		this.id = id;
 		this.name = name;
@@ -54,14 +55,19 @@ public final class Variant
 		this.npcPredicate = npcPredicate;
 	}
 
-	public static Variant of(String name, Predicate<NPC> npcPredicate)
-	{
-		return new Variant(null, name, DEFAULT_SLAYER_XP, npcPredicate);
-	}
-
 	public static Variant of(String name, int slayerXp, Predicate<NPC> npcPredicate)
 	{
 		return new Variant(null, name, slayerXp, npcPredicate);
+	}
+
+	public static Variant of(String name, Predicate<NPC> npcPredicate)
+	{
+		return Variant.of(name, DEFAULT_SLAYER_XP, npcPredicate);
+	}
+
+	public static Variant of(String name)
+	{
+		return Variant.of(name, NpcPredicates.byName(name));
 	}
 
 	static Variant scopeToAssignment(String assignmentKey, Variant template)
