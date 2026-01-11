@@ -35,11 +35,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
@@ -172,20 +170,23 @@ public class SlayerTrackerPlugin extends Plugin
 		switch (event.getGroup())
 		{
 			case SlayerTrackerConfig.GROUP_NAME:
-				if (!event.getKey().equals(SlayerTrackerConfig.LOOT_UNIT_KEY))
+				if (event.getKey().equals(SlayerTrackerConfig.LOOT_UNIT_KEY))
 				{
-					break;
+					clientThread.invokeLater(() ->
+						SwingUtilities.invokeLater(() ->
+							slayerTrackerPanel.update()));
 				}
-				clientThread.invokeLater(() ->
-					SwingUtilities.invokeLater(() ->
-						slayerTrackerPanel.update()));
 				break;
 			case SlayerConfig.GROUP_NAME:
-				if (!event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
+				switch (event.getKey())
 				{
-					break;
+					case SlayerConfig.TASK_NAME_KEY:
+						trackerService.handleSlayerTaskChange();
+						break;
+					case SlayerConfig.AMOUNT_KEY:
+						trackerService.handleTaskAmountChange();
+						break;
 				}
-				trackerService.handleSlayerTaskChange(event.getNewValue());
 				break;
 		}
 	}
@@ -193,19 +194,7 @@ public class SlayerTrackerPlugin extends Plugin
 	@Subscribe
 	public void onInteractingChanged(InteractingChanged event)
 	{
-		trackerService.handleInteractionStart(event);
-	}
-
-	@Subscribe
-	public void onGameTick(GameTick event)
-	{
-		trackerService.handleInteractionEnd();
-	}
-
-	@Subscribe
-	public void onActorDeath(ActorDeath event)
-	{
-		trackerService.handleActorDeath(event);
+		trackerService.handleInteractingChanged(event);
 	}
 
 	@Subscribe

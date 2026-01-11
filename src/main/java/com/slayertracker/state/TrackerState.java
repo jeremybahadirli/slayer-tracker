@@ -31,10 +31,8 @@ import com.slayertracker.records.RecordMap;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -49,11 +47,12 @@ public class TrackerState implements PropertyChangeListener
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-	private final Set<NPC> xpNpcQueue = new HashSet<>();
-	private final Set<NPC> kcNpcQueue = new HashSet<>();
-	private final Map<NPC, Assignment> lootNpcQueue = new HashMap<>();
+	private final Deque<KillEvent> recentKills = new ArrayDeque<>();
+	private final Deque<XpDrop> slayerXpDrops = new ArrayDeque<>();
 
 	private Assignment currentAssignment;
+	@Setter
+	private int remainingAmount;
 	@Setter
 	private int cachedXp = -1;
 	@Setter
@@ -65,18 +64,13 @@ public class TrackerState implements PropertyChangeListener
 		assignmentRecords = new RecordMap<>(this);
 	}
 
-	public void clearQueues()
-	{
-		xpNpcQueue.clear();
-		kcNpcQueue.clear();
-		lootNpcQueue.clear();
-	}
-
 	public void clear()
 	{
 		assignmentRecords.clear();
-		clearQueues();
+		recentKills.clear();
+		slayerXpDrops.clear();
 		currentAssignment = null;
+		remainingAmount = 0;
 		cachedXp = -1;
 		profileFileName = null;
 	}
@@ -90,6 +84,11 @@ public class TrackerState implements PropertyChangeListener
 		}
 	}
 
+	public AssignmentRecord getCurrentAssignmentRecord()
+	{
+		return assignmentRecords.get(currentAssignment);
+	}
+
 	public void addPropertyChangeListener(PropertyChangeListener listener)
 	{
 		support.addPropertyChangeListener(listener);
@@ -99,5 +98,42 @@ public class TrackerState implements PropertyChangeListener
 	public void propertyChange(PropertyChangeEvent evt)
 	{
 		support.firePropertyChange(evt);
+	}
+
+	@Getter
+	public static class KillEvent
+	{
+		private final NPC npc;
+		private final Assignment assignment;
+		private final int tick;
+
+		private boolean kcLogged;
+		private boolean lootLogged;
+
+		public KillEvent(NPC npc, Assignment assignment, int tick)
+		{
+			this.npc = npc;
+			this.assignment = assignment;
+			this.tick = tick;
+		}
+
+		public void markKcLogged()
+		{
+			kcLogged = true;
+		}
+
+		public void markLootLogged()
+		{
+			lootLogged = true;
+		}
+
+		public boolean isCompleted()
+		{
+			return kcLogged && lootLogged;
+		}
+	}
+
+	public record XpDrop(int xp, int tick)
+	{
 	}
 }
