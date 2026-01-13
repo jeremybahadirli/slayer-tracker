@@ -47,8 +47,11 @@ public class TrackerState implements PropertyChangeListener
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
-	private final Deque<KillEvent> recentKills = new ArrayDeque<>();
-	private final Deque<XpDrop> slayerXpDrops = new ArrayDeque<>();
+
+	private final Deque<EndedInteraction> endedInteractions = new ArrayDeque<>();
+	private final Deque<KillEvent> killEvents = new ArrayDeque<>();
+	private final Deque<XpDropEvent> xpDropEvents = new ArrayDeque<>();
+	private final Deque<TaskAmountChange> taskAmountChanges = new ArrayDeque<>();
 
 	private Assignment currentAssignment;
 	@Setter
@@ -67,8 +70,10 @@ public class TrackerState implements PropertyChangeListener
 	public void clear()
 	{
 		assignmentRecords.clear();
-		recentKills.clear();
-		slayerXpDrops.clear();
+		endedInteractions.clear();
+		killEvents.clear();
+		xpDropEvents.clear();
+		taskAmountChanges.clear();
 		currentAssignment = null;
 		remainingAmount = 0;
 		cachedXp = -1;
@@ -101,6 +106,31 @@ public class TrackerState implements PropertyChangeListener
 	}
 
 	@Getter
+	public static class EndedInteraction
+	{
+		private final NPC npc;
+		private int lastInteractedTick;
+		private boolean dead;
+
+		public EndedInteraction(NPC npc, int lastInteractedTick, boolean dead)
+		{
+			this.npc = npc;
+			this.lastInteractedTick = lastInteractedTick;
+			this.dead = dead;
+		}
+
+		public void updateTick(int tick)
+		{
+			lastInteractedTick = tick;
+		}
+
+		public void markDead()
+		{
+			dead = true;
+		}
+	}
+
+	@Getter
 	public static class KillEvent
 	{
 		private final NPC npc;
@@ -108,6 +138,7 @@ public class TrackerState implements PropertyChangeListener
 		private final int tick;
 
 		private boolean kcLogged;
+		private boolean xpLogged;
 		private boolean lootLogged;
 
 		public KillEvent(NPC npc, Assignment assignment, int tick)
@@ -122,6 +153,11 @@ public class TrackerState implements PropertyChangeListener
 			kcLogged = true;
 		}
 
+		public void markXpLogged()
+		{
+			xpLogged = true;
+		}
+
 		public void markLootLogged()
 		{
 			lootLogged = true;
@@ -129,11 +165,42 @@ public class TrackerState implements PropertyChangeListener
 
 		public boolean isCompleted()
 		{
-			return kcLogged && lootLogged;
+			return kcLogged && lootLogged && xpLogged;
+		}
+
+		@Override
+		public String toString()
+		{
+			return npc.getName() + "," + assignment + "," + tick;
 		}
 	}
 
-	public record XpDrop(int xp, int tick)
+	public record XpDropEvent(int xp, int tick)
 	{
+	}
+
+	@Getter
+	public static class TaskAmountChange
+	{
+		private final int amount;
+		private int unloggedAmount;
+		private final int tick;
+
+		public TaskAmountChange(int amount, int tick)
+		{
+			this.amount = amount;
+			this.unloggedAmount = amount;
+			this.tick = tick;
+		}
+
+		public void consume(int amount)
+		{
+			unloggedAmount -= amount;
+		}
+
+		public boolean isConsumed()
+		{
+			return unloggedAmount <= 0;
+		}
 	}
 }

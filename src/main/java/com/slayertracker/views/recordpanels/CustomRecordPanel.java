@@ -93,7 +93,7 @@ public class CustomRecordPanel extends RecordPanel
 			else
 			{
 				record.setRecording(false);
-				record.getInteractors().clear();
+				record.getInteractingNpcs().clear();
 				recordButton.setIcon(recordIcon);
 			}
 		});

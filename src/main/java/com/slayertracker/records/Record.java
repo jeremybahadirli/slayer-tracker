@@ -52,7 +52,7 @@ public class Record
 	@Expose
 	private Instant combatInstant;
 
-	private final Set<NPC> interactors = new HashSet<>();
+	private final Set<NPC> interactingNpcs = new HashSet<>();
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
 	public Record()

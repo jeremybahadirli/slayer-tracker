@@ -40,6 +40,7 @@ import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -178,17 +179,18 @@ public class SlayerTrackerPlugin extends Plugin
 				}
 				break;
 			case SlayerConfig.GROUP_NAME:
-				switch (event.getKey())
+				if (event.getKey().equals(SlayerConfig.TASK_NAME_KEY))
 				{
-					case SlayerConfig.TASK_NAME_KEY:
-						trackerService.handleSlayerTaskChange();
-						break;
-					case SlayerConfig.AMOUNT_KEY:
-						trackerService.handleTaskAmountChange();
-						break;
+					trackerService.handleSlayerTaskChange();
 				}
 				break;
 		}
+	}
+
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		trackerService.handleVarbitChanged(event);
 	}
 
 	@Subscribe
@@ -219,8 +221,18 @@ public class SlayerTrackerPlugin extends Plugin
 	@Subscribe
 	public void onCommandExecuted(CommandExecuted event)
 	{
-		trackerService.handleCommandExecuted(event);
+		if (event.getCommand().equals("t"))
+		{
+			trackerService.log("ended interactions: ", trackerState.getEndedInteractions());
+			trackerService.log("recent kills: ", trackerState.getKillEvents());
+			trackerService.log("slayer xp drops: ", trackerState.getXpDropEvents());
+			trackerService.log("task amount changes: ", trackerState.getTaskAmountChanges());
+			trackerService.log("current assignment: ", trackerState.getCurrentAssignment());
+			trackerService.log("current assignment record: ", trackerState.getCurrentAssignmentRecord());
+			trackerService.log("remaining amount: ", trackerState.getRemainingAmount());
+		}
 	}
+
 
 	@Provides
 	SlayerTrackerConfig provideConfig(ConfigManager configManager)

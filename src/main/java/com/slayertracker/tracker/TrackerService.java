@@ -36,12 +36,14 @@ import com.slayertracker.records.Record;
 import com.slayertracker.state.TrackerState;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Objects;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.function.Function;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,12 +54,15 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.game.ItemManager;
@@ -115,8 +120,6 @@ public class TrackerService
 
 	public void handleLogin() throws Exception
 	{
-		state.getAssignmentRecords().clear();
-
 		Optional<String> fileName = profileContext.getProfileFileName();
 		state.setProfileFileName(fileName.orElse(null));
 		if (fileName.isPresent())
@@ -130,7 +133,34 @@ public class TrackerService
 	public void handleLogout() throws Exception
 	{
 		saveRecords();
-		reset();
+		state.clear();
+	}
+
+	public void handleVarbitChanged(VarbitChanged event)
+	{
+		if (event.getVarpId() != VarPlayerID.SLAYER_COUNT)
+		{
+			return;
+		}
+		else if (event.getValue() == client.getVarpValue(VarPlayerID.SLAYER_COUNT_ORIGINAL))
+		{
+			return;
+		}
+		else if (client.getTickCount() == 0)
+		{
+			state.setRemainingAmount(event.getValue());
+			return;
+		}
+
+		// Remaining amount decrement
+		triggerContinuousRecording();
+		final int amountDelta = state.getRemainingAmount() - event.getValue();
+		if (amountDelta > 0)
+		{
+			state.getTaskAmountChanges().addLast(new TrackerState.TaskAmountChange(amountDelta, client.getTickCount()));
+			runQueueCycle();
+		}
+		state.setRemainingAmount(event.getValue());
 	}
 
 	public void handleSlayerTaskChange()
@@ -138,27 +168,16 @@ public class TrackerService
 		refreshCurrentAssignmentFromConfig();
 
 		state.getAssignmentRecords().values().forEach(ar -> {
-			ar.getInteractors().clear();
-			ar.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractors().clear());
-			ar.getCustomRecords().forEach(customRecord -> customRecord.getInteractors().clear());
+			ar.getInteractingNpcs().clear();
+			ar.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractingNpcs().clear());
+			ar.getCustomRecords().forEach(customRecord -> customRecord.getInteractingNpcs().clear());
 		});
-	}
-
-	public void handleTaskAmountChange()
-	{
-		if (slayerPluginService.getRemainingAmount() == slayerPluginService.getInitialAmount())
-		{
-			return;
-		}
-		triggerContinuousRecording();
-		handleKills(state.getRemainingAmount() - slayerPluginService.getRemainingAmount());
-		state.setRemainingAmount(slayerPluginService.getRemainingAmount());
+		state.getEndedInteractions().clear();
 	}
 
 	public void handleInteractingChanged(InteractingChanged event)
 	{
-		if (state.getCurrentAssignment() == null
-			|| (event.getSource() != client.getLocalPlayer() && event.getTarget() != client.getLocalPlayer()))
+		if (event.getSource() != client.getLocalPlayer() && event.getTarget() != client.getLocalPlayer())
 		{
 			return;
 		}
@@ -187,9 +206,11 @@ public class TrackerService
 	{
 		triggerContinuousRecording();
 
+		state.getEndedInteractions().removeIf(endedInteraction -> endedInteraction.getNpc() == npc);
+
 		Predicate<Record> shouldSetCombatInstant = r -> (!isContinuousRecordingMode()
 			|| getContinuousRecordingStartInstant().isAfter(r.getCombatInstant()))
-			&& r.getInteractors().isEmpty();
+			&& r.getInteractingNpcs().isEmpty();
 
 		final Instant now = Instant.now();
 
@@ -198,17 +219,15 @@ public class TrackerService
 		{
 			assignmentRecord.setCombatInstant(now);
 		}
-		assignmentRecord.getInteractors().add(npc);
-
+		assignmentRecord.getInteractingNpcs().add(npc);
 		state.getCurrentAssignment().getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().computeIfAbsent(variant, r -> new Record(state));
 			if (shouldSetCombatInstant.test(variantRecord))
 			{
 				variantRecord.setCombatInstant(now);
 			}
-			variantRecord.getInteractors().add(npc);
+			variantRecord.getInteractingNpcs().add(npc);
 		});
-
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
@@ -216,63 +235,120 @@ public class TrackerService
 				{
 					customRecord.setCombatInstant(now);
 				}
-				customRecord.getInteractors().add(npc);
+				customRecord.getInteractingNpcs().add(npc);
 			});
 	}
 
 	private void handleInteractingEnd()
 	{
-		final Predicate<NPC> isNotInteracting = interactor ->
-			client.getTopLevelWorldView().npcs().stream().noneMatch(npc -> npc.equals(interactor))
-				|| client.getLocalPlayer() == null
-				|| interactor.isDead()
-				|| (client.getLocalPlayer().getInteracting() != interactor
-				&& interactor.getInteracting() != client.getLocalPlayer());
+		final Predicate<NPC> isNotInteracting = npc ->
+			client.getTopLevelWorldView().npcs().stream().noneMatch(worldNpc -> worldNpc.equals(npc))
+				|| (client.getLocalPlayer().getInteracting() != npc
+				&& npc.getInteracting() != client.getLocalPlayer());
 
-		// Change to only iterate over current assignment record? Must then purge interactors when assignment ends.
 		final Instant now = Instant.now();
+		final int currentTick = client.getTickCount();
+
+		Set<NPC> endedInteractionNpcs = new HashSet<>();
 		state.getAssignmentRecords().values().forEach(ar -> {
-			ar.getInteractors().stream()
-				.filter(isNotInteracting)
-				.forEach(interactor -> {
-					ar.addToHours(Duration.between(ar.getCombatInstant(), now));
-					ar.setCombatInstant(now);
-				});
-
-			ar.getVariantRecords().values().forEach(vr ->
-				vr.getInteractors().stream()
-					.filter(isNotInteracting)
-					.forEach(interactor -> {
-						vr.addToHours(Duration.between(vr.getCombatInstant(), now));
-						vr.setCombatInstant(now);
-					}));
-
-			ar.getCustomRecords().forEach(cr ->
-				cr.getInteractors().stream()
-					.filter(isNotInteracting)
-					.forEach(interactor -> {
-						cr.addToHours(Duration.between(cr.getCombatInstant(), now));
-						cr.setCombatInstant(now);
-					}));
+			updateInteractingNpcs(ar, isNotInteracting, now, endedInteractionNpcs);
+			ar.getVariantRecords().values().forEach(vr -> updateInteractingNpcs(vr, isNotInteracting, now, endedInteractionNpcs));
+			ar.getCustomRecords().forEach(cr -> updateInteractingNpcs(cr, isNotInteracting, now, endedInteractionNpcs));
 		});
 
-		state.getCurrentAssignmentRecord().getInteractors().stream()
-			.filter(NPC::isDead)
-			.forEach(npc -> {
-				if (isNpcAlreadyTracked(npc))
+		updateEndedInteractions(endedInteractionNpcs, currentTick);
+		runQueueCycle();
+	}
+
+	private void updateInteractingNpcs(Record record, Predicate<NPC> isNotInteracting, Instant now, Set<NPC> endedInteractionNpcs)
+	{
+		boolean recordHadActiveInteractors = !record.getInteractingNpcs().isEmpty();
+
+		record.getInteractingNpcs().removeIf(npc -> {
+			if (isNotInteracting.test(npc))
+			{
+				endedInteractionNpcs.add(npc);
+				return true;
+			}
+			return false;
+		});
+
+		boolean allInteractionsEnded = recordHadActiveInteractors && record.getInteractingNpcs().isEmpty();
+		if (allInteractionsEnded)
+		{
+			record.addToHours(Duration.between(record.getCombatInstant(), now));
+			record.setCombatInstant(now);
+		}
+	}
+
+	private void updateEndedInteractions(Set<NPC> endedInteractionNpcs, int currentTick)
+	{
+		if (endedInteractionNpcs.isEmpty())
+		{
+			return;
+		}
+
+		for (NPC npc : endedInteractionNpcs)
+		{
+			TrackerState.EndedInteraction existingEntry = state.getEndedInteractions()
+				.stream()
+				.filter(endedInteraction -> endedInteraction.getNpc() == npc)
+				.findFirst()
+				.orElse(null);
+
+			if (existingEntry != null)
+			{
+				state.getEndedInteractions().remove(existingEntry);
+				existingEntry.updateTick(currentTick);
+				if (npc.isDead())
 				{
-					return;
+					existingEntry.markDead();
 				}
-				state.getRecentKills().addLast(new TrackerState.KillEvent(npc, state.getCurrentAssignment(), client.getTickCount()));
-			});
+				state.getEndedInteractions().addLast(existingEntry);
+				continue;
+			}
 
-		state.getAssignmentRecords().values().forEach(ar -> {
-			ar.getInteractors().removeIf(isNotInteracting);
-			ar.getVariantRecords().values().forEach(variantRecord ->
-				variantRecord.getInteractors().removeIf(isNotInteracting));
-			ar.getCustomRecords().forEach(customRecord ->
-				customRecord.getInteractors().removeIf(isNotInteracting));
-		});
+			state.getEndedInteractions().addLast(new TrackerState.EndedInteraction(npc, currentTick, npc.isDead()));
+		}
+	}
+
+	private void populateKillEventsFromInteractions(int currentTick)
+	{
+		AssignmentRecord currentAssignmentRecord = state.getCurrentAssignmentRecord();
+		if (currentAssignmentRecord == null)
+		{
+			return;
+		}
+
+		List<NPC> killCandidates = new ArrayList<>();
+
+		// Populate from interacting NPCs
+		currentAssignmentRecord.getInteractingNpcs().stream()
+			.filter(NPC::isDead)
+			.forEach(killCandidates::add);
+
+		// Populate from ended interactions
+		Iterator<TrackerState.EndedInteraction> endedInteractionIterator = state.getEndedInteractions().iterator();
+		while (endedInteractionIterator.hasNext())
+		{
+			TrackerState.EndedInteraction endedInteraction = endedInteractionIterator.next();
+			// We can mark endedInteraction.isDead() in special conditions (bosses)
+			if (endedInteraction.isDead() || endedInteraction.getNpc().isDead())
+			{
+				killCandidates.add(endedInteraction.getNpc());
+				endedInteractionIterator.remove();
+			}
+		}
+
+		for (NPC npc : killCandidates)
+		{
+			if (state.getKillEvents().stream().anyMatch(recentKill -> recentKill.getNpc() == npc))
+			{
+				continue;
+			}
+			state.getKillEvents().addLast(new TrackerState.KillEvent(npc, state.getCurrentAssignment(), currentTick));
+			log("killEvent created: ", npc);
+		}
 	}
 
 	public void handleChatMessage(ChatMessage event)
@@ -306,233 +382,370 @@ public class TrackerService
 			return;
 		}
 
-		if (state.getCurrentAssignment() == null || !state.getAssignmentRecords().containsKey(state.getCurrentAssignment()))
-		{
-			return;
-		}
-
 		final int slayerXpDrop = newSlayerXp - state.getCachedXp();
-		state.getSlayerXpDrops().addLast(new TrackerState.XpDrop(slayerXpDrop, client.getTickCount()));
+		state.getXpDropEvents().addLast(new TrackerState.XpDropEvent(slayerXpDrop, client.getTickCount()));
 		state.setCachedXp(newSlayerXp);
+		runQueueCycle();
 	}
 
-	private void handleKills(int kills)
+	// Runs on amount change, interaction end, and stat change
+	private void runQueueCycle()
 	{
-		if (kills <= 0)
-		{
-			return;
-		}
-
 		final int currentTick = client.getTickCount();
-		pruneRecentKills(currentTick);
-		pruneSlayerXpDrops(currentTick);
+		pruneEndedInteractions(currentTick);
+		populateKillEventsFromInteractions(currentTick);
+		pruneKillEvents(currentTick);
+		pruneXpDropEvents(currentTick);
+		pruneTaskAmountChanges(currentTick);
 
-		Queue<NPC> xpNpcQueue = new ArrayDeque<>();
-		int killsRemaining = kills;
-		for (Iterator<TrackerState.KillEvent> it = state.getRecentKills().iterator(); killsRemaining > 0 && it.hasNext(); )
+		Iterator<TrackerState.KillEvent> killEventIterator = state.getKillEvents().iterator();
+
+		// Iterate through unlogged task amount changes. For each, pull an unlogged kill event and increment KCs
+		for (Iterator<TrackerState.TaskAmountChange> taskAmountChangeIterator = state.getTaskAmountChanges().iterator(); taskAmountChangeIterator.hasNext(); )
 		{
-			TrackerState.KillEvent kill = it.next();
-			if (kill.isKcLogged())
+			TrackerState.TaskAmountChange taskAmountChange = taskAmountChangeIterator.next();
+
+			while (taskAmountChange.getUnloggedAmount() > 0)
 			{
-				continue;
+				TrackerState.KillEvent killEvent = nextUnloggedKillEvent(killEventIterator);
+				if (killEvent == null)
+				{
+					break;
+				}
+
+				// Increment if record exists. Record should have been created on interacting start;
+				// if not, do nothing to avoid record with hours = 0;
+				Assignment assignment = killEvent.getAssignment();
+				AssignmentRecord assignmentRecord = state.getAssignmentRecords().get(assignment);
+				if (assignmentRecord != null)
+				{
+					assignmentRecord.incrementKc();
+					assignment.getVariantMatchingNpc(killEvent.getNpc()).ifPresent(variant -> {
+						Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+						if (variantRecord != null)
+						{
+							variantRecord.incrementKc();
+						}
+					});
+					assignmentRecord.getCustomRecords().stream()
+						.filter(CustomRecord::isRecording)
+						.forEach(Record::incrementKc);
+				}
+
+				killEvent.markKcLogged();
+				if (killEvent.isCompleted())
+				{
+					log("kill-kill-completed", "npc", killEvent.getNpc(), "assignment", assignment, "taskAmountChange", taskAmountChange);
+					killEventIterator.remove();
+				}
+				taskAmountChange.consume(1);
 			}
 
-			NPC npc = kill.getNpc();
-
-			xpNpcQueue.add(npc);
-
-			Assignment assignment = kill.getAssignment();
-			AssignmentRecord assignmentRecord = state.getAssignmentRecords().get(assignment);
-			assignmentRecord.incrementKc();
-
-			assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-				Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-				variantRecord.incrementKc();
-			});
-
-			assignmentRecord.getCustomRecords().stream()
-				.filter(CustomRecord::isRecording)
-				.forEach(Record::incrementKc);
-
-			kill.markKcLogged();
-			if (kill.isCompleted())
+			if (taskAmountChange.isConsumed())
 			{
-				it.remove();
+				taskAmountChangeIterator.remove();
 			}
-			killsRemaining--;
+			else // Ran out of KillEvents
+			{
+				break;
+			}
 		}
 
-		int xpToAllocate = state.getSlayerXpDrops().stream()
-			.mapToInt(TrackerState.XpDrop::xp)
+		List<TrackerState.KillEvent> xpEligibleKillEvents = state.getKillEvents().stream()
+			.filter(killEvent -> killEvent.isKcLogged() && !killEvent.isXpLogged())
+			.toList();
+
+		int xpToAllocate = state.getXpDropEvents().stream()
+			.mapToInt(TrackerState.XpDropEvent::xp)
 			.sum();
-		state.getSlayerXpDrops().clear();
-		processXpQueue(xpToAllocate, xpNpcQueue);
+
+		if (!xpEligibleKillEvents.isEmpty() && xpToAllocate > 0)
+		{
+			state.getXpDropEvents().clear();
+			Map<TrackerState.KillEvent, Integer> killEventXpAllocations = calculateXpAllocations(xpToAllocate, xpEligibleKillEvents);
+			applyXpAllocations(killEventXpAllocations);
+			xpEligibleKillEvents.forEach(ke -> {
+				ke.markXpLogged();
+				if (ke.isCompleted()) {
+					log("xp-kill-completed", "npc", ke.getNpc(), "assignment", ke.getAssignment(), "taskAmountChange", null);
+				}
+			});
+			state.getKillEvents().removeIf(TrackerState.KillEvent::isCompleted);
+		}
 	}
 
-	private void processXpQueue(int xpToAllocate, Queue<NPC> xpNpcQueue)
+	private Map<TrackerState.KillEvent, Integer> calculateXpAllocations(int xpToAllocate, List<TrackerState.KillEvent> killEvents)
 	{
-		if (xpNpcQueue.isEmpty() || xpToAllocate <= 0)
+		Map<TrackerState.KillEvent, Integer> killEventXpAllocations = new HashMap<>();
+
+		final int npcXpTotal = killEvents.stream().mapToInt(this::getSlayerXpForKillEvent).sum();
+		if (npcXpTotal <= 0)
 		{
+			log("xp-allocation-npcXpTotal=0", killEvents);
+			return killEventXpAllocations;
+		}
+
+		int remainingXp = xpToAllocate;
+		for (int i = 0; i < killEvents.size(); i++)
+		{
+			TrackerState.KillEvent killEvent = killEvents.get(i);
+			int killEventXpAllocation;
+			if (i == killEvents.size() - 1)
+			{
+				killEventXpAllocation = remainingXp;
+			}
+			else
+			{
+				double killEventXpRatio = (double) getSlayerXpForKillEvent(killEvent) / npcXpTotal;
+				killEventXpAllocation = Math.min((int) Math.round(xpToAllocate * killEventXpRatio), remainingXp);
+				remainingXp -= killEventXpAllocation;
+			}
+			killEventXpAllocations.put(killEvent, killEventXpAllocation);
+		}
+
+		return killEventXpAllocations;
+	}
+
+	private int getSlayerXpForKillEvent(TrackerState.KillEvent killEvent)
+	{
+		Assignment assignment = killEvent.getAssignment();
+		NPC npc = killEvent.getNpc();
+
+		// Health-based xp amount isn't a property of Variant because it requires an NPC object to calculate
+		return assignment.getVariantMatchingNpc(npc)
+			.flatMap(Variant::getSlayerXp)
+			.orElseGet(() -> {
+				NPCComposition composition = npc.getTransformedComposition();
+				if (composition == null)
+				{
+					log("xp-allocation-missing-NPCComposition", npc);
+					return 0;
+				}
+				Integer health = npcManager.getHealth(composition.getId());
+				if (health == null)
+				{
+					log("xp-allocation-missing-health", npc, composition.getId());
+					return 0;
+				}
+				return health;
+			});
+	}
+
+	private void applyXpAllocations(Map<TrackerState.KillEvent, Integer> killEventXpAllocations)
+	{
+		if (killEventXpAllocations.isEmpty())
+		{
+			log("xp-allocation-couldn't-apply-no-killEventXpAllocations");
 			return;
 		}
 
-		final Function<NPC, Integer> getSlayerXp = npc ->
-			state.getCurrentAssignment().getVariantMatchingNpc(npc)
-				.flatMap(Variant::getSlayerXp)
-				.orElse(npcManager.getHealth(Objects.requireNonNull(npc.getTransformedComposition()).getId()));
+		killEventXpAllocations.forEach((killEvent, killEventXpAllocation) -> {
+			if (killEventXpAllocation <= 0)
+			{
+				log("xp-allocation-killEventXpAllocation<=0", killEvent, killEventXpAllocation);
+				return;
+			}
 
-		final int npcXpTotal = xpNpcQueue.stream().mapToInt(getSlayerXp::apply).sum();
+			Assignment assignment = killEvent.getAssignment();
+			if (assignment == null)
+			{
+				log("xp-allocation-missing-assignment", killEvent);
+				return;
+			}
 
-		NPC npc = xpNpcQueue.remove();
-		final double thisNpcXpRatio = (double) xpToAllocate / npcXpTotal;
-		final int thisNpcsXpShare = Math.toIntExact(Math.round(xpToAllocate * thisNpcXpRatio));
-		xpToAllocate -= thisNpcsXpShare;
-
-		AssignmentRecord assignmentRecord = state.getCurrentAssignmentRecord();
-		assignmentRecord.addToXp(thisNpcsXpShare);
-
-		state.getCurrentAssignment().getVariantMatchingNpc(npc).ifPresent(variant -> {
-			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			variantRecord.addToXp(thisNpcsXpShare);
+			// Increment if record exists. Record should have been created on interacting start;
+			// if not, do nothing to avoid record with hours = 0;
+			AssignmentRecord assignmentRecord = state.getAssignmentRecords().get(assignment);
+			if (assignmentRecord != null)
+			{
+				assignmentRecord.addToXp(killEventXpAllocation);
+				assignment.getVariantMatchingNpc(killEvent.getNpc()).ifPresent(variant -> {
+					Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+					if (variantRecord != null)
+					{
+						variantRecord.addToXp(killEventXpAllocation);
+					}
+				});
+				assignmentRecord.getCustomRecords().stream()
+					.filter(CustomRecord::isRecording)
+					.forEach(customRecord -> customRecord.addToXp(killEventXpAllocation));
+			}
 		});
-
-		assignmentRecord.getCustomRecords().stream()
-			.filter(CustomRecord::isRecording)
-			.forEach(customRecord ->
-				customRecord.addToXp(thisNpcsXpShare));
-
-		processXpQueue(xpToAllocate, xpNpcQueue);
 	}
 
 	public void handleNpcLootReceived(NpcLootReceived event)
 	{
 		NPC npc = event.getNpc();
 
-		final int currentTick = client.getTickCount();
-		pruneRecentKills(currentTick);
-		TrackerState.KillEvent killEvent = findKillForNpc(npc);
+//		final int currentTick = client.getTickCount();
+//		pruneKillEvents(currentTick);
+		runQueueCycle(); // TODO Is this necessary? Should ensure all KillEvents are kc-logged.
+
+		TrackerState.KillEvent killEvent = findEligibleKillEventForNpc(npc);
 		if (killEvent == null)
 		{
+			log("loot-no-kill-found", "npc", npc, "event", event,
+				"oldestKillTick", state.getKillEvents().isEmpty() ? -1 : state.getKillEvents().peekFirst().getTick(),
+				"recentKills", state.getKillEvents().size());
 			return;
 		}
 
-		killEvent.markLootLogged();
-
-		Assignment assignment = killEvent.getAssignment();
-
 		final int lootGe = event.getItems().stream().mapToInt(itemStack ->
-				itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity())
-			.sum();
+			itemManager.getItemPrice(itemStack.getId()) * itemStack.getQuantity()
+		).sum();
 
 		final int lootHa = event.getItems().stream().mapToInt(itemStack -> {
-				if (itemStack.getId() == ItemID.COINS)
-				{
-					return itemStack.getQuantity();
-				}
-				else
-				{
-					return itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
-				}
-			})
-			.sum();
+			if (itemStack.getId() == ItemID.COINS)
+			{
+				return itemStack.getQuantity();
+			}
+			else
+			{
+				return itemManager.getItemComposition(itemStack.getId()).getHaPrice() * itemStack.getQuantity();
+			}
+		}).sum();
 
+		// Increment if record exists. Record should have been created on interacting start;
+		// if not, do nothing to avoid record with hours = 0;
+		Assignment assignment = killEvent.getAssignment();
 		AssignmentRecord assignmentRecord = state.getAssignmentRecords().get(assignment);
-		assignmentRecord.addToGe(lootGe);
-		assignmentRecord.addToHa(lootHa);
-
-		assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
-			Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
-			variantRecord.addToGe(lootGe);
-			variantRecord.addToHa(lootHa);
-		});
-
-		assignmentRecord.getCustomRecords().stream()
-			.filter(CustomRecord::isRecording)
-			.forEach(customRecord -> {
-				customRecord.addToGe(lootGe);
-				customRecord.addToHa(lootHa);
+		if (assignmentRecord != null)
+		{
+			assignmentRecord.addToGe(lootGe);
+			assignmentRecord.addToHa(lootHa);
+			assignment.getVariantMatchingNpc(npc).ifPresent(variant -> {
+				Record variantRecord = assignmentRecord.getVariantRecords().get(variant);
+				if (variantRecord != null)
+				{
+					variantRecord.addToGe(lootGe);
+					variantRecord.addToHa(lootHa);
+				}
 			});
+			assignmentRecord.getCustomRecords().stream()
+				.filter(CustomRecord::isRecording)
+				.forEach(customRecord -> {
+					customRecord.addToGe(lootGe);
+					customRecord.addToHa(lootHa);
+				});
+		}
 
+		killEvent.markLootLogged();
 		if (killEvent.isCompleted())
 		{
-			state.getRecentKills().remove(killEvent);
+			log("loot-kill-completed", "npc", npc, "event", event, "killEvent", killEvent);
+			state.getKillEvents().remove(killEvent);
 		}
 	}
 
-	private void pruneRecentKills(int currentTick)
+	private void pruneEndedInteractions(int currentTick)
 	{
-		while (!state.getRecentKills().isEmpty())
+		while (!state.getEndedInteractions().isEmpty())
 		{
-			TrackerState.KillEvent kill = state.getRecentKills().peekFirst();
+			TrackerState.EndedInteraction endedInteraction = state.getEndedInteractions().peekFirst();
 
-			boolean expired = currentTick - kill.getTick() > QUEUE_PRUNE_TICKS;
-			boolean completed = kill.isCompleted();
+			boolean expired = currentTick - endedInteraction.getLastInteractedTick() > QUEUE_PRUNE_TICKS;
 
 			if (expired)
 			{
-				log("Kill expired:", kill);
+				log("EndedInteraction expired:", endedInteraction.getNpc());
+				state.getEndedInteractions().removeFirst();
+				continue;
 			}
-
-			if (!expired && !completed)
-			{
-				break;
-			}
-
-			state.getRecentKills().removeFirst();
+			break;
 		}
 	}
 
-	private void pruneSlayerXpDrops(int currentTick)
+	private void pruneKillEvents(int currentTick)
 	{
-		while (!state.getSlayerXpDrops().isEmpty())
+		while (!state.getKillEvents().isEmpty())
 		{
-			TrackerState.XpDrop drop = state.getSlayerXpDrops().peekFirst();
+			TrackerState.KillEvent killEvent = state.getKillEvents().peekFirst();
 
-			boolean expired = currentTick - drop.tick() > QUEUE_PRUNE_TICKS;
+			boolean expired = currentTick - killEvent.getTick() > QUEUE_PRUNE_TICKS;
+			boolean completed = killEvent.isCompleted();
 
 			if (expired)
 			{
-				log("Xp drop expired:", drop);
+				log("KillEvent expired:", killEvent);
 			}
-
-			if (!expired)
+			if (expired || completed)
 			{
-				break;
+				state.getKillEvents().removeFirst();
+				continue;
 			}
-
-			state.getSlayerXpDrops().removeFirst();
+			break;
 		}
 	}
 
-	private TrackerState.KillEvent findKillForNpc(NPC npc)
+	private void pruneXpDropEvents(int currentTick)
 	{
-		for (Iterator<TrackerState.KillEvent> it = state.getRecentKills().descendingIterator(); it.hasNext(); )
+		while (!state.getXpDropEvents().isEmpty())
 		{
-			TrackerState.KillEvent kill = it.next();
-			if (kill.getNpc() == npc)
+			TrackerState.XpDropEvent xpDropEvent = state.getXpDropEvents().peekFirst();
+
+			boolean expired = currentTick - xpDropEvent.tick() > QUEUE_PRUNE_TICKS;
+
+			if (expired)
 			{
-				return kill;
+				log("xpDropEvent expired:", xpDropEvent);
+				state.getXpDropEvents().removeFirst();
+				continue;
+			}
+			break;
+		}
+	}
+
+	private void pruneTaskAmountChanges(int currentTick)
+	{
+		while (!state.getTaskAmountChanges().isEmpty())
+		{
+			TrackerState.TaskAmountChange taskAmountChange = state.getTaskAmountChanges().peekFirst();
+
+			boolean expired = currentTick - taskAmountChange.getTick() > QUEUE_PRUNE_TICKS;
+			boolean consumed = taskAmountChange.isConsumed();
+
+			if (expired)
+			{
+				log("taskAmountChanges expired:", taskAmountChange);
+			}
+			if (expired || consumed)
+			{
+				state.getTaskAmountChanges().removeFirst();
+				continue;
+			}
+			break;
+		}
+	}
+
+	private TrackerState.KillEvent nextUnloggedKillEvent(Iterator<TrackerState.KillEvent> iterator)
+	{
+		while (iterator.hasNext())
+		{
+			TrackerState.KillEvent killEvent = iterator.next();
+			if (!killEvent.isKcLogged())
+			{
+				return killEvent;
 			}
 		}
 		return null;
 	}
 
-	private boolean isNpcAlreadyTracked(NPC npc)
+	private TrackerState.KillEvent findEligibleKillEventForNpc(NPC npc)
 	{
-		return state.getRecentKills().stream().anyMatch(kill -> kill.getNpc() == npc);
-	}
-
-	public void handleCommandExecuted(CommandExecuted event)
-	{
-		if (event.getCommand().equals("t") && state != null)
+		for (Iterator<TrackerState.KillEvent> it = state.getKillEvents().descendingIterator(); it.hasNext(); )
 		{
-			log("recent kills: ", state.getRecentKills());
-			log("slayer xp drops: ", state.getSlayerXpDrops());
-			log("current assignment: ", state.getCurrentAssignment());
-			log("current assignment record: ", state.getCurrentAssignmentRecord());
-			log("targets: ", slayerPluginService.getTargets());
-			log("remaining amount: ", slayerPluginService.getRemainingAmount());
+			TrackerState.KillEvent killEvent = it.next();
+			if (killEvent.getNpc() == npc)
+			{
+				if (!killEvent.isKcLogged())
+				{
+					log("loot-KillEvent associated with NPC was not kc-logged:", killEvent);
+					return null;
+				}
+				return killEvent;
+			}
 		}
+		return null;
 	}
 
 	public void saveRecords() throws Exception
@@ -544,23 +757,17 @@ public class TrackerService
 		recordRepository.save(state.getAssignmentRecords(), state.getProfileFileName());
 	}
 
-	// Slayer config updates sooner than SlayerPluginService
 	private void refreshCurrentAssignmentFromConfig()
 	{
 		Assignment.getAssignmentByName(
 				configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.TASK_NAME_KEY))
 			.ifPresentOrElse(assignment -> {
 				state.setCurrentAssignment(assignment);
-				state.setRemainingAmount(Integer.parseInt(configManager.getRSProfileConfiguration(SlayerConfig.GROUP_NAME, SlayerConfig.AMOUNT_KEY)));
+				state.setRemainingAmount(client.getVarpValue(VarPlayerID.SLAYER_COUNT));
 			}, () -> {
 				state.setCurrentAssignment(null);
 				state.setRemainingAmount(0);
 			});
-	}
-
-	private void reset()
-	{
-		state.clear();
 	}
 
 	private boolean isContinuousRecordingMode()
@@ -581,7 +788,7 @@ public class TrackerService
 		}
 	}
 
-	private void log(Object... objects)
+	public void log(Object... objects)
 	{
 		Object[] out = new Object[objects.length + 1];
 		out[0] = client.getTickCount();
