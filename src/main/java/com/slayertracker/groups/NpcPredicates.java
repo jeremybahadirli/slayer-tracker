@@ -55,14 +55,8 @@ final class NpcPredicates
 		return npc ->
 		{
 			final NPCComposition composition = npc.getTransformedComposition();
-			if (composition == null)
-			{
-				return false;
-			}
-
-			final String npcName = composition.getName()
-				.replace('\u00A0', ' ');
-
+			String npcName = composition != null ? composition.getName() : npc.getName();
+			npcName = npcName != null ? npcName.replace('\u00A0', ' ') : "";
 			for (String name : names)
 			{
 				if (name != null && name.equalsIgnoreCase(npcName))
@@ -96,17 +90,12 @@ final class NpcPredicates
 		return npc ->
 		{
 			final NPCComposition composition = npc.getTransformedComposition();
-			if (composition == null)
-			{
-				return false;
-			}
-
-			final String name = composition.getName()
-				.replace('\u00A0', ' ');
+			String npcName = composition != null ? composition.getName() : npc.getName();
+			npcName = npcName != null ? npcName.replace('\u00A0', ' ') : "";
 
 			for (Pattern pattern : patterns)
 			{
-				if (pattern.matcher(name).find())
+				if (pattern.matcher(npcName).find())
 				{
 					return true;
 				}
@@ -126,12 +115,8 @@ final class NpcPredicates
 		return npc ->
 		{
 			final NPCComposition composition = npc.getTransformedComposition();
-			if (composition == null)
-			{
-				return false;
-			}
+			final int npcLevel = composition != null ? composition.getCombatLevel() : npc.getCombatLevel();
 
-			final int npcLevel = composition.getCombatLevel();
 			for (int combatLevel : combatLevels)
 			{
 				if (combatLevel == npcLevel)
@@ -154,12 +139,8 @@ final class NpcPredicates
 		return npc ->
 		{
 			final NPCComposition composition = npc.getTransformedComposition();
-			if (composition == null)
-			{
-				return false;
-			}
+			final int npcId = composition != null ? composition.getId() : npc.getId();
 
-			final int npcId = composition.getId();
 			for (int id : ids)
 			{
 				if (id == npcId)

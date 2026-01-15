@@ -51,13 +51,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
-import net.runelite.api.NPCComposition;
 import net.runelite.api.Skill;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.CommandExecuted;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -133,6 +133,10 @@ public class TrackerService
 	public void handleLogout() throws Exception
 	{
 		saveRecords();
+		logDequeChange("endedInteractions", "clear-logout", state.getEndedInteractions());
+		logDequeChange("killEvents", "clear-logout", state.getKillEvents());
+		logDequeChange("xpDropEvents", "clear-logout", state.getXpDropEvents());
+		logDequeChange("taskAmountChanges", "clear-logout", state.getTaskAmountChanges());
 		state.clear();
 	}
 
@@ -157,8 +161,8 @@ public class TrackerService
 		final int amountDelta = state.getRemainingAmount() - event.getValue();
 		if (amountDelta > 0)
 		{
-			state.getTaskAmountChanges().addLast(new TrackerState.TaskAmountChange(amountDelta, client.getTickCount()));
-			runQueueCycle();
+			addTaskAmountChange(new TrackerState.TaskAmountChange(amountDelta, client.getTickCount()));
+//			runQueueCycle();
 		}
 		state.setRemainingAmount(event.getValue());
 	}
@@ -168,37 +172,42 @@ public class TrackerService
 		refreshCurrentAssignmentFromConfig();
 
 		state.getAssignmentRecords().values().forEach(ar -> {
-			ar.getInteractingNpcs().clear();
-			ar.getVariantRecords().values().forEach(variantRecord -> variantRecord.getInteractingNpcs().clear());
-			ar.getCustomRecords().forEach(customRecord -> customRecord.getInteractingNpcs().clear());
+			clearInteractingNpcs(ar, "taskChange-assignment");
+			ar.getVariantRecords().values().forEach(variantRecord -> clearInteractingNpcs(variantRecord, "taskChange-variant"));
+			ar.getCustomRecords().forEach(customRecord -> clearInteractingNpcs(customRecord, "taskChange-custom"));
 		});
-		state.getEndedInteractions().clear();
+		clearEndedInteractions("taskChange");
 	}
 
 	public void handleInteractingChanged(InteractingChanged event)
 	{
-		if (event.getSource() != client.getLocalPlayer() && event.getTarget() != client.getLocalPlayer())
+		final Actor source = event.getSource();
+		final Actor target = event.getTarget();
+
+		if (source == client.getLocalPlayer()
+			|| target == client.getLocalPlayer()
+			|| state.getCurrentAssignmentRecord().getInteractingNpcs().stream().anyMatch(npc -> npc.equals(source) || npc.equals(target)))
+		{
+			handleInteractingEnd();
+		}
+
+		final NPC npc;
+		if (source == client.getLocalPlayer() && target instanceof NPC)
+		{
+			npc = (NPC) target;
+		}
+		else if (target == client.getLocalPlayer() && source instanceof NPC)
+		{
+			npc = (NPC) source;
+		}
+		else
 		{
 			return;
 		}
 
-		NPC npc = null;
-		if (event.getSource() instanceof NPC)
-		{
-			npc = (NPC) event.getSource();
-		}
-		else if (event.getTarget() instanceof NPC)
-		{
-			npc = (NPC) event.getTarget();
-		}
-
-		if (npc != null && slayerPluginService.getTargets().contains(npc))
+		if (slayerPluginService.getTargets().contains(npc))
 		{
 			handleTargetInteractingStart(npc);
-		}
-		else if (npc == null)
-		{
-			handleInteractingEnd();
 		}
 	}
 
@@ -206,7 +215,14 @@ public class TrackerService
 	{
 		triggerContinuousRecording();
 
-		state.getEndedInteractions().removeIf(endedInteraction -> endedInteraction.getNpc() == npc);
+		state.getEndedInteractions().removeIf(endedInteraction -> {
+			boolean match = endedInteraction.getNpc() == npc;
+			if (match)
+			{
+				logDequeChange("endedInteractions", "removeIf-interactingStart", endedInteraction);
+			}
+			return match;
+		});
 
 		Predicate<Record> shouldSetCombatInstant = r -> (!isContinuousRecordingMode()
 			|| getContinuousRecordingStartInstant().isAfter(r.getCombatInstant()))
@@ -219,14 +235,14 @@ public class TrackerService
 		{
 			assignmentRecord.setCombatInstant(now);
 		}
-		assignmentRecord.getInteractingNpcs().add(npc);
+		addNpcToInteracting(assignmentRecord, npc, "interacting-start-assignment");
 		state.getCurrentAssignment().getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().computeIfAbsent(variant, r -> new Record(state));
 			if (shouldSetCombatInstant.test(variantRecord))
 			{
 				variantRecord.setCombatInstant(now);
 			}
-			variantRecord.getInteractingNpcs().add(npc);
+			addNpcToInteracting(variantRecord, npc, "interacting-start-variant");
 		});
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
@@ -235,54 +251,22 @@ public class TrackerService
 				{
 					customRecord.setCombatInstant(now);
 				}
-				customRecord.getInteractingNpcs().add(npc);
+				addNpcToInteracting(customRecord, npc, "interacting-start-custom");
 			});
 	}
 
 	private void handleInteractingEnd()
 	{
-		final Predicate<NPC> isNotInteracting = npc ->
-			client.getTopLevelWorldView().npcs().stream().noneMatch(worldNpc -> worldNpc.equals(npc))
-				|| (client.getLocalPlayer().getInteracting() != npc
-				&& npc.getInteracting() != client.getLocalPlayer());
-
 		final Instant now = Instant.now();
 		final int currentTick = client.getTickCount();
 
 		Set<NPC> endedInteractionNpcs = new HashSet<>();
 		state.getAssignmentRecords().values().forEach(ar -> {
-			updateInteractingNpcs(ar, isNotInteracting, now, endedInteractionNpcs);
-			ar.getVariantRecords().values().forEach(vr -> updateInteractingNpcs(vr, isNotInteracting, now, endedInteractionNpcs));
-			ar.getCustomRecords().forEach(cr -> updateInteractingNpcs(cr, isNotInteracting, now, endedInteractionNpcs));
+			updateInteractingNpcs(ar, now, endedInteractionNpcs);
+			ar.getVariantRecords().values().forEach(vr -> updateInteractingNpcs(vr, now, endedInteractionNpcs));
+			ar.getCustomRecords().forEach(cr -> updateInteractingNpcs(cr, now, endedInteractionNpcs));
 		});
 
-		updateEndedInteractions(endedInteractionNpcs, currentTick);
-		runQueueCycle();
-	}
-
-	private void updateInteractingNpcs(Record record, Predicate<NPC> isNotInteracting, Instant now, Set<NPC> endedInteractionNpcs)
-	{
-		boolean recordHadActiveInteractors = !record.getInteractingNpcs().isEmpty();
-
-		record.getInteractingNpcs().removeIf(npc -> {
-			if (isNotInteracting.test(npc))
-			{
-				endedInteractionNpcs.add(npc);
-				return true;
-			}
-			return false;
-		});
-
-		boolean allInteractionsEnded = recordHadActiveInteractors && record.getInteractingNpcs().isEmpty();
-		if (allInteractionsEnded)
-		{
-			record.addToHours(Duration.between(record.getCombatInstant(), now));
-			record.setCombatInstant(now);
-		}
-	}
-
-	private void updateEndedInteractions(Set<NPC> endedInteractionNpcs, int currentTick)
-	{
 		if (endedInteractionNpcs.isEmpty())
 		{
 			return;
@@ -298,18 +282,42 @@ public class TrackerService
 
 			if (existingEntry != null)
 			{
-				state.getEndedInteractions().remove(existingEntry);
+				removeEndedInteraction(existingEntry, "update");
 				existingEntry.updateTick(currentTick);
 				if (npc.isDead())
 				{
 					existingEntry.markDead();
 				}
 				state.getEndedInteractions().addLast(existingEntry);
+				logDequeChange("endedInteractions", "addLast-" + "update", existingEntry);
 				continue;
 			}
-
-			state.getEndedInteractions().addLast(new TrackerState.EndedInteraction(npc, currentTick, npc.isDead()));
+			TrackerState.EndedInteraction endedInteraction = new TrackerState.EndedInteraction(npc, currentTick, npc.isDead());
+			state.getEndedInteractions().addLast(endedInteraction);
+			logDequeChange("endedInteractions", "addLast-" + "new", endedInteraction);
 		}
+		//		runQueueCycle();
+	}
+
+	private void updateInteractingNpcs(Record record, Instant now, Set<NPC> endedInteractionNpcs)
+	{
+		final Predicate<NPC> isNotInteracting = npc ->
+			client.getTopLevelWorldView().npcs().stream().noneMatch(worldNpc -> worldNpc.equals(npc))
+				|| npc.isDead()
+				|| (client.getLocalPlayer().getInteracting() != npc
+				&& npc.getInteracting() != client.getLocalPlayer());
+
+		record.getInteractingNpcs().removeIf(npc -> {
+			if (isNotInteracting.test(npc))
+			{
+				logRecordInteraction("remove", record, npc, "interacting-end");
+				record.addToHours(Duration.between(record.getCombatInstant(), now));
+				record.setCombatInstant(now);
+				endedInteractionNpcs.add(npc);
+				return true;
+			}
+			return false;
+		});
 	}
 
 	private void populateKillEventsFromInteractions(int currentTick)
@@ -322,32 +330,25 @@ public class TrackerService
 
 		List<NPC> killCandidates = new ArrayList<>();
 
-		// Populate from interacting NPCs
-		currentAssignmentRecord.getInteractingNpcs().stream()
-			.filter(NPC::isDead)
-			.forEach(killCandidates::add);
-
-		// Populate from ended interactions
-		Iterator<TrackerState.EndedInteraction> endedInteractionIterator = state.getEndedInteractions().iterator();
-		while (endedInteractionIterator.hasNext())
+		for (Iterator<TrackerState.EndedInteraction> endedInteractionIterator = state.getEndedInteractions().iterator(); endedInteractionIterator.hasNext(); )
 		{
 			TrackerState.EndedInteraction endedInteraction = endedInteractionIterator.next();
 			// We can mark endedInteraction.isDead() in special conditions (bosses)
 			if (endedInteraction.isDead() || endedInteraction.getNpc().isDead())
 			{
 				killCandidates.add(endedInteraction.getNpc());
+				logDequeChange("endedInteractions", "iterator-remove-populateKillEvents", endedInteraction);
 				endedInteractionIterator.remove();
 			}
 		}
 
 		for (NPC npc : killCandidates)
 		{
-			if (state.getKillEvents().stream().anyMatch(recentKill -> recentKill.getNpc() == npc))
+			if (state.getKillEvents().stream().anyMatch(killEvent -> killEvent.getNpc() == npc))
 			{
 				continue;
 			}
-			state.getKillEvents().addLast(new TrackerState.KillEvent(npc, state.getCurrentAssignment(), currentTick));
-			log("killEvent created: ", npc);
+			addKillEvent(new TrackerState.KillEvent(npc, state.getCurrentAssignment(), currentTick), "fromInteraction");
 		}
 	}
 
@@ -383,9 +384,9 @@ public class TrackerService
 		}
 
 		final int slayerXpDrop = newSlayerXp - state.getCachedXp();
-		state.getXpDropEvents().addLast(new TrackerState.XpDropEvent(slayerXpDrop, client.getTickCount()));
+		addXpDropEvent(new TrackerState.XpDropEvent(slayerXpDrop, client.getTickCount()));
 		state.setCachedXp(newSlayerXp);
-		runQueueCycle();
+//		runQueueCycle();
 	}
 
 	// Runs on amount change, interaction end, and stat change
@@ -393,6 +394,7 @@ public class TrackerService
 	{
 		final int currentTick = client.getTickCount();
 		pruneEndedInteractions(currentTick);
+		// TODO killevent created late
 		populateKillEventsFromInteractions(currentTick);
 		pruneKillEvents(currentTick);
 		pruneXpDropEvents(currentTick);
@@ -436,6 +438,8 @@ public class TrackerService
 				if (killEvent.isCompleted())
 				{
 					log("kill-kill-completed", "npc", killEvent.getNpc(), "assignment", assignment, "taskAmountChange", taskAmountChange);
+					onKillEventCompleted(killEvent);
+					logDequeChange("killEvents", "iterator-remove-kc", killEvent);
 					killEventIterator.remove();
 				}
 				taskAmountChange.consume(1);
@@ -443,6 +447,7 @@ public class TrackerService
 
 			if (taskAmountChange.isConsumed())
 			{
+				logDequeChange("taskAmountChanges", "iterator-remove-consumed", taskAmountChange);
 				taskAmountChangeIterator.remove();
 			}
 			else // Ran out of KillEvents
@@ -461,16 +466,25 @@ public class TrackerService
 
 		if (!xpEligibleKillEvents.isEmpty() && xpToAllocate > 0)
 		{
-			state.getXpDropEvents().clear();
+			clearXpDropEvents("allocation");
 			Map<TrackerState.KillEvent, Integer> killEventXpAllocations = calculateXpAllocations(xpToAllocate, xpEligibleKillEvents);
 			applyXpAllocations(killEventXpAllocations);
 			xpEligibleKillEvents.forEach(ke -> {
 				ke.markXpLogged();
-				if (ke.isCompleted()) {
+				if (ke.isCompleted())
+				{
 					log("xp-kill-completed", "npc", ke.getNpc(), "assignment", ke.getAssignment(), "taskAmountChange", null);
 				}
 			});
-			state.getKillEvents().removeIf(TrackerState.KillEvent::isCompleted);
+			state.getKillEvents().removeIf(killEvent -> {
+				if (killEvent.isCompleted())
+				{
+					onKillEventCompleted(killEvent);
+					logDequeChange("killEvents", "removeIf-completed-xp", killEvent);
+					return true;
+				}
+				return false;
+			});
 		}
 	}
 
@@ -515,16 +529,12 @@ public class TrackerService
 		return assignment.getVariantMatchingNpc(npc)
 			.flatMap(Variant::getSlayerXp)
 			.orElseGet(() -> {
-				NPCComposition composition = npc.getTransformedComposition();
-				if (composition == null)
-				{
-					log("xp-allocation-missing-NPCComposition", npc);
-					return 0;
-				}
-				Integer health = npcManager.getHealth(composition.getId());
+				// NPCComposition is null on NPC despawn. Use NPC id for now.
+				// TODO change NPCPredicates to take
+				Integer health = npcManager.getHealth(npc.getId());
 				if (health == null)
 				{
-					log("xp-allocation-missing-health", npc, composition.getId());
+					log("xp-allocation-missing-health", npc, npc.getId());
 					return 0;
 				}
 				return health;
@@ -579,14 +589,11 @@ public class TrackerService
 
 //		final int currentTick = client.getTickCount();
 //		pruneKillEvents(currentTick);
-		runQueueCycle(); // TODO Is this necessary? Should ensure all KillEvents are kc-logged.
+//		runQueueCycle(); // TODO Is this necessary? Should ensure all KillEvents are kc-logged.
 
 		TrackerState.KillEvent killEvent = findEligibleKillEventForNpc(npc);
 		if (killEvent == null)
 		{
-			log("loot-no-kill-found", "npc", npc, "event", event,
-				"oldestKillTick", state.getKillEvents().isEmpty() ? -1 : state.getKillEvents().peekFirst().getTick(),
-				"recentKills", state.getKillEvents().size());
 			return;
 		}
 
@@ -633,10 +640,13 @@ public class TrackerService
 		if (killEvent.isCompleted())
 		{
 			log("loot-kill-completed", "npc", npc, "event", event, "killEvent", killEvent);
-			state.getKillEvents().remove(killEvent);
+			onKillEventCompleted(killEvent);
+			removeKillEvent(killEvent, "loot");
 		}
 	}
 
+	// TODO Prune/log when npc==null
+	// TODO Prune when killEvent contains NPC
 	private void pruneEndedInteractions(int currentTick)
 	{
 		while (!state.getEndedInteractions().isEmpty())
@@ -648,7 +658,7 @@ public class TrackerService
 			if (expired)
 			{
 				log("EndedInteraction expired:", endedInteraction.getNpc());
-				state.getEndedInteractions().removeFirst();
+				removeFirstEndedInteraction("prune-expired");
 				continue;
 			}
 			break;
@@ -661,16 +671,32 @@ public class TrackerService
 		{
 			TrackerState.KillEvent killEvent = state.getKillEvents().peekFirst();
 
+			NPC npc = killEvent.getNpc();
+			boolean isNpcNull = npc == null;
+			boolean isNpcCompositionNull = !isNpcNull && npc.getTransformedComposition() == null;
 			boolean expired = currentTick - killEvent.getTick() > QUEUE_PRUNE_TICKS;
 			boolean completed = killEvent.isCompleted();
 
+			if (isNpcNull)
+			{
+				log("KillEvent NPC is null:", killEvent);
+			}
+			if (isNpcCompositionNull)
+			{
+				log("KillEvent NPCComposition is null:", killEvent);
+			}
 			if (expired)
 			{
 				log("KillEvent expired:", killEvent);
 			}
+			if (completed)
+			{
+				onKillEventCompleted(killEvent);
+				logDequeChange("killEvents", "prune-remove-completed", killEvent);
+			}
 			if (expired || completed)
 			{
-				state.getKillEvents().removeFirst();
+				removeFirstKillEvent(expired ? "prune-expired" : "prune-completed");
 				continue;
 			}
 			break;
@@ -688,7 +714,7 @@ public class TrackerService
 			if (expired)
 			{
 				log("xpDropEvent expired:", xpDropEvent);
-				state.getXpDropEvents().removeFirst();
+				removeFirstXpDropEvent("prune-expired");
 				continue;
 			}
 			break;
@@ -710,7 +736,7 @@ public class TrackerService
 			}
 			if (expired || consumed)
 			{
-				state.getTaskAmountChanges().removeFirst();
+				removeFirstTaskAmountChange(expired ? "prune-expired" : "prune-consumed");
 				continue;
 			}
 			break;
@@ -732,9 +758,8 @@ public class TrackerService
 
 	private TrackerState.KillEvent findEligibleKillEventForNpc(NPC npc)
 	{
-		for (Iterator<TrackerState.KillEvent> it = state.getKillEvents().descendingIterator(); it.hasNext(); )
+		for (TrackerState.KillEvent killEvent : state.getKillEvents())
 		{
-			TrackerState.KillEvent killEvent = it.next();
 			if (killEvent.getNpc() == npc)
 			{
 				if (!killEvent.isKcLogged())
@@ -746,6 +771,139 @@ public class TrackerService
 			}
 		}
 		return null;
+	}
+
+	private void onKillEventCompleted(TrackerState.KillEvent killEvent)
+	{
+		final Instant now = Instant.now();
+		NPC npc = killEvent.getNpc();
+
+		state.getAssignmentRecords().values().forEach(ar -> {
+			removeNpcFromRecord(ar, npc, now);
+			ar.getVariantRecords().values().forEach(vr -> removeNpcFromRecord(vr, npc, now));
+			ar.getCustomRecords().forEach(cr -> removeNpcFromRecord(cr, npc, now));
+		});
+		state.getEndedInteractions().removeIf(endedInteraction -> {
+			boolean match = endedInteraction.getNpc() == npc;
+			if (match)
+			{
+				logDequeChange("endedInteractions", "removeIf-onKillEventCompleted", endedInteraction);
+			}
+			return match;
+		});
+	}
+
+	private void removeNpcFromRecord(Record record, NPC npc, Instant now)
+	{
+		boolean removed = record.getInteractingNpcs().remove(npc);
+		if (removed)
+		{
+			logRecordInteraction("remove", record, npc, "killEvent-completed");
+		}
+		if (removed && record.getInteractingNpcs().isEmpty())
+		{
+			record.addToHours(Duration.between(record.getCombatInstant(), now));
+			record.setCombatInstant(now);
+		}
+	}
+
+	private void addNpcToInteracting(Record record, NPC npc, String reason)
+	{
+		if (record.getInteractingNpcs().add(npc))
+		{
+			logRecordInteraction("add", record, npc, reason);
+		}
+	}
+
+	private void clearInteractingNpcs(Record record, String reason)
+	{
+		if (!record.getInteractingNpcs().isEmpty())
+		{
+			logRecordInteraction("clear", record, null, reason);
+			record.getInteractingNpcs().clear();
+		}
+	}
+
+	private void logRecordInteraction(String action, Record record, NPC npc, String reason)
+	{
+		log("record-interactingNpcs-" + action, reason, record, npc);
+	}
+
+	private void removeEndedInteraction(TrackerState.EndedInteraction endedInteraction, String reason)
+	{
+		state.getEndedInteractions().remove(endedInteraction);
+		logDequeChange("endedInteractions", "remove-" + reason, endedInteraction);
+	}
+
+	private void removeFirstEndedInteraction(String reason)
+	{
+		TrackerState.EndedInteraction removed = state.getEndedInteractions().removeFirst();
+		logDequeChange("endedInteractions", "removeFirst-" + reason, removed);
+	}
+
+	private void clearEndedInteractions(String reason)
+	{
+		if (!state.getEndedInteractions().isEmpty())
+		{
+			logDequeChange("endedInteractions", "clear-" + reason, state.getEndedInteractions());
+			state.getEndedInteractions().clear();
+		}
+	}
+
+	private void addKillEvent(TrackerState.KillEvent killEvent, String reason)
+	{
+		state.getKillEvents().addLast(killEvent);
+		logDequeChange("killEvents", "addLast-" + reason, killEvent);
+	}
+
+	private void removeKillEvent(TrackerState.KillEvent killEvent, String reason)
+	{
+		state.getKillEvents().remove(killEvent);
+		logDequeChange("killEvents", "remove-" + reason, killEvent);
+	}
+
+	private void removeFirstKillEvent(String reason)
+	{
+		TrackerState.KillEvent removed = state.getKillEvents().removeFirst();
+		logDequeChange("killEvents", "removeFirst-" + reason, removed);
+	}
+
+	private void addXpDropEvent(TrackerState.XpDropEvent xpDropEvent)
+	{
+		state.getXpDropEvents().addLast(xpDropEvent);
+		logDequeChange("xpDropEvents", "addLast", xpDropEvent);
+	}
+
+	private void clearXpDropEvents(String reason)
+	{
+		if (!state.getXpDropEvents().isEmpty())
+		{
+			logDequeChange("xpDropEvents", "clear-" + reason, state.getXpDropEvents());
+			state.getXpDropEvents().clear();
+		}
+	}
+
+	private void removeFirstXpDropEvent(String reason)
+	{
+		TrackerState.XpDropEvent removed = state.getXpDropEvents().removeFirst();
+		logDequeChange("xpDropEvents", "removeFirst-" + reason, removed);
+	}
+
+	private void addTaskAmountChange(TrackerState.TaskAmountChange taskAmountChange)
+	{
+		state.getTaskAmountChanges().addLast(taskAmountChange);
+		logDequeChange("taskAmountChanges", "addLast", taskAmountChange);
+	}
+
+	private void removeFirstTaskAmountChange(String reason)
+	{
+		TrackerState.TaskAmountChange removed = state.getTaskAmountChanges().removeFirst();
+		logDequeChange("taskAmountChanges", "removeFirst-" + reason, removed);
+	}
+
+	private void logDequeChange(String dequeName, String action, Object value)
+	{
+		log("deque-" + dequeName + "-" + action, value);
 	}
 
 	public void saveRecords() throws Exception
@@ -795,5 +953,10 @@ public class TrackerService
 		System.arraycopy(objects, 0, out, 1, objects.length);
 
 		log.info("{}", java.util.Arrays.toString(out));
+	}
+
+	public void handleGameTick(GameTick event)
+	{
+		runQueueCycle();
 	}
 }

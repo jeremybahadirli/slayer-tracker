@@ -128,6 +128,12 @@ public class TrackerState implements PropertyChangeListener
 		{
 			dead = true;
 		}
+
+		@Override
+		public String toString()
+		{
+			return "npc=" + npc + ", npc name=" + npc.getName() + ", lastInteractedTick=" + lastInteractedTick + ", dead=" + dead;
+		}
 	}
 
 	@Getter
@@ -171,7 +177,7 @@ public class TrackerState implements PropertyChangeListener
 		@Override
 		public String toString()
 		{
-			return npc.getName() + "," + assignment + "," + tick;
+			return "npc=" + npc + ", npc name=" + npc.getName() + ", assignment=" + assignment + ", tick=" + tick + ", kcL=" + kcLogged + ", xpL=" + xpLogged + ", lootL=" + lootLogged;
 		}
 	}
 
@@ -201,6 +207,12 @@ public class TrackerState implements PropertyChangeListener
 		public boolean isConsumed()
 		{
 			return unloggedAmount <= 0;
+		}
+
+		@Override
+		public String toString()
+		{
+			return "amount=" + amount + ", unlogged amount=" + unloggedAmount + ", tick=" + tick;
 		}
 	}
 }

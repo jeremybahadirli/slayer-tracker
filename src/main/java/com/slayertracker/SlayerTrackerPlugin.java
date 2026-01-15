@@ -35,9 +35,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NPC;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -188,6 +190,11 @@ public class SlayerTrackerPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onGameTick(GameTick event) {
+		trackerService.handleGameTick(event);
+	}
+
+	@Subscribe
 	public void onVarbitChanged(VarbitChanged event)
 	{
 		trackerService.handleVarbitChanged(event);
@@ -223,6 +230,7 @@ public class SlayerTrackerPlugin extends Plugin
 	{
 		if (event.getCommand().equals("t"))
 		{
+			trackerService.log("interacting npcs: ", trackerState.getCurrentAssignmentRecord().getInteractingNpcs(), trackerState.getCurrentAssignmentRecord().getInteractingNpcs().stream().map(NPC::isDead));
 			trackerService.log("ended interactions: ", trackerState.getEndedInteractions());
 			trackerService.log("recent kills: ", trackerState.getKillEvents());
 			trackerService.log("slayer xp drops: ", trackerState.getXpDropEvents());
@@ -232,7 +240,6 @@ public class SlayerTrackerPlugin extends Plugin
 			trackerService.log("remaining amount: ", trackerState.getRemainingAmount());
 		}
 	}
-
 
 	@Provides
 	SlayerTrackerConfig provideConfig(ConfigManager configManager)
