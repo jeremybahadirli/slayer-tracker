@@ -79,6 +79,7 @@ public class CustomRecordPanel extends RecordPanel
 				record.setName(titleField.getText());
 			}
 		});
+		titleField.setComponentPopupMenu(popupMenu);
 		headerPanel.add(titleField);
 		// Record button
 		ImageIcon recordIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_icon.png"));
