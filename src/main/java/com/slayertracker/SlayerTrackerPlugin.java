@@ -190,7 +190,8 @@ public class SlayerTrackerPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onGameTick(GameTick event) {
+	public void onGameTick(GameTick event)
+	{
 		trackerService.handleGameTick(event);
 	}
 

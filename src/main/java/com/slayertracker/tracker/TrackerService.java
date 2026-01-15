@@ -47,6 +47,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.Setter;
@@ -458,10 +459,10 @@ public class TrackerService
 
 		List<TrackerState.KillEvent> xpEligibleKillEvents = state.getKillEvents().stream()
 			.filter(killEvent -> killEvent.isKcLogged() && !killEvent.isXpLogged())
-			.toList();
+			.collect(Collectors.toList());
 
 		int xpToAllocate = state.getXpDropEvents().stream()
-			.mapToInt(TrackerState.XpDropEvent::xp)
+			.mapToInt(TrackerState.XpDropEvent::getXp)
 			.sum();
 
 		if (!xpEligibleKillEvents.isEmpty() && xpToAllocate > 0)
@@ -709,7 +710,7 @@ public class TrackerService
 		{
 			TrackerState.XpDropEvent xpDropEvent = state.getXpDropEvents().peekFirst();
 
-			boolean expired = currentTick - xpDropEvent.tick() > QUEUE_PRUNE_TICKS;
+			boolean expired = currentTick - xpDropEvent.getTick() > QUEUE_PRUNE_TICKS;
 
 			if (expired)
 			{

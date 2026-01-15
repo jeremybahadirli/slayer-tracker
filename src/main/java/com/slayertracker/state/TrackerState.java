@@ -181,8 +181,23 @@ public class TrackerState implements PropertyChangeListener
 		}
 	}
 
-	public record XpDropEvent(int xp, int tick)
+	@Getter
+	public static class XpDropEvent
 	{
+		private final int xp;
+		private final int tick;
+
+		public XpDropEvent(int xp, int tick)
+		{
+			this.xp = xp;
+			this.tick = tick;
+		}
+
+		@Override
+		public String toString()
+		{
+			return "XpDropEvent[xp=" + xp + ", tick=" + tick + "]";
+		}
 	}
 
 	@Getter

@@ -128,10 +128,11 @@ public final class Variant
 		{
 			return true;
 		}
-		if (!(o instanceof Variant variant))
+		if (!(o instanceof Variant))
 		{
 			return false;
 		}
+		Variant variant = (Variant) o;
 		if (id == null || variant.id == null)
 		{
 			return false;

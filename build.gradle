@@ -31,7 +31,7 @@ version = '1.0.1-ALPHA'
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release.set(16)
+    options.release.set(11)
 }
 
 tasks.register('run', JavaExec) {
