@@ -48,7 +48,8 @@ public class AssignmentRecord extends Record
 	public String toString()
 	{
 		return "AssignmentRecord{" +
-			"variantRecords=" + variantRecords +
+			super.toString() +
+			", variantRecords=" + variantRecords +
 			", customRecords=" + customRecords +
 			'}';
 	}

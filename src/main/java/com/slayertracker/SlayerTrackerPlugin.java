@@ -231,14 +231,14 @@ public class SlayerTrackerPlugin extends Plugin
 	{
 		if (event.getCommand().equals("t"))
 		{
-			trackerService.log("interacting npcs: ", trackerState.getCurrentAssignmentRecord().getInteractingNpcs(), trackerState.getCurrentAssignmentRecord().getInteractingNpcs().stream().map(NPC::isDead));
-			trackerService.log("ended interactions: ", trackerState.getEndedInteractions());
-			trackerService.log("recent kills: ", trackerState.getKillEvents());
-			trackerService.log("slayer xp drops: ", trackerState.getXpDropEvents());
-			trackerService.log("task amount changes: ", trackerState.getTaskAmountChanges());
-			trackerService.log("current assignment: ", trackerState.getCurrentAssignment());
-			trackerService.log("current assignment record: ", trackerState.getCurrentAssignmentRecord());
-			trackerService.log("remaining amount: ", trackerState.getRemainingAmount());
+			trackerService.log("interacting npcs", trackerState.getCurrentAssignmentRecord().getInteractingNpcs(), trackerState.getCurrentAssignmentRecord().getInteractingNpcs().stream().map(NPC::isDead));
+			trackerService.log("ended interactions", trackerState.getEndedInteractions());
+			trackerService.log("recent kills", trackerState.getKillEvents());
+			trackerService.log("slayer xp drops", trackerState.getXpDropEvents());
+			trackerService.log("task amount changes", trackerState.getTaskAmountChanges());
+			trackerService.log("current assignment", trackerState.getCurrentAssignment());
+			trackerService.log("current assignment record", trackerState.getCurrentAssignmentRecord());
+			trackerService.log("remaining amount", trackerState.getRemainingAmount());
 		}
 	}
 
