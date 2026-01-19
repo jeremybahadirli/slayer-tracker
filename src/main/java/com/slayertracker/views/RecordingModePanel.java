@@ -37,6 +37,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
@@ -50,6 +51,8 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 	private final JButton recordingBreakButton;
 	private final JPanel recordButtonBorderPanel;
 	private final ImageIcon recordActiveIcon;
+	@Setter
+	private Runnable pauseRequestHandler;
 
 	RecordingModePanel()
 	{
@@ -69,7 +72,12 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 		recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_active_icon.png"));
 		recordingBreakButton = new JButton(recordActiveIcon);
 		recordingBreakButton.setEnabled(false);
-		recordingBreakButton.addActionListener(l -> setRecording(false));
+		recordingBreakButton.addActionListener(l -> {
+			if (pauseRequestHandler != null)
+			{
+				pauseRequestHandler.run();
+			}
+		});
 		recordingBreakButton.setPreferredSize(new Dimension(16, 16));
 		recordingBreakButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		recordingBreakButton.setToolTipText("Pause Recording");

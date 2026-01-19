@@ -299,6 +299,14 @@ public class TrackerService
 		}
 	}
 
+	public void pauseRecordingIfNotInteracting()
+	{
+		if (client.getLocalPlayer().getInteracting() == null)
+		{
+			recordingModeController.setRecording(false);
+		}
+	}
+
 	private void updateInteractingNpcs(Record record, Instant now, Set<NPC> endedInteractionNpcs)
 	{
 		final Predicate<NPC> isNotInteracting = npc ->
