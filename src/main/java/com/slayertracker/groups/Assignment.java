@@ -53,15 +53,15 @@ public enum Assignment
 		Variant.of("Abyssal demon", NpcPredicates.byNameContaining("Abyssal demon")),
 		Variant.of("The Abyssal Sire")
 	),
-	ABYSSAL_SIRE("The Abyssal Sire", ItemID.ABYSSALSIRE_PET),
-	ALCHEMICAL_HYDRA("The Alchemical Hydra", ItemID.HYDRAPET),
+	ABYSSAL_SIRE("The Abyssal Sire", ItemID.ABYSSALSIRE_PET, true),
+	ALCHEMICAL_HYDRA("The Alchemical Hydra", ItemID.HYDRAPET, true),
 	ANKOU("Ankou", ItemID.ANKOU_HEAD,
 		Variant.of("Normal", NpcPredicates.byCombatLevel(75, 82, 86)),
 		Variant.of("Catacombs", NpcPredicates.byCombatLevel(95)),
 		Variant.of("Wildy Slayer Cave", NpcPredicates.byCombatLevel(98))
 	),
 	AQUANITES("Aquanite", ItemID.SLAYERGUIDE_AQUANITE),
-	ARAXXOR("Araxxor", ItemID.ARAXXORPET),
+	ARAXXOR("Araxxor", ItemID.ARAXXORPET, true),
 	ARAXYTES("Araxytes", ItemID.POH_ARAXYTE_HEAD,
 		Variant.of("Araxyte", NpcPredicates.byNameContaining("Araxyte")),
 		Variant.of("Araxxor")
@@ -78,7 +78,7 @@ public enum Assignment
 		Variant.of("Normal", NpcPredicates.byCombatLevel(23, 70)),
 		Variant.of("Catacombs", NpcPredicates.byCombatLevel(89, 144))
 	),
-	BARROWS_BROTHERS("Barrows Brothers", ItemID.BARROWS_KARIL_HEAD),
+	BARROWS_BROTHERS("Barrows Brothers", ItemID.BARROWS_KARIL_HEAD, true),
 	BASILISKS("Basilisks", ItemID.SLAYERGUIDE_BASILISK,
 		Variant.of("Basilisk", NpcPredicates.byName("Basilisk", "Monstrous basilisk")),
 		Variant.of("Basilisk knight", NpcPredicates.byName("Basilisk knight", "Basilisk sentinel")),
@@ -119,7 +119,7 @@ public enum Assignment
 		Variant.of("Vorkath")
 	),
 	BRINE_RATS("Brine rats", ItemID.OLAF2_BRINE_RAT_INV),
-	CALLISTO("Callisto", ItemID.CALLISTO_PET),
+	CALLISTO("Callisto", ItemID.CALLISTO_PET, true),
 	CATABLEPON("Catablepon", ItemID.SOS_HALF_SKULL2),
 	CAVE_BUGS("Cave bugs", ItemID.SWAMP_CAVE_BUG),
 	CAVE_CRAWLERS("Cave crawlers", ItemID.SLAYERGUIDE_CAVECRAWLER),
@@ -129,13 +129,13 @@ public enum Assignment
 		Variant.of("Kraken")
 	),
 	CAVE_SLIMES("Cave slimes", ItemID.SWAMP_CAVE_SLIME),
-	CERBERUS("Cerberus", ItemID.HELL_PET),
+	CERBERUS("Cerberus", ItemID.HELL_PET, true),
 	CHAOS_DRUIDS("Chaos druids", ItemID.ELDERCHAOS_HOOD,
 		Variant.of("Chaos druid"),
 		Variant.of("Elder", NpcPredicates.byName("Elder chaos druid"))
 	),
-	CHAOS_ELEMENTAL("The Chaos Elemental", ItemID.CHAOSELEPET),
-	CHAOS_FANATIC("The Chaos Fanatic", ItemID.STAFF_OF_ZAROS),
+	CHAOS_ELEMENTAL("The Chaos Elemental", ItemID.CHAOSELEPET, true),
+	CHAOS_FANATIC("The Chaos Fanatic", ItemID.STAFF_OF_ZAROS, true),
 	COCKATRICE("Cockatrice", ItemID.SLAYERGUIDE_COCKATRICE),
 	COWS("Cows", ItemID.COW_MASK),
 	CRABS("Crabs", ItemID.HUNDRED_PIRATE_CRAB_SHELL_GAUNTLET,
@@ -148,7 +148,7 @@ public enum Assignment
 		Variant.of("Swamp", NpcPredicates.byName("Swamp crab"))
 	),
 	CRAWLING_HANDS("Crawling hands", ItemID.SLAYERGUIDE_CRAWLINGHAND),
-	CRAZY_ARCHAEOLOGIST("Crazy Archaeologists", ItemID.FEDORA),
+	CRAZY_ARCHAEOLOGIST("Crazy Archaeologists", ItemID.FEDORA, true),
 	CROCODILES("Crocodiles", ItemID.GREEN_SALAMANDER),
 	CUSTODIAN_STALKERS("Custodian Stalkers", ItemID.SLAYERGUIDE_CUSTODIAN_STALKER_MATURE,
 		Variant.of("Juvenile", NpcPredicates.byNameContaining("Juvenile")),
@@ -163,7 +163,7 @@ public enum Assignment
 		Variant.of("Dagannoth Supreme"),
 		Variant.of("Dagannoth Mother")
 	),
-	DAGANNOTH_KINGS("Dagannoth Kings", ItemID.PRIMEPET,
+	DAGANNOTH_KINGS("Dagannoth Kings", ItemID.PRIMEPET, true,
 		Variant.of("Dagannoth Rex"),
 		Variant.of("Dagannoth Prime"),
 		Variant.of("Dagannoth Supreme")
@@ -176,7 +176,7 @@ public enum Assignment
 	DERANGED_ARCHAEOLOGIST("Deranged Archaeologist", ItemID.FOSSIL_SWAMP_DIARY),
 	DOGS("Dogs", ItemID.POH_GUARD_DOG),
 	DRAKES("Drakes", ItemID.SLAYERGUIDE_DRAKE),
-	DUKE_SUCELLUS("Duke Sucellus", ItemID.DUKESUCELLUSPET),
+	DUKE_SUCELLUS("Duke Sucellus", ItemID.DUKESUCELLUSPET, true),
 	DUST_DEVILS("Dust devils", ItemID.SLAYERGUIDE_DUSTDEVIL,
 		Variant.of("Smoke Dungeon", NpcPredicates.byCombatLevel(93, 264)),
 		Variant.of("Catacombs of Kourend", NpcPredicates.byCombatLevel(110, 264))
@@ -203,18 +203,18 @@ public enum Assignment
 		Variant.of("Long-tailed", NpcPredicates.byName("Long-tailed wyvern")),
 		Variant.of("Ancient", NpcPredicates.byName("Ancient wyvern"))
 	),
-	GARGOYLES("Gargoyles", ItemID.SLAYERGUIDE_GARGOYLE,
+	GARGOYLES("Gargoyles", ItemID.SLAYERGUIDE_GARGOYLE, 9,
 		Variant.of("Gargoyle", NpcPredicates.byNameContaining("Gargoyle")),
 		Variant.of("The Grotesque Guardians", 1350, NpcPredicates.byName("Dawn", "Dusk"))
 	),
-	GENERAL_GRAARDOR("General Graardor", ItemID.BANDOSPET),
+	GENERAL_GRAARDOR("General Graardor", ItemID.BANDOSPET, true),
 	GHOSTS("Ghosts", ItemID.AMULET_OF_GHOSTSPEAK,
 		Variant.of("Revenant", NpcPredicates.byNameContaining("Revenant")),
 		Variant.of("Death wing"),
 		Variant.of("Normal", NpcPredicates.byNameContaining("Ghost", "Soul"))
 	),
 	GHOULS("Ghouls", ItemID.TRICK_OR_TREAT_HEAD),
-	GIANT_MOLE("The Giant Mole", ItemID.MOLEPET),
+	GIANT_MOLE("The Giant Mole", ItemID.MOLEPET, true),
 	GOBLINS("Goblins", ItemID.ARCEUUS_CORPSE_GOBLIN_INITIAL,
 		Variant.of("Normal", NpcPredicates.byNameContaining("Goblin")),
 		Variant.of("Bandos", NpcPredicates.byCombatLevel(141, 142))),
@@ -227,7 +227,7 @@ public enum Assignment
 		Variant.of("K'ril Tsutsaroth", NpcPredicates.byCombatLevel(145, 650))
 	),
 	GREEN_DRAGONS("Green dragons", ItemID.DRAGONMASK_GREEN),
-	GROTESQUE_GUARDIANS("The Grotesque Guardians", ItemID.DUSKPET),
+	GROTESQUE_GUARDIANS("The Grotesque Guardians", ItemID.DUSKPET, true),
 	GRYPHONS("Gryphons", ItemID.SLAYERGUIDE_GRYPHON,
 		Variant.of("Normal", NpcPredicates.byName("Gryphon", "Dire gryphon")),
 		Variant.of("Shellbane Gryphpn")
@@ -273,12 +273,12 @@ public enum Assignment
 		Variant.of("Guardian", NpcPredicates.byName("Kalphite guardian")),
 		Variant.of("Queen", NpcPredicates.byName("Kalphite Queen"))
 	),
-	KALPHITE_QUEEN("The Kalphite Queen", ItemID.KQPET_WALKING),
+	KALPHITE_QUEEN("The Kalphite Queen", ItemID.KQPET_WALKING, true),
 	KILLERWATTS("Killerwatts", ItemID.SLAYERGUIDE_KILLERWATT),
-	KING_BLACK_DRAGON("The King Black Dragon", ItemID.KBDPET),
-	KRAKEN("The Cave Kraken Boss", ItemID.KRAKENPET),
-	KREEARRA("Kree'arra", ItemID.ARMADYLPET),
-	KRIL_TSUTSAROTH("K'ril Tsutsaroth", ItemID.ZAMORAKPET),
+	KING_BLACK_DRAGON("The King Black Dragon", ItemID.KBDPET, true),
+	KRAKEN("The Cave Kraken Boss", ItemID.KRAKENPET, true),
+	KREEARRA("Kree'arra", ItemID.ARMADYLPET, true),
+	KRIL_TSUTSAROTH("K'ril Tsutsaroth", ItemID.ZAMORAKPET, true),
 	KURASK("Kurask", ItemID.SLAYERGUIDE_KURASK),
 	LAVA_DRAGONS("Lava Dragons", ItemID.LAVA_SCALE),
 	LESSER_DEMONS("Lesser demons", ItemID.LESSER_DEMON_MASK,
@@ -329,7 +329,7 @@ public enum Assignment
 		Variant.of("Normal", NpcPredicates.byCombatLevel(42, 48)),
 		Variant.of("Iorwerth", NpcPredicates.byCombatLevel(84)),
 		Variant.of("Bryophyta", NpcPredicates.byCombatLevel(128))),
-	MUTATED_ZYGOMITES("Mutated zygomites", ItemID.SLAYER_ZYGOMITE_OBJECT,
+	MUTATED_ZYGOMITES("Mutated zygomites", ItemID.SLAYER_ZYGOMITE_OBJECT, 7,
 		Variant.of("Zygomite"),
 		Variant.of("Ancient zygomite")
 	),
@@ -341,7 +341,7 @@ public enum Assignment
 		Variant.of("Normal", NpcPredicates.byCombatLevel(82).negate()),
 		Variant.of("Ogress", NpcPredicates.byCombatLevel(82))),
 	OTHERWORLDLY_BEING("Otherworldly beings", ItemID.SECRET_GHOST_HAT),
-	PHANTOM_MUSPAH("The Phantom Muspah", ItemID.MUSPAHPET),
+	PHANTOM_MUSPAH("The Phantom Muspah", ItemID.MUSPAHPET, true),
 	PIRATES("Pirates", ItemID.BREW_RED_PIRATE_HAT),
 	PYREFIENDS("Pyrefiends", ItemID.SLAYERGUIDE_PYRFIEND,
 		Variant.of("Pyrefiend", NpcPredicates.byName("Pyrefiend", "Flaming pyrelord")),
@@ -357,12 +357,12 @@ public enum Assignment
 		Variant.of("Brutal red dragon")
 	),
 	REVENANTS("Revenants", ItemID.WILD_CAVE_BRACELET_CHARGED),
-	ROCKSLUGS("Rockslugs", ItemID.SLAYERGUIDE_ROCKSLUG),
+	ROCKSLUGS("Rockslugs", ItemID.SLAYERGUIDE_ROCKSLUG, 4),
 	ROGUES("Rogues", ItemID.ROGUESDEN_HELM,
 		Variant.of("(level-15)", NpcPredicates.byCombatLevel(15)),
 		Variant.of("(level-135)", NpcPredicates.byCombatLevel(135))),
-	SARACHNIS("Sarachnis", ItemID.SARACHNISPET),
-	SCORPIA("Scorpia", ItemID.SCORPIA_PET),
+	SARACHNIS("Sarachnis", ItemID.SARACHNISPET, true),
+	SCORPIA("Scorpia", ItemID.SCORPIA_PET, true),
 	SCORPIONS("Scorpions", ItemID.ARCEUUS_CORPSE_SCORPION_INITIAL,
 		Variant.of("Normal", NpcPredicates.byNameContaining("Scorpia", "Scorpia's").negate()),
 		Variant.of("Scorpia", NpcPredicates.byNameContaining("Scorpia", "Scorpia's"))
@@ -378,7 +378,7 @@ public enum Assignment
 		Variant.of("Mort'ton Catacombs", NpcPredicates.byCombatLevel(60, 80, 100, 120, 140))
 	),
 	SHADOW_WARRIORS("Shadow warriors", ItemID.BLACK_FULL_HELM),
-	SHELLBANE_GRYPHON("Shellbane Gryphon", ItemID.GRYPHONBOSSPET_ADULT),
+	SHELLBANE_GRYPHON("Shellbane Gryphon", ItemID.GRYPHONBOSSPET_ADULT, true),
 	SKELETAL_WYVERNS("Skeletal wyverns", ItemID.SLAYERGUIDE_SKELETALWYVERN),
 	SKELETONS("Skeletons", ItemID.POH_SKELETON_GUARD,
 		Variant.of("Normal", NpcPredicates.byName("Calvar'ion", "Vet'ion").negate()),
@@ -404,9 +404,9 @@ public enum Assignment
 	),
 	SUQAHS("Suqahs", ItemID.SUQKA_TOOTH),
 	TERROR_DOGS("Terror dogs", ItemID.SLAYERGUIDE_TERRORDOG),
-	THE_LEVIATHAN("The Leviathan", ItemID.LEVIATHANPET),
-	THE_WHISPERER("The Whisperer", ItemID.WHISPERERPET),
-	THERMONUCLEAR_SMOKE_DEVIL("The Thermonuclear Smoke Devil", ItemID.SMOKEPET),
+	THE_LEVIATHAN("The Leviathan", ItemID.LEVIATHANPET, true),
+	THE_WHISPERER("The Whisperer", ItemID.WHISPERERPET, true),
+	THERMONUCLEAR_SMOKE_DEVIL("The Thermonuclear Smoke Devil", ItemID.SMOKEPET, true),
 	TROLLS("Trolls", ItemID.POH_TROLL,
 		Variant.of("Ice troll", NpcPredicates.byNameContaining("Ice troll")),
 		Variant.of("Mountain troll", NpcPredicates.byName("Mountain troll"))
@@ -430,17 +430,15 @@ public enum Assignment
 		Variant.of("Vyrewatch"),
 		Variant.of("Vyrewatch sentinel")
 	),
-	VARDORVIS("Vardorvis", ItemID.VARDORVISPET),
-	VENENATIS("Venenatis", ItemID.VENENATIS_PET),
-	VETION("Vet'ion", ItemID.VETION_PET),
-	VORKATH("Vorkath", ItemID.VORKATHPET),
+	VARDORVIS("Vardorvis", ItemID.VARDORVISPET, true),
+	VENENATIS("Venenatis", ItemID.VENENATIS_PET, true),
+	VETION("Vet'ion", ItemID.VETION_PET, true),
+	VORKATH("Vorkath", ItemID.VORKATHPET, true),
 	WALL_BEASTS("Wall beasts", ItemID.SWAMP_WALLBEAST),
-
 	WARPED_CREATURES("Warped Creatures", ItemID.POG_SLAYER_DUMMY_WARPED_TERRORBIRD,
 		Variant.of("Torroise", NpcPredicates.byCombatLevel(121, 247)),
 		Variant.of("Terrorbird", NpcPredicates.byCombatLevel(96, 178))
 	),
-
 	WATERFIENDS("Waterfiends", ItemID.WATER_ORB),
 	WEREWOLVES("Werewolves", ItemID.DAGGER_WOLFBANE),
 	WOLVES("Wolves", ItemID.GREY_WOLF_FUR),
@@ -449,28 +447,47 @@ public enum Assignment
 		Variant.of("Wyrmling"),
 		Variant.of("Strykewyrm", NpcPredicates.byNameContaining("Strykewyrm"))
 	),
-	ZILYANA("Commander Zilyana", ItemID.SARADOMINPET),
+	ZILYANA("Commander Zilyana", ItemID.SARADOMINPET, true),
 	ZOMBIES("Zombies", ItemID.TRICK_OR_TREAT_HEAD,
 		Variant.of("Vorkath"),
 		Variant.of("Armoured", NpcPredicates.byNameContaining("Armoured")),
 		Variant.of("Zogre")
 	),
-	ZUK("TzKal-Zuk", ItemID.INFERNOPET_ZUK),
-	ZULRAH("Zulrah", ItemID.SNAKEPET);
+	ZUK("TzKal-Zuk", ItemID.INFERNOPET_ZUK, true),
+	ZULRAH("Zulrah", ItemID.SNAKEPET, true);
 	//</editor-fold>
 
 	private final String name;
 	private final int itemSpriteId;
+	private final boolean boss;
+	private final int weaknessThreshold;
 	private final Variant[] variants;
 
-	Assignment(String name, int itemSpriteId, Variant... variants)
+	Assignment(String name, int itemSpriteId, boolean boss, int weaknessThreshold, Variant... variants)
 	{
 		Preconditions.checkArgument(itemSpriteId >= 0);
 		this.name = name;
 		this.itemSpriteId = itemSpriteId;
+		this.boss = boss;
+		this.weaknessThreshold = weaknessThreshold;
 		this.variants = Arrays.stream(variants)
 			.map(variant -> Variant.scopeToAssignment(this.name(), variant))
 			.toArray(Variant[]::new);
+	}
+
+	Assignment(String name, int itemSpriteId, int weaknessThreshold, Variant... variants)
+	{
+		this(name, itemSpriteId, false, weaknessThreshold, variants);
+	}
+
+	Assignment(String name, int itemSpriteId, boolean boss, Variant... variants)
+	{
+		this(name, itemSpriteId, boss, 0, variants);
+	}
+
+	Assignment(String name, int itemSpriteId, Variant... variants)
+	{
+		this(name, itemSpriteId, false, 0, variants);
 	}
 
 	public static Optional<Assignment> getAssignmentByName(String name)
