@@ -25,14 +25,18 @@
 package com.slayertracker;
 
 import com.google.inject.Provides;
+import com.slayertracker.groups.Master;
 import com.slayertracker.persistence.RecordRepository;
 import com.slayertracker.persistence.SlayerTrackerSaveManager;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.state.TrackerState;
+import com.slayertracker.tracker.Optimizer;
 import com.slayertracker.tracker.TrackerService;
 import com.slayertracker.views.SlayerTrackerPanel;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
@@ -240,6 +244,29 @@ public class SlayerTrackerPlugin extends Plugin
 			trackerService.log("current assignment", trackerState.getCurrentAssignment());
 			trackerService.log("current assignment record", trackerState.getCurrentAssignmentRecord());
 			trackerService.log("remaining amount", trackerState.getRemainingAmount());
+		}
+		if (event.getCommand().equals(("o")))
+		{
+			List<Optimizer.Task> optimizerTasks = trackerState.getAssignmentRecords().keySet().stream().map(a -> {
+					AssignmentRecord ar = trackerState.getAssignmentRecords().get(a);
+
+					String name = a.getName();
+					double rate = ar.getXp() / ar.getHours();
+					double kcPerHour = ar.getKc() / ar.getHours();
+					double hours = Master.DURADEL.getTaskByName(name).getAverageAmount(false) / kcPerHour;
+					double minHours = Master.Task.BOSS_MIN_AMOUNT / kcPerHour;
+					double maxHours = Master.Task.BOSS_MAX_AMOUNT / kcPerHour;
+					double weight = Master.DURADEL.getTaskByName(name).getWeight();
+
+					trackerService.log(name, "rate", rate, "hours", hours, "weight", weight);
+					return a.isBoss()
+						? Optimizer.Task.boss(name, rate, minHours, maxHours, weight)
+						: Optimizer.Task.normal(name, rate, hours, weight);
+				})
+				.collect(Collectors.toList());
+
+			Optimizer.Result r = Optimizer.optimize(optimizerTasks, Master.DURADEL.getTaskPointRevenueAtTimeScale(1000), 30, 1);
+			System.out.println(Optimizer.formatResult(r));
 		}
 	}
 
