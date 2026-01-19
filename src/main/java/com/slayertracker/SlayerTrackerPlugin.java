@@ -161,7 +161,7 @@ public class SlayerTrackerPlugin extends Plugin
 					break;
 				case LOGIN_SCREEN:
 					trackerService.handleLogout();
-					slayerTrackerPanel.getRecordingModePanel().setContinuousRecording(false);
+					trackerService.getRecordingModeController().setRecording(false);
 					break;
 			}
 		}

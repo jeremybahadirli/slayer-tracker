@@ -34,6 +34,7 @@ import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.Record;
 import com.slayertracker.state.TrackerState;
+import com.slayertracker.views.RecordingModePanel;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -50,6 +51,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Actor;
@@ -85,6 +87,7 @@ public class TrackerService
 	private final RecordRepository recordRepository;
 	private final ProfileContext profileContext;
 
+	@Getter
 	@Setter
 	private RecordingModeController recordingModeController;
 
@@ -163,7 +166,6 @@ public class TrackerService
 		{
 			return;
 		}
-		triggerContinuousRecording();
 		final int amountDelta = state.getRemainingAmount() - event.getValue();
 		if (amountDelta > 0)
 		{
@@ -218,25 +220,21 @@ public class TrackerService
 
 	private void handleTargetInteractingStart(NPC npc)
 	{
-		triggerContinuousRecording();
-
 		state.getEndedInteractions().removeIf(endedInteraction -> endedInteraction.getNpc() == npc);
 
-		Predicate<Record> shouldSetCombatInstant = r -> (!isContinuousRecordingMode()
-			|| getContinuousRecordingStartInstant().isAfter(r.getCombatInstant()))
-			&& r.getInteractingNpcs().isEmpty();
 
 		final Instant now = Instant.now();
 
 		AssignmentRecord assignmentRecord = state.getAssignmentRecords().computeIfAbsent(state.getCurrentAssignment(), r -> new AssignmentRecord(state));
-		if (shouldSetCombatInstant.test(assignmentRecord))
+		if (!recordingModeController.isRecording())
 		{
+			log("set combat instant @S");
 			assignmentRecord.setCombatInstant(now);
 		}
 		assignmentRecord.getInteractingNpcs().add(npc);
 		state.getCurrentAssignment().getVariantMatchingNpc(npc).ifPresent(variant -> {
 			Record variantRecord = assignmentRecord.getVariantRecords().computeIfAbsent(variant, r -> new Record(state));
-			if (shouldSetCombatInstant.test(variantRecord))
+			if (!recordingModeController.isRecording())
 			{
 				variantRecord.setCombatInstant(now);
 			}
@@ -245,12 +243,14 @@ public class TrackerService
 		assignmentRecord.getCustomRecords().stream()
 			.filter(CustomRecord::isRecording)
 			.forEach(customRecord -> {
-				if (shouldSetCombatInstant.test(customRecord))
+				if (!recordingModeController.isRecording())
 				{
 					customRecord.setCombatInstant(now);
 				}
 				customRecord.getInteractingNpcs().add(npc);
 			});
+
+		recordingModeController.setRecording(true);
 	}
 
 	private void handleInteractingEnd()
@@ -291,6 +291,12 @@ public class TrackerService
 				entry.markDead();
 			}
 		}
+
+		if (recordingModeController.getRecordingMode() == RecordingModePanel.RecordingMode.IN_COMBAT
+			&& state.getCurrentAssignmentRecord().getInteractingNpcs().isEmpty())
+		{
+			recordingModeController.setRecording(false);
+		}
 	}
 
 	private void updateInteractingNpcs(Record record, Instant now, Set<NPC> endedInteractionNpcs)
@@ -304,9 +310,14 @@ public class TrackerService
 		record.getInteractingNpcs().removeIf(npc -> {
 			if (isNotInteracting.test(npc))
 			{
-				Duration duration = Duration.between(record.getCombatInstant(), now);
-				log("Added duration: ", duration);
-				record.addToHours(duration);
+				System.out.println(recordingModeController.isRecording());
+				if (recordingModeController.isRecording())
+				{
+					Duration duration = Duration.between(record.getCombatInstant(), now);
+					log("Added duration: ", duration);
+					record.addToHours(duration);
+				}
+				log("set combat instant @E");
 				record.setCombatInstant(now);
 				endedInteractionNpcs.add(npc);
 				return true;
@@ -881,24 +892,6 @@ public class TrackerService
 				state.setCurrentAssignment(null);
 				state.setRemainingAmount(0);
 			});
-	}
-
-	private boolean isContinuousRecordingMode()
-	{
-		return recordingModeController != null && recordingModeController.isContinuousRecordingMode();
-	}
-
-	private Instant getContinuousRecordingStartInstant()
-	{
-		return recordingModeController == null ? Instant.EPOCH : recordingModeController.getContinuousRecordingStartInstant();
-	}
-
-	private void triggerContinuousRecording()
-	{
-		if (recordingModeController != null)
-		{
-			recordingModeController.setContinuousRecording(isContinuousRecordingMode());
-		}
 	}
 
 	public void log(Object... objects)

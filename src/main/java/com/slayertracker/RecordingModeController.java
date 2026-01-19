@@ -25,13 +25,13 @@
 
 package com.slayertracker;
 
-import java.time.Instant;
+import com.slayertracker.views.RecordingModePanel;
 
 public interface RecordingModeController
 {
-	boolean isContinuousRecordingMode();
+	RecordingModePanel.RecordingMode getRecordingMode();
 
-	Instant getContinuousRecordingStartInstant();
+	boolean isRecording();
 
-	void setContinuousRecording(boolean active);
+	void setRecording(boolean active);
 }

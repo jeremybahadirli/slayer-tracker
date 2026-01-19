@@ -24,11 +24,10 @@
  */
 package com.slayertracker.views;
 
-import com.google.common.collect.ImmutableList;
 import com.slayertracker.RecordingModeController;
 import com.slayertracker.views.components.DarkComboBoxRenderer;
 import java.awt.Dimension;
-import java.time.Instant;
+import java.util.Arrays;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -45,18 +44,12 @@ import net.runelite.client.util.ImageUtil;
 public class RecordingModePanel extends JPanel implements RecordingModeController
 {
 
-	private Instant continuousRecordingStartInstant;
-	private boolean isContinuousRecordingMode = false;
+	private boolean isRecording = false;
+	private RecordingMode recordingMode = RecordingMode.IN_COMBAT;
 	private final JComboBox<String> recordingModeComboBox;
 	private final JButton recordingBreakButton;
 	private final JPanel recordButtonBorderPanel;
 	private final ImageIcon recordActiveIcon;
-	private static final ImmutableList<String> RECORDING_MODES = ImmutableList.of(
-		"In Combat",
-		"Continuous"
-	);
-	private final String inCombatToolTipText = "Only log combat time. Recommended for most tasks, to normalize for varying focus level.";
-	private final String continuousToolTipText = "Log time between kills, until paused. Recommended for tasks where banking is significant, such as bosses.";
 
 	RecordingModePanel()
 	{
@@ -66,51 +59,59 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 		// Recording mode combo box
 		recordingModeComboBox = new JComboBox<>();
 		recordingModeComboBox.setRenderer(new DarkComboBoxRenderer());
-		RECORDING_MODES.forEach(recordingModeComboBox::addItem);
+		Arrays.stream(RecordingMode.values()).map(RecordingMode::getLabel).forEach(recordingModeComboBox::addItem);
 		recordingModeComboBox.addActionListener(l ->
-			setContinuousRecordingMode("Continuous".equals(String.valueOf(recordingModeComboBox.getSelectedItem()))));
+			setRecordingMode(RecordingMode.getRecordingModeByLabel(String.valueOf(recordingModeComboBox.getSelectedItem()))));
+		recordingModeComboBox.setToolTipText(recordingMode.tooltip);
 		recordingModeComboBox.setFocusable(false);
-		recordingModeComboBox.setToolTipText(inCombatToolTipText);
 		add(recordingModeComboBox);
 		// Record button
 		recordActiveIcon = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/record_active_icon.png"));
 		recordingBreakButton = new JButton(recordActiveIcon);
 		recordingBreakButton.setEnabled(false);
-		recordingBreakButton.addActionListener(l -> setContinuousRecording(false));
+		recordingBreakButton.addActionListener(l -> setRecording(false));
 		recordingBreakButton.setPreferredSize(new Dimension(16, 16));
 		recordingBreakButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		recordingBreakButton.setToolTipText("Pause Continuous Recording");
+		recordingBreakButton.setToolTipText("Pause Recording");
 		recordButtonBorderPanel = new JPanel();
 		recordButtonBorderPanel.setLayout(new BoxLayout(recordButtonBorderPanel, BoxLayout.X_AXIS));
 		recordButtonBorderPanel.setBorder(new EmptyBorder(3, 4, 3, 4));
-		recordButtonBorderPanel.setVisible(false);
 		recordButtonBorderPanel.add(recordingBreakButton);
 		add(recordButtonBorderPanel);
 	}
 
-	public void setContinuousRecording(boolean b)
+	public void setRecording(boolean b)
 	{
 		recordingBreakButton.setEnabled(b);
-		if (!b)
-		{
-			continuousRecordingStartInstant = Instant.now();
-		}
+		isRecording = b;
 	}
 
-	private void setContinuousRecordingMode(boolean b)
+	private void setRecordingMode(RecordingMode recordingMode)
 	{
-		isContinuousRecordingMode = b;
-		recordingBreakButton.setEnabled(false);
-		continuousRecordingStartInstant = Instant.now();
-		recordButtonBorderPanel.setVisible(b);
-		if (!b)
+		this.recordingMode = recordingMode;
+		recordingModeComboBox.setToolTipText(recordingMode.tooltip);
+	}
+
+	@Getter
+	public enum RecordingMode
+	{
+		IN_COMBAT("In Combat",
+			"Only log combat time. Recommended for most tasks, to normalize for varying focus level."),
+		CONTINUOUS("Continuous",
+			"Log time between kills, until paused. Recommended for tasks where banking is significant, such as bosses.");
+
+		final String label;
+		final String tooltip;
+
+		RecordingMode(String label, String tooltip)
 		{
-			setContinuousRecording(false);
-			recordingModeComboBox.setToolTipText(inCombatToolTipText);
+			this.label = label;
+			this.tooltip = tooltip;
 		}
-		else
+
+		static RecordingMode getRecordingModeByLabel(String label)
 		{
-			recordingModeComboBox.setToolTipText(continuousToolTipText);
+			return Arrays.stream(RecordingMode.values()).filter(rm -> rm.getLabel().equals(label)).findFirst().orElse(null);
 		}
 	}
 }
