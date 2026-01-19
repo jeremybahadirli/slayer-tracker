@@ -49,9 +49,10 @@ public class TrackerState implements PropertyChangeListener
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 
 	private final Deque<EndedInteraction> endedInteractions = new ArrayDeque<>();
+	private final Deque<AmountProc> taskAmountChanges = new ArrayDeque<>();
+	private final Deque<AmountProc> expeditiousProcs = new ArrayDeque<>();
 	private final Deque<KillEvent> killEvents = new ArrayDeque<>();
 	private final Deque<XpDropEvent> xpDropEvents = new ArrayDeque<>();
-	private final Deque<TaskAmountChange> taskAmountChanges = new ArrayDeque<>();
 
 	private Assignment currentAssignment;
 	@Setter
@@ -71,9 +72,10 @@ public class TrackerState implements PropertyChangeListener
 	{
 		assignmentRecords.clear();
 		endedInteractions.clear();
+		taskAmountChanges.clear();
+		expeditiousProcs.clear();
 		killEvents.clear();
 		xpDropEvents.clear();
-		taskAmountChanges.clear();
 		currentAssignment = null;
 		remainingAmount = 0;
 		cachedXp = -1;
@@ -133,6 +135,37 @@ public class TrackerState implements PropertyChangeListener
 		public String toString()
 		{
 			return "npc=" + npc + ", npc name=" + npc.getName() + ", lastInteractedTick=" + lastInteractedTick + ", dead=" + dead;
+		}
+	}
+
+	@Getter
+	public static class AmountProc
+	{
+		private final int amount;
+		private int unloggedAmount;
+		private final int tick;
+
+		public AmountProc(int amount, int tick)
+		{
+			this.amount = amount;
+			this.unloggedAmount = amount;
+			this.tick = tick;
+		}
+
+		public void consume(int amount)
+		{
+			unloggedAmount -= amount;
+		}
+
+		public boolean isConsumed()
+		{
+			return unloggedAmount <= 0;
+		}
+
+		@Override
+		public String toString()
+		{
+			return "amount=" + amount + ", unlogged amount=" + unloggedAmount + ", tick=" + tick;
 		}
 	}
 
@@ -200,34 +233,4 @@ public class TrackerState implements PropertyChangeListener
 		}
 	}
 
-	@Getter
-	public static class TaskAmountChange
-	{
-		private final int amount;
-		private int unloggedAmount;
-		private final int tick;
-
-		public TaskAmountChange(int amount, int tick)
-		{
-			this.amount = amount;
-			this.unloggedAmount = amount;
-			this.tick = tick;
-		}
-
-		public void consume(int amount)
-		{
-			unloggedAmount -= amount;
-		}
-
-		public boolean isConsumed()
-		{
-			return unloggedAmount <= 0;
-		}
-
-		@Override
-		public String toString()
-		{
-			return "amount=" + amount + ", unlogged amount=" + unloggedAmount + ", tick=" + tick;
-		}
-	}
 }

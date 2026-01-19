@@ -27,6 +27,7 @@ package com.slayertracker;
 import com.google.inject.Provides;
 import com.slayertracker.persistence.RecordRepository;
 import com.slayertracker.persistence.SlayerTrackerSaveManager;
+import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.state.TrackerState;
 import com.slayertracker.tracker.TrackerService;
 import com.slayertracker.views.SlayerTrackerPanel;
@@ -35,7 +36,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.NPC;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
@@ -192,7 +192,7 @@ public class SlayerTrackerPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		trackerService.handleGameTick(event);
+		trackerService.handleGameTick();
 	}
 
 	@Subscribe
@@ -231,11 +231,12 @@ public class SlayerTrackerPlugin extends Plugin
 	{
 		if (event.getCommand().equals("t"))
 		{
-			trackerService.log("interacting npcs", trackerState.getCurrentAssignmentRecord().getInteractingNpcs(), trackerState.getCurrentAssignmentRecord().getInteractingNpcs().stream().map(NPC::isDead));
+			trackerService.log("interacting npcs", trackerState.getCurrentAssignmentRecord().getInteractingNpcs());
 			trackerService.log("ended interactions", trackerState.getEndedInteractions());
 			trackerService.log("recent kills", trackerState.getKillEvents());
 			trackerService.log("slayer xp drops", trackerState.getXpDropEvents());
 			trackerService.log("task amount changes", trackerState.getTaskAmountChanges());
+			trackerService.log("expeditious procs", trackerState.getExpeditiousProcs());
 			trackerService.log("current assignment", trackerState.getCurrentAssignment());
 			trackerService.log("current assignment record", trackerState.getCurrentAssignmentRecord());
 			trackerService.log("remaining amount", trackerState.getRemainingAmount());
