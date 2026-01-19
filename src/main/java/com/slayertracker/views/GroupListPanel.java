@@ -27,15 +27,12 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
-import com.slayertracker.records.CustomRecord;
-import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.recordpanels.AssignmentRecordPanel;
 import com.slayertracker.views.recordpanels.CustomRecordPanel;
 import com.slayertracker.views.recordpanels.RecordPanel;
 import com.slayertracker.views.recordpanels.VariantRecordPanel;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.beans.PropertyChangeListener;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
@@ -58,38 +55,39 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 	private final AssignmentRecordPanel assignmentRecordPanel;
 	private final Set<VariantRecordPanel> variantRecordPanels = new HashSet<>();
 	private final Set<CustomRecordPanel> customRecordPanels = new HashSet<>();
-	private final PropertyChangeListener changeListener;
+	private final RecordInteractionHandler recordInteractionHandler;
 
 	GroupListPanel(Assignment assignment,
-				   PropertyChangeListener changeListener,
-				   RecordMap<Assignment, AssignmentRecord> assignmentRecords,
+				   AssignmentRecord assignmentRecord,
 				   SlayerTrackerConfig config,
 				   ItemManager itemManager,
-				   Function<? super RecordListPanel, Long> sortFunction)
+				   Function<? super RecordListPanel, Long> sortFunction,
+				   RecordInteractionHandler recordInteractionHandler)
 	{
 		this.assignment = assignment;
 		this.config = config;
 		this.itemManager = itemManager;
-		this.record = assignmentRecords.get(assignment);
-		this.changeListener = changeListener;
+		this.record = assignmentRecord;
+		this.recordInteractionHandler = recordInteractionHandler;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
 		// Assignment Record Panel
-		assignmentRecordPanel = new AssignmentRecordPanel(assignment, assignmentRecords, this);
+		assignmentRecordPanel = new AssignmentRecordPanel(assignment, this, recordInteractionHandler);
 		assignmentRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 		{
 			@Override
-			public void mouseClicked(MouseEvent e)
+			public void mousePressed(MouseEvent e)
 			{
+				super.mousePressed(e);
 				if (e.getButton() == MouseEvent.BUTTON1)
 				{
 					toggleCollapsedAll();
 				}
+
 			}
 		});
-		assignmentRecordPanel.getAddCustomRecordButton().addActionListener(l ->
-			record.getCustomRecords().add(new CustomRecord(changeListener)));
+		assignmentRecordPanel.getAddCustomRecordButton().addActionListener(l -> recordInteractionHandler.addCustomRecord());
 
 		update(sortFunction);
 	}
@@ -116,11 +114,11 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			if (variantRecordPanels.stream().noneMatch(variantRecordPanel ->
 				variantRecordPanel.getVariant().equals(variant)))
 			{
-				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), this);
+				VariantRecordPanel variantRecordPanel = new VariantRecordPanel(variant, record.getVariantRecords(), this, recordInteractionHandler);
 				variantRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 				{
 					@Override
-					public void mouseClicked(MouseEvent e)
+					public void mousePressed(MouseEvent e)
 					{
 						if (e.getButton() == MouseEvent.BUTTON1)
 						{
@@ -136,11 +134,11 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 			if (customRecordPanels.stream().noneMatch(customRecordPanel ->
 				customRecordPanel.getRecord().equals(customRecord)))
 			{
-				CustomRecordPanel customRecordPanel = new CustomRecordPanel(customRecord.getName(), customRecord, record.getCustomRecords(), this);
+				CustomRecordPanel customRecordPanel = new CustomRecordPanel(customRecord.getName(), customRecord, this, recordInteractionHandler);
 				customRecordPanel.getHeaderPanel().addMouseListener(new MouseAdapter()
 				{
 					@Override
-					public void mouseClicked(MouseEvent e)
+					public void mousePressed(MouseEvent e)
 					{
 						if (e.getButton() == MouseEvent.BUTTON1)
 						{

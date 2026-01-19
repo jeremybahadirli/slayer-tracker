@@ -24,10 +24,9 @@
  */
 package com.slayertracker.views;
 
-import com.slayertracker.RecordingModeController;
-import com.slayertracker.views.components.DarkComboBoxRenderer;
 import java.awt.Dimension;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -42,30 +41,41 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
 @Getter
-public class RecordingModePanel extends JPanel implements RecordingModeController
+public class RecordingModePanel extends JPanel
 {
 
-	private boolean isRecording = false;
-	private RecordingMode recordingMode = RecordingMode.IN_COMBAT;
 	private final JComboBox<String> recordingModeComboBox;
 	private final JButton recordingBreakButton;
 	private final JPanel recordButtonBorderPanel;
 	private final ImageIcon recordActiveIcon;
 	@Setter
 	private Runnable pauseRequestHandler;
+	@Setter
+	private Consumer<RecordingMode> recordingModeChangeListener;
+	private boolean suppressRecordingModeChangeEvent;
 
-	RecordingModePanel()
+	RecordingModePanel(RecordingMode defaultMode)
 	{
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
 		add(new JLabel("Recording:"));
 		add(Box.createRigidArea(new Dimension(24, 0)));
 		// Recording mode combo box
 		recordingModeComboBox = new JComboBox<>();
-		recordingModeComboBox.setRenderer(new DarkComboBoxRenderer());
-		Arrays.stream(RecordingMode.values()).map(RecordingMode::getLabel).forEach(recordingModeComboBox::addItem);
+		recordingModeComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		Arrays.stream(RecordingMode.values()).map(rm -> rm.label).forEach(recordingModeComboBox::addItem);
 		recordingModeComboBox.addActionListener(l ->
-			setRecordingMode(RecordingMode.getRecordingModeByLabel(String.valueOf(recordingModeComboBox.getSelectedItem()))));
-		recordingModeComboBox.setToolTipText(recordingMode.tooltip);
+		{
+			if (suppressRecordingModeChangeEvent)
+			{
+				return;
+			}
+
+			RecordingMode selected = RecordingMode.getRecordingModeByLabel(String.valueOf(recordingModeComboBox.getSelectedItem()));
+			if (selected != null && recordingModeChangeListener != null)
+			{
+				recordingModeChangeListener.accept(selected);
+			}
+		});
 		recordingModeComboBox.setFocusable(false);
 		add(recordingModeComboBox);
 		// Record button
@@ -80,27 +90,41 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 		});
 		recordingBreakButton.setPreferredSize(new Dimension(16, 16));
 		recordingBreakButton.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		recordingBreakButton.setFocusPainted(false);
 		recordingBreakButton.setToolTipText("Pause Recording");
 		recordButtonBorderPanel = new JPanel();
 		recordButtonBorderPanel.setLayout(new BoxLayout(recordButtonBorderPanel, BoxLayout.X_AXIS));
 		recordButtonBorderPanel.setBorder(new EmptyBorder(3, 4, 3, 4));
 		recordButtonBorderPanel.add(recordingBreakButton);
 		add(recordButtonBorderPanel);
+
+		setRecordingModeValue(defaultMode);
 	}
 
-	public void setRecording(boolean b)
+	public void setRecordingState(boolean active)
 	{
-		recordingBreakButton.setEnabled(b);
-		isRecording = b;
+		recordingBreakButton.setEnabled(active);
 	}
 
-	private void setRecordingMode(RecordingMode recordingMode)
+	public void setRecordingModeValue(RecordingMode recordingMode)
 	{
-		this.recordingMode = recordingMode;
-		recordingModeComboBox.setToolTipText(recordingMode.tooltip);
+		if (recordingMode == null)
+		{
+			return;
+		}
+
+		suppressRecordingModeChangeEvent = true;
+		try
+		{
+			recordingModeComboBox.setSelectedItem(recordingMode.label);
+			recordingModeComboBox.setToolTipText(recordingMode.tooltip);
+		}
+		finally
+		{
+			suppressRecordingModeChangeEvent = false;
+		}
 	}
 
-	@Getter
 	public enum RecordingMode
 	{
 		IN_COMBAT("In Combat",
@@ -119,7 +143,7 @@ public class RecordingModePanel extends JPanel implements RecordingModeControlle
 
 		static RecordingMode getRecordingModeByLabel(String label)
 		{
-			return Arrays.stream(RecordingMode.values()).filter(rm -> rm.getLabel().equals(label)).findFirst().orElse(null);
+			return Arrays.stream(RecordingMode.values()).filter(rm -> rm.label.equals(label)).findFirst().orElse(null);
 		}
 	}
 }

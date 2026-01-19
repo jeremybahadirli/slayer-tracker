@@ -98,9 +98,9 @@ public class SlayerTrackerPlugin extends Plugin
 			clientThread.invokeLater(() ->
 				SwingUtilities.invokeLater(() ->
 					slayerTrackerPanel.update())));
-		trackerService.setRecordingModeController(slayerTrackerPanel.getRecordingModePanel());
-		slayerTrackerPanel.getRecordingModePanel()
-			.setPauseRequestHandler(() -> clientThread.invokeLater(trackerService::pauseRecordingIfNotInteracting));
+		trackerService.setRecordingModeController(slayerTrackerPanel.getRecordingModePresenter());
+		slayerTrackerPanel.getRecordingModePresenter()
+			.setPauseRequestHandler(() -> clientThread.invokeLater(trackerService::pauseRecordingIfIdle));
 
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/slayer_icon.png");
 		navButton = NavigationButton.builder()

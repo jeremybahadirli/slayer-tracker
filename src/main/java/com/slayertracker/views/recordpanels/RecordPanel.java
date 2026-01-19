@@ -24,9 +24,9 @@
  */
 package com.slayertracker.views.recordpanels;
 
-import com.slayertracker.records.CustomRecord;
 import com.slayertracker.records.Record;
 import com.slayertracker.views.GroupListPanel;
+import com.slayertracker.views.RecordInteractionHandler;
 import com.slayertracker.views.RecordListPanel;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Color;
@@ -45,6 +45,7 @@ public class RecordPanel extends JPanel implements RecordListPanel
 	private final GroupListPanel groupListPanel;
 
 	private final Record record;
+	private final RecordInteractionHandler recordInteractionHandler;
 
 	final JPanel headerPanel;
 	final JMenuItem resetMenuItem;
@@ -53,10 +54,11 @@ public class RecordPanel extends JPanel implements RecordListPanel
 
 	StatsPanel statsPanel;
 
-	RecordPanel(Record record, GroupListPanel groupListPanel)
+	RecordPanel(Record record, GroupListPanel groupListPanel, RecordInteractionHandler recordInteractionHandler)
 	{
 		this.record = record;
 		this.groupListPanel = groupListPanel;
+		this.recordInteractionHandler = recordInteractionHandler;
 
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
@@ -74,7 +76,7 @@ public class RecordPanel extends JPanel implements RecordListPanel
 		// Copy to custom record button
 		final JMenuItem copyToCustomRecordMenuItem = new JMenuItem("Copy to Custom Record");
 		copyToCustomRecordMenuItem.addActionListener(e ->
-			groupListPanel.getRecord().getCustomRecords().add(new CustomRecord(record, groupListPanel.getChangeListener())));
+			recordInteractionHandler.copyRecordToCustom(record));
 		popupMenu = getComponentPopupMenu();
 		if (popupMenu == null)
 		{

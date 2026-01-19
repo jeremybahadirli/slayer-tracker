@@ -28,6 +28,7 @@ import com.slayertracker.groups.Variant;
 import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.GroupListPanel;
+import com.slayertracker.views.RecordInteractionHandler;
 import java.awt.Dimension;
 import java.util.Locale;
 import javax.swing.Box;
@@ -43,9 +44,10 @@ public class VariantRecordPanel extends RecordPanel
 
 	public VariantRecordPanel(Variant variant,
 							  RecordMap<Variant, Record> variantRecords,
-							  GroupListPanel groupListPanel)
+							  GroupListPanel groupListPanel,
+							  RecordInteractionHandler recordInteractionHandler)
 	{
-		super(variantRecords.get(variant), groupListPanel);
+		super(variantRecords.get(variant), groupListPanel, recordInteractionHandler);
 		this.variant = variant;
 
 		// Header panel
@@ -66,7 +68,7 @@ public class VariantRecordPanel extends RecordPanel
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)
 			{
-				variantRecords.remove(variant);
+				recordInteractionHandler.deleteVariant(variant);
 			}
 		});
 

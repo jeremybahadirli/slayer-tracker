@@ -71,6 +71,7 @@ public class SlayerTrackerSaveManager implements RecordRepository
 			.excludeFieldsWithoutExposeAnnotation()
 			.setPrettyPrinting()
 			.registerTypeAdapter(AssignmentRecord.class, assignmentRecordCreator(trackerState))
+			.registerTypeAdapter(CustomRecord.class, customRecordCreator(trackerState))
 			.registerTypeAdapter(RecordMap.class, recordMapCreator(trackerState))
 			.registerTypeAdapter(CustomRecordSet.class, customRecordSetCreator(trackerState))
 			.registerTypeAdapter(Instant.class, new InstantAdapter())
@@ -134,9 +135,14 @@ public class SlayerTrackerSaveManager implements RecordRepository
 		}
 	}
 
-	private static InstanceCreator<Record> assignmentRecordCreator(PropertyChangeListener propertyChangeListener)
+	private static InstanceCreator<AssignmentRecord> assignmentRecordCreator(PropertyChangeListener propertyChangeListener)
 	{
 		return type -> new AssignmentRecord(propertyChangeListener);
+	}
+
+	private static InstanceCreator<CustomRecord> customRecordCreator(PropertyChangeListener propertyChangeListener)
+	{
+		return type -> new CustomRecord(propertyChangeListener);
 	}
 
 	private static InstanceCreator<RecordMap<?, ? extends Record>> recordMapCreator(PropertyChangeListener propertyChangeListener)

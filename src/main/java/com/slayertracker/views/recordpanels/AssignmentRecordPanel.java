@@ -25,10 +25,8 @@
 package com.slayertracker.views.recordpanels;
 
 import com.slayertracker.groups.Assignment;
-import com.slayertracker.records.AssignmentRecord;
-import com.slayertracker.records.RecordMap;
 import com.slayertracker.views.GroupListPanel;
-import java.awt.Color;
+import com.slayertracker.views.RecordInteractionHandler;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
@@ -54,10 +52,10 @@ public class AssignmentRecordPanel extends RecordPanel
 	JButton addCustomRecordButton;
 
 	public AssignmentRecordPanel(Assignment assignment,
-								 RecordMap<Assignment, AssignmentRecord> assignmentRecords,
-								 GroupListPanel groupListPanel)
+								 GroupListPanel groupListPanel,
+								 RecordInteractionHandler recordInteractionHandler)
 	{
-		super(assignmentRecords.get(assignment), groupListPanel);
+		super(groupListPanel.getRecord(), groupListPanel, recordInteractionHandler);
 
 		// Header panel
 
@@ -74,7 +72,6 @@ public class AssignmentRecordPanel extends RecordPanel
 		addCustomRecordButton.setFocusPainted(false);
 		addCustomRecordButton.setToolTipText("New Custom Record");
 		Component hg = Box.createHorizontalGlue();
-		hg.setBackground(Color.red);
 		headerPanel.add(hg);
 		headerPanel.add(addCustomRecordButton);
 
@@ -89,7 +86,7 @@ public class AssignmentRecordPanel extends RecordPanel
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)
 			{
-				assignmentRecords.remove(assignment);
+				recordInteractionHandler.deleteAssignment(assignment);
 			}
 		});
 

@@ -30,7 +30,6 @@ import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.state.TrackerState;
-import com.slayertracker.views.components.DarkComboBoxRenderer;
 import java.awt.Dimension;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -45,6 +44,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.PluginErrorPanel;
@@ -63,9 +63,10 @@ public class SlayerTrackerPanel extends PluginPanel
 	private final JButton resetAllButton;
 	private final JButton resetCustomButton;
 	private final RecordingModePanel recordingModePanel;
+	private final RecordingModePresenter recordingModePresenter;
 	private final JPanel assignmentListPanel;
 	private final JComboBox<String> sorterComboBox;
-	private final Set<GroupListPanel> groupListPanels = new HashSet<>();
+	private final Set<GroupListPresenter> groupListPresenters = new HashSet<>();
 
 	private static final ImmutableList<String> SORT_ORDERS = ImmutableList.of(
 		"Recently Killed",
@@ -91,7 +92,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(new JLabel("Sort by:"));
 		sorterPanel.add(Box.createRigidArea(new Dimension(39, 0)));
 		sorterComboBox = new JComboBox<>();
-		sorterComboBox.setRenderer(new DarkComboBoxRenderer());
+		sorterComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
 		SORT_ORDERS.forEach(sorterComboBox::addItem);
 		sortFunction = sortFunctionFor(String.valueOf(sorterComboBox.getSelectedItem()));
 		sorterComboBox.addActionListener(l -> {
@@ -103,7 +104,8 @@ public class SlayerTrackerPanel extends PluginPanel
 		add(sorterPanel);
 
 		// Recording Mode
-		recordingModePanel = new RecordingModePanel();
+		recordingModePanel = new RecordingModePanel(RecordingModePanel.RecordingMode.IN_COMBAT);
+		recordingModePresenter = new RecordingModePresenter(recordingModePanel);
 		add(recordingModePanel);
 
 		// Assignment list panel
@@ -156,18 +158,24 @@ public class SlayerTrackerPanel extends PluginPanel
 		// Remove/Update/Add Panels
 
 		// Remove panels
-		groupListPanels.removeIf(groupListPanel ->
-			!assignmentRecords.containsValue(groupListPanel.getRecord()));
+		groupListPresenters.removeIf(presenter ->
+			!assignmentRecords.containsValue(presenter.getRecord()));
 
 		// Update panels
-		groupListPanels.forEach(groupListPanel -> groupListPanel.update(sortFunction));
+		groupListPresenters.forEach(presenter -> presenter.update(sortFunction));
 
 		// Add panels
 		assignmentRecords.keySet().forEach(assignment -> {
-			if (groupListPanels.stream().noneMatch(groupListPanel -> groupListPanel.getAssignment().equals(assignment)))
+			if (groupListPresenters.stream().noneMatch(groupListPresenter -> groupListPresenter.getAssignment().equals(assignment)))
 			{
-				GroupListPanel groupListPanel = new GroupListPanel(assignment, trackerState, assignmentRecords, config, itemManager, sortFunction);
-				groupListPanels.add(groupListPanel);
+				GroupListPresenter groupListPresenter = new GroupListPresenter(
+					assignment,
+					trackerState,
+					assignmentRecords,
+					config,
+					itemManager,
+					() -> sortFunction);
+				groupListPresenters.add(groupListPresenter);
 			}
 		});
 
@@ -175,7 +183,7 @@ public class SlayerTrackerPanel extends PluginPanel
 
 		assignmentListPanel.removeAll();
 
-		if (groupListPanels.isEmpty())
+		if (groupListPresenters.isEmpty())
 		{
 			// Welcome text
 			assignmentListPanel.add(welcomeText);
@@ -183,19 +191,19 @@ public class SlayerTrackerPanel extends PluginPanel
 		else
 		{
 			// Group List Panels
-			groupListPanels.stream()
-				.sorted(Comparator.comparing(sortFunction))
-				.forEachOrdered(assignmentListPanel::add);
+			groupListPresenters.stream()
+				.sorted(Comparator.comparing(presenter -> sortFunction.apply(presenter.getView())))
+				.forEachOrdered(presenter -> assignmentListPanel.add(presenter.getView()));
 		}
 
 		// Reset All button
-		resetAllButton.setVisible(!groupListPanels.isEmpty());
+		resetAllButton.setVisible(!groupListPresenters.isEmpty());
 
 		// Reset Custom button
 		resetCustomButton.setVisible(
-			!groupListPanels.isEmpty()
-				&& assignmentRecords.values().stream()
-				.anyMatch(assignmentRecord -> !assignmentRecord.getCustomRecords().isEmpty()));
+			!groupListPresenters.isEmpty()
+				&& groupListPresenters.stream()
+				.anyMatch(presenter -> !presenter.getRecord().getCustomRecords().isEmpty()));
 	}
 
 	public void displayFileError()

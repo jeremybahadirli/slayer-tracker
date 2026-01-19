@@ -25,8 +25,8 @@
 package com.slayertracker.views.recordpanels;
 
 import com.slayertracker.records.CustomRecord;
-import com.slayertracker.records.CustomRecordSet;
 import com.slayertracker.views.GroupListPanel;
+import com.slayertracker.views.RecordInteractionHandler;
 import com.slayertracker.views.recordpanels.components.StatsPanel;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
@@ -51,10 +51,10 @@ public class CustomRecordPanel extends RecordPanel
 	private final JTextField titleField;
 
 	public CustomRecordPanel(CustomRecord record,
-							 CustomRecordSet<CustomRecord> customRecordSet,
-							 GroupListPanel groupListPanel)
+							 GroupListPanel groupListPanel,
+							 RecordInteractionHandler recordInteractionHandler)
 	{
-		super(record, groupListPanel);
+		super(record, groupListPanel, recordInteractionHandler);
 		this.record = record;
 
 		// Header Panel
@@ -76,7 +76,7 @@ public class CustomRecordPanel extends RecordPanel
 			@Override
 			public void focusLost(FocusEvent e)
 			{
-				record.setName(titleField.getText());
+				recordInteractionHandler.renameCustomRecord(record, titleField.getText());
 			}
 		});
 		titleField.setComponentPopupMenu(popupMenu);
@@ -88,13 +88,12 @@ public class CustomRecordPanel extends RecordPanel
 		recordButton.addActionListener(l -> {
 			if (recordButton.isSelected())
 			{
-				record.setRecording(true);
+				recordInteractionHandler.setCustomRecording(record, true);
 				recordButton.setIcon(recordActiveIcon);
 			}
 			else
 			{
-				record.setRecording(false);
-				record.getInteractingNpcs().clear();
+				recordInteractionHandler.setCustomRecording(record, false);
 				recordButton.setIcon(recordIcon);
 			}
 		});
@@ -117,7 +116,7 @@ public class CustomRecordPanel extends RecordPanel
 				null, new String[]{"Yes", "No"}, "No");
 			if (selection == JOptionPane.YES_OPTION)
 			{
-				customRecordSet.remove(record);
+				recordInteractionHandler.deleteCustomRecord(record);
 			}
 		});
 		popupMenu.add(resetMenuItem);
@@ -133,10 +132,10 @@ public class CustomRecordPanel extends RecordPanel
 
 	public CustomRecordPanel(String title,
 							 CustomRecord record,
-							 CustomRecordSet<CustomRecord> customRecordSet,
-							 GroupListPanel groupListPanel)
+							 GroupListPanel groupListPanel,
+							 RecordInteractionHandler recordInteractionHandler)
 	{
-		this(record, customRecordSet, groupListPanel);
+		this(record, groupListPanel, recordInteractionHandler);
 		titleField.setText(title);
 	}
 }

@@ -299,9 +299,15 @@ public class TrackerService
 		}
 	}
 
-	public void pauseRecordingIfNotInteracting()
+	public void pauseRecordingIfIdle()
 	{
-		if (client.getLocalPlayer().getInteracting() == null)
+		if (recordingModeController == null)
+		{
+			return;
+		}
+
+		Actor localPlayer = client.getLocalPlayer();
+		if (localPlayer != null && localPlayer.getInteracting() == null)
 		{
 			recordingModeController.setRecording(false);
 		}
