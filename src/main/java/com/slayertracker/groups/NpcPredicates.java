@@ -134,6 +134,7 @@ final class NpcPredicates
 	 * @param ids candidate ids
 	 * @return a predicate that matches NPCs by the specified ids
 	 */
+	@SuppressWarnings("unused")
 	static Predicate<NPC> byId(int... ids)
 	{
 		return npc ->
