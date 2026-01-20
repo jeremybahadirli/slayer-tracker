@@ -3,6 +3,7 @@ package com.slayertracker.groups;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.Getter;
 
@@ -346,10 +347,17 @@ public enum Master
 		return Arrays.stream(tasks).filter(t -> t.getAssignment().getName().equals(name)).findFirst().orElse(null);
 	}
 
-	public double getTaskPointRevenueAtTimeScale(int timeScale)
+	public double getTaskPointRevenueAtTimeScale(int timeScale, boolean westernElite, boolean kourendElite)
 	{
-		// TODO IF nieve && EliteWesternProvinces, use increasedPointRewards
-		// TODO IF konar && EliteKourend, use increaedPointRewards
+		Map<Integer, Integer> rewardsTable;
+		if (this == NIEVE && westernElite || this == KONAR && kourendElite)
+		{
+			rewardsTable = increaedPointRewards;
+		}
+		else
+		{
+			rewardsTable = pointRewards;
+		}
 
 		double points = 0.0;
 
@@ -364,8 +372,7 @@ public enum Master
 					break;
 				}
 			}
-
-			points += pointRewards.get(multiple);
+			points += rewardsTable.get(multiple);
 		}
 
 		return points / timeScale;
@@ -414,8 +421,9 @@ public enum Master
 			return of(assignment, minAmount, maxAmount, -1, -1, weight);
 		}
 
-		public double getAverageAmount(boolean extended)
+		public double getAverageAmount(Set<Assignment> extendedAssignments)
 		{
+			boolean extended = extendedAssignments.contains(assignment);
 			return extended ? (minExtendedAmount + maxExtendedAmount) / 2.0 : (minAmount + maxAmount) / 2.0;
 		}
 	}

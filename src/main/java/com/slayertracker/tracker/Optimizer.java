@@ -33,6 +33,8 @@ import java.util.Set;
  */
 public class Optimizer
 {
+	private static final int SKIP_PRICE = 30;
+
 	// -------------------- Data types --------------------
 
 	public static final class Task
@@ -140,16 +142,15 @@ public class Optimizer
 	public static Result optimize(
 		List<Task> tasks,
 		double taskPointRevenue,
-		int skipPrice,
 		int blockSlots)
 	{
 		if (tasks == null || tasks.isEmpty())
 		{
 			return emptyResult();
 		}
-		if (taskPointRevenue <= 0 || skipPrice <= 0)
+		if (taskPointRevenue <= 0)
 		{
-			throw new IllegalArgumentException("All point parameters must be > 0.");
+			throw new IllegalArgumentException("task point revenue must be > 0.");
 		}
 		if (blockSlots < 0)
 		{
@@ -161,7 +162,7 @@ public class Optimizer
 		// Greedy block selection. Bosses cannot be blocked.
 		final Set<Integer> blocked = new LinkedHashSet<>();
 
-		Policy bestSoFar = optimizeDoSkip(all, blocked, taskPointRevenue, skipPrice);
+		Policy bestSoFar = optimizeDoSkip(all, blocked, taskPointRevenue);
 
 		for (int slotsLeft = blockSlots; slotsLeft > 0; slotsLeft--)
 		{
@@ -178,7 +179,7 @@ public class Optimizer
 				Set<Integer> trialBlocked = new LinkedHashSet<>(blocked);
 				trialBlocked.add(i);
 
-				Policy trial = optimizeDoSkip(all, trialBlocked, taskPointRevenue, skipPrice);
+				Policy trial = optimizeDoSkip(all, trialBlocked, taskPointRevenue);
 
 				// Choose better policy: value/hour first, then surplus points.
 				if (better(trial, bestTrial))
@@ -198,7 +199,7 @@ public class Optimizer
 			bestSoFar = bestTrial;
 		}
 
-		Policy finalPolicy = optimizeDoSkip(all, blocked, taskPointRevenue, skipPrice);
+		Policy finalPolicy = optimizeDoSkip(all, blocked, taskPointRevenue);
 		double equilibriumRate = finalPolicy.valuePerHour;
 
 		// Classify tasks into DO/SKIP/BLOCK and boss min/max buckets.
@@ -322,7 +323,7 @@ public class Optimizer
 		}
 	}
 
-	private static Policy optimizeDoSkip(List<Task> all, Set<Integer> blocked, double tpr, int sp)
+	private static Policy optimizeDoSkip(List<Task> all, Set<Integer> blocked, double tpr)
 	{
 		final int n = all.size();
 
@@ -332,7 +333,7 @@ public class Optimizer
 			return new Policy(new boolean[n], new double[n], 0.0, 0.0, 0.0, 0.0);
 		}
 
-		final double pMin = (double) sp / (tpr + (double) sp);
+		final double pMin = (double) Optimizer.SKIP_PRICE / (tpr + (double) Optimizer.SKIP_PRICE);
 
 		double R = initialRateGuess(all, blocked, totalWeight);
 		final int maxIters = 100;
@@ -389,7 +390,7 @@ public class Optimizer
 		}
 
 		// Compute surplus points metrics for tie-breaking / reporting.
-		Metrics m = computeMetrics(all, blocked, last.doMask, last.doHours, totalWeight, tpr, sp, R);
+		Metrics m = computeMetrics(all, blocked, last.doMask, last.doHours, totalWeight, tpr, R);
 		return new Policy(last.doMask, last.doHours, m.valuePerHour, m.pointsPerAssignment, m.pointsPerHour, pMin);
 	}
 
@@ -414,7 +415,6 @@ public class Optimizer
 		double[] doHours,
 		double totalWeight,
 		double tpr,
-		int sp,
 		double valuePerHour)
 	{
 		// DO probability mass
@@ -437,7 +437,7 @@ public class Optimizer
 
 		// Expected net points per assignment:
 		//   +TPR with probability pDo, -SP otherwise
-		double pointsPerAssignment = (tpr + sp) * pDo - sp;
+		double pointsPerAssignment = (tpr + Optimizer.SKIP_PRICE) * pDo - Optimizer.SKIP_PRICE;
 
 		// Points per hour: divide by expected time per assignment.
 		// If expectedTimePerAssignment is 0 (shouldn't when pMin>0), define p/h as 0.

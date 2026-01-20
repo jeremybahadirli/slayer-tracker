@@ -46,6 +46,7 @@ public class TrackerState implements PropertyChangeListener
 {
 	private final PropertyChangeSupport support = new PropertyChangeSupport(this);
 
+	private final PlayerUnlockState playerUnlockState = new PlayerUnlockState();
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 
 	private final Deque<EndedInteraction> endedInteractions = new ArrayDeque<>();
@@ -70,6 +71,7 @@ public class TrackerState implements PropertyChangeListener
 
 	public void clear()
 	{
+		playerUnlockState.clear();
 		assignmentRecords.clear();
 		endedInteractions.clear();
 		taskAmountChanges.clear();

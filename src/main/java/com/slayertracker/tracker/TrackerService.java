@@ -66,6 +66,7 @@ import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.game.ItemManager;
@@ -152,7 +153,96 @@ public class TrackerService
 		{
 			handleSlayerCountVarbitChanged(event);
 		}
-		// TODO ...
+		switch (event.getVarbitId())
+		{
+			case VarbitID.WESTERN_DIARY_ELITE_COMPLETE:
+				state.getPlayerUnlockState().setWesternDiary(true);
+				break;
+			case VarbitID.KOUREND_DIARY_ELITE_COMPLETE:
+				state.getPlayerUnlockState().setKourendDiary(true);
+				break;
+			case VarbitID.SLAYER_LONGER_ABERRANTSPECTRES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.ABERRANT_SPECTRES);
+				break;
+			case VarbitID.SLAYER_LONGER_ABYSSALDEMONS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.ABYSSAL_DEMONS);
+				break;
+			case VarbitID.SLAYER_LONGER_ANKOU:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.ANKOU);
+				break;
+			case VarbitID.SLAYER_LONGER_AQUANITES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.AQUANITES);
+				break;
+			case VarbitID.SLAYER_LONGER_ARAXYTES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.ARAXYTES);
+				break;
+			case VarbitID.SLAYER_LONGER_AVIANSIES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.AVIANSIES);
+				break;
+			case VarbitID.SLAYER_LONGER_BASILISK:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.BASILISKS);
+				break;
+			case VarbitID.SLAYER_LONGER_BLACKDEMONS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.BLACK_DEMONS);
+				break;
+			case VarbitID.SLAYER_LONGER_BLACKDRAGONS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.BLACK_DRAGONS);
+				break;
+			case VarbitID.SLAYER_LONGER_BLOODVELD:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.BLOODVELD);
+				break;
+			case VarbitID.SLAYER_LONGER_CAVEHORRORS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.CAVE_HORRORS);
+				break;
+			case VarbitID.SLAYER_LONGER_CAVEKRAKEN:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.CAVE_KRAKEN);
+				break;
+			case VarbitID.SLAYER_LONGER_CUSTODIANS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.CUSTODIAN_STALKERS);
+				break;
+			case VarbitID.SLAYER_LONGER_DARKBEASTS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.DARK_BEASTS);
+				break;
+			case VarbitID.SLAYER_LONGER_DUSTDEVILS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.DUST_DEVILS);
+				break;
+			case VarbitID.SLAYER_LONGER_FOSSILWYVERNS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.FOSSIL_ISLAND_WYVERNS);
+				break;
+			case VarbitID.SLAYER_LONGER_GARGOYLES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.GARGOYLES);
+				break;
+			case VarbitID.SLAYER_LONGER_GREATERDEMONS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.GREATER_DEMONS);
+				break;
+			case VarbitID.SLAYER_LONGER_METALDRAGONS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.METAL_DRAGONS);
+				break;
+			case VarbitID.SLAYER_LONGER_NECHRYAEL:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.NECHRYAEL);
+				break;
+			case VarbitID.SLAYER_LONGER_REVENANTS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.REVENANTS);
+				break;
+			case VarbitID.SLAYER_LONGER_SCABARITES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.MINIONS_OF_SCABARAS);
+				break;
+			case VarbitID.SLAYER_LONGER_SKELETALWYVERNS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.SKELETAL_WYVERNS);
+				break;
+			case VarbitID.SLAYER_LONGER_SPIRITUALGWD:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.SPIRITUAL_CREATURES);
+				break;
+			case VarbitID.SLAYER_LONGER_SUQAH:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.SUQAHS);
+				break;
+			case VarbitID.SLAYER_LONGER_VAMPYRES:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.VAMPYRES);
+				break;
+			case VarbitID.SLAYER_LONGER_WYRMS:
+				state.getPlayerUnlockState().addExtendedAssignment(Assignment.WYRMS);
+				break;
+		}
 	}
 
 	private void handleSlayerCountVarbitChanged(VarbitChanged event)

@@ -246,6 +246,7 @@ public class SlayerTrackerPlugin extends Plugin
 			trackerService.log("current assignment", trackerState.getCurrentAssignment());
 			trackerService.log("current assignment record", trackerState.getCurrentAssignmentRecord());
 			trackerService.log("remaining amount", trackerState.getRemainingAmount());
+			trackerService.log(trackerState.getPlayerUnlockState());
 		}
 		if (event.getCommand().equals(("o")))
 		{
@@ -253,9 +254,9 @@ public class SlayerTrackerPlugin extends Plugin
 					AssignmentRecord ar = trackerState.getAssignmentRecords().get(a);
 
 					String name = a.getName();
-					double rate = ar.getXp() / ar.getHours();
+					double rate = ar.getGe() / ar.getHours();
 					double kcPerHour = ar.getKc() / ar.getHours();
-					double hours = Master.DURADEL.getTaskByName(name).getAverageAmount(false) / kcPerHour;
+					double hours = Master.DURADEL.getTaskByName(name).getAverageAmount(trackerState.getPlayerUnlockState().getExtendedAssignments()) / kcPerHour;
 					double minHours = Master.Task.BOSS_MIN_AMOUNT / kcPerHour;
 					double maxHours = Master.Task.BOSS_MAX_AMOUNT / kcPerHour;
 					double weight = Master.DURADEL.getTaskByName(name).getWeight();
@@ -267,7 +268,10 @@ public class SlayerTrackerPlugin extends Plugin
 				})
 				.collect(Collectors.toList());
 
-			Optimizer.Result r = Optimizer.optimize(optimizerTasks, Master.DURADEL.getTaskPointRevenueAtTimeScale(1000), 30, 1);
+			Optimizer.Result r = Optimizer.optimize(
+				optimizerTasks,
+				Master.DURADEL.getTaskPointRevenueAtTimeScale(1000, trackerState.getPlayerUnlockState().isWesternDiary(), trackerState.getPlayerUnlockState().isKourendDiary()),
+				1);
 			System.out.println(Optimizer.formatResult(r));
 		}
 	}

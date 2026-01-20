@@ -19,8 +19,7 @@ public class OptimizerTest
 			Optimizer.Task.normal("Gargoyles", 7954.1494, 11.59583, 8.0)
 		);
 
-		Optimizer.Result r = Optimizer.optimize(tasks, 20, 30, 1);
+		Optimizer.Result r = Optimizer.optimize(tasks, 20, 1);
 		System.out.println(Optimizer.formatResult(r));
-
 	}
 }
