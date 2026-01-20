@@ -385,13 +385,13 @@ public enum Master
 		public static final int BOSS_MAX_AMOUNT = 35;
 
 		@Getter
-		Assignment assignment;
-		int minAmount;
-		int maxAmount;
-		int minExtendedAmount;
-		int maxExtendedAmount;
+		final Assignment assignment;
+		final int minAmount;
+		final int maxAmount;
+		final int minExtendedAmount;
+		final int maxExtendedAmount;
 		@Getter
-		double weight;
+		final double weight;
 
 		Task(Assignment assignment, int minAmount, int maxAmount, int minExtendedAmount, int maxExtendedAmount, double weight)
 		{

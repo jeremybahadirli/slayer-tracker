@@ -14,7 +14,7 @@ public class PlayerUnlockState
 	@Setter
 	boolean kourendDiary;
 
-	Set<Assignment> extendedAssignments;
+	final Set<Assignment> extendedAssignments;
 
 	PlayerUnlockState()
 	{

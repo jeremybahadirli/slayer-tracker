@@ -49,7 +49,7 @@ import okhttp3.HttpUrl;
 @Getter
 public class AssignmentRecordPanel extends RecordPanel
 {
-	JButton addCustomRecordButton;
+	final JButton addCustomRecordButton;
 
 	public AssignmentRecordPanel(Assignment assignment,
 								 GroupListPanel groupListPanel,
