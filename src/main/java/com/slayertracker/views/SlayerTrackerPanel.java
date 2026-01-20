@@ -24,17 +24,18 @@
  */
 package com.slayertracker.views;
 
-import com.google.common.collect.ImmutableList;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import com.slayertracker.state.TrackerState;
 import java.awt.Dimension;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -68,13 +69,6 @@ public class SlayerTrackerPanel extends PluginPanel
 	private final JComboBox<String> sorterComboBox;
 	private final Set<GroupListPresenter> groupListPresenters = new HashSet<>();
 
-	private static final ImmutableList<String> SORT_ORDERS = ImmutableList.of(
-		"Recently Killed",
-		"XP Rate",
-		"GP Rate"
-	);
-	private Function<? super RecordListPanel, Long> sortFunction;
-
 	public SlayerTrackerPanel(TrackerState trackerState,
 							  SlayerTrackerConfig config,
 							  ItemManager itemManager)
@@ -93,12 +87,8 @@ public class SlayerTrackerPanel extends PluginPanel
 		sorterPanel.add(Box.createRigidArea(new Dimension(39, 0)));
 		sorterComboBox = new JComboBox<>();
 		sorterComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		SORT_ORDERS.forEach(sorterComboBox::addItem);
-		sortFunction = sortFunctionFor(String.valueOf(sorterComboBox.getSelectedItem()));
-		sorterComboBox.addActionListener(l -> {
-			sortFunction = sortFunctionFor(String.valueOf(sorterComboBox.getSelectedItem()));
-			update();
-		});
+		Arrays.stream(SortOrder.values()).map(sortOrder -> sortOrder.label).forEach(sorterComboBox::addItem);
+		sorterComboBox.addActionListener(l -> update());
 		sorterComboBox.setFocusable(false);
 		sorterPanel.add(sorterComboBox);
 		add(sorterPanel);
@@ -155,6 +145,8 @@ public class SlayerTrackerPanel extends PluginPanel
 
 	public void update()
 	{
+		BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction = SortOrder.values()[sorterComboBox.getSelectedIndex()].sortFunction;
+
 		// Remove/Update/Add Panels
 
 		// Remove panels
@@ -192,7 +184,7 @@ public class SlayerTrackerPanel extends PluginPanel
 		{
 			// Group List Panels
 			groupListPresenters.stream()
-				.sorted(Comparator.comparing(presenter -> sortFunction.apply(presenter.getView())))
+				.sorted(Comparator.comparing(presenter -> sortFunction.apply(presenter.getView().getRecord(), config.lootUnit())))
 				.forEachOrdered(presenter -> assignmentListPanel.add(presenter.getView()));
 		}
 
@@ -216,24 +208,27 @@ public class SlayerTrackerPanel extends PluginPanel
 		assignmentListPanel.add(fileErrorPanel);
 	}
 
-	private Function<? super RecordListPanel, Long> sortFunctionFor(String selectedSort)
+	private enum SortOrder
 	{
-		switch (selectedSort)
+		RECENTLY_KILLED("Recently Killed",
+			(r, u) -> -1 * r.getCombatInstant().getEpochSecond()
+		),
+		XP_RATE("XP Rate ",
+			(r, u) -> (long) Math.round(-1 * r.getXp() / r.getHours())
+		),
+		GP_RATE("GP Rate",
+			(r, u) -> u.equals(SlayerTrackerConfig.LootUnit.GRAND_EXCHANGE)
+				? (long) Math.round(-1 * r.getGe() / r.getHours())
+				: (long) Math.round(-1 * r.getHa() / r.getHours())
+		);
+
+		final String label;
+		final BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction;
+
+		SortOrder(String label, BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction)
 		{
-			case "XP Rate":
-				return panel ->
-					(long) Math.round(-1 * panel.getRecord().getXp() / panel.getRecord().getHours());
-			case "GP Rate":
-				if (config.lootUnit().equals(SlayerTrackerConfig.LootUnit.GRAND_EXCHANGE))
-				{
-					return panel ->
-						(long) Math.round(-1 * panel.getRecord().getGe() / panel.getRecord().getHours());
-				}
-				return panel ->
-					(long) Math.round(-1 * panel.getRecord().getHa() / panel.getRecord().getHours());
-			default:
-				return panel ->
-					-1 * panel.getRecord().getCombatInstant().getEpochSecond();
+			this.label = label;
+			this.sortFunction = sortFunction;
 		}
 	}
 }

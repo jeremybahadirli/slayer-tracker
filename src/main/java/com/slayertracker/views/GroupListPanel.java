@@ -27,6 +27,7 @@ package com.slayertracker.views;
 import com.slayertracker.SlayerTrackerConfig;
 import com.slayertracker.groups.Assignment;
 import com.slayertracker.records.AssignmentRecord;
+import com.slayertracker.records.Record;
 import com.slayertracker.views.recordpanels.AssignmentRecordPanel;
 import com.slayertracker.views.recordpanels.CustomRecordPanel;
 import com.slayertracker.views.recordpanels.RecordPanel;
@@ -36,7 +37,7 @@ import java.awt.event.MouseEvent;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
@@ -61,7 +62,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 				   AssignmentRecord assignmentRecord,
 				   SlayerTrackerConfig config,
 				   ItemManager itemManager,
-				   Function<? super RecordListPanel, Long> sortFunction,
+				   BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction,
 				   RecordInteractionHandler recordInteractionHandler)
 	{
 		this.assignment = assignment;
@@ -92,7 +93,7 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		update(sortFunction);
 	}
 
-	void update(Function<? super RecordListPanel, Long> sortFunction)
+	void update(BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction)
 	{
 		// Remove/Update/Add Panels
 
@@ -157,14 +158,14 @@ public class GroupListPanel extends JPanel implements RecordListPanel
 		add(assignmentRecordPanel);
 
 		variantRecordPanels.stream()
-			.sorted(Comparator.comparing(sortFunction))
+			.sorted(Comparator.comparing(p -> sortFunction.apply(p.getRecord(), config.lootUnit())))
 			.forEachOrdered(variantRecordPanel -> {
 				variantRecordPanel.setBorder(new EmptyBorder(0, 36, 0, 0));
 				add(variantRecordPanel);
 			});
 
 		customRecordPanels.stream()
-			.sorted(Comparator.comparing(sortFunction))
+			.sorted(Comparator.comparing(p -> sortFunction.apply(p.getRecord(), config.lootUnit())))
 			.forEachOrdered(customRecordPanel -> {
 				customRecordPanel.setBorder(new EmptyBorder(0, 36, 0, 0));
 				add(customRecordPanel);

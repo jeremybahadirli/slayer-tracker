@@ -9,7 +9,7 @@ import com.slayertracker.records.Record;
 import com.slayertracker.records.RecordMap;
 import java.beans.PropertyChangeListener;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import lombok.Getter;
 import net.runelite.client.game.ItemManager;
@@ -22,7 +22,7 @@ public class GroupListPresenter implements RecordInteractionHandler
 	private final AssignmentRecord record;
 	private final RecordMap<Assignment, AssignmentRecord> assignmentRecords;
 	private final PropertyChangeListener changeListener;
-	private final Supplier<Function<? super RecordListPanel, Long>> sortFunctionSupplier;
+	private final Supplier<BiFunction<Record, SlayerTrackerConfig.LootUnit, Long>> sortFunctionSupplier;
 	@Getter
 	private final GroupListPanel view;
 
@@ -32,7 +32,7 @@ public class GroupListPresenter implements RecordInteractionHandler
 		RecordMap<Assignment, AssignmentRecord> assignmentRecords,
 		SlayerTrackerConfig config,
 		ItemManager itemManager,
-		Supplier<Function<? super RecordListPanel, Long>> sortFunctionSupplier)
+		Supplier<BiFunction<Record, SlayerTrackerConfig.LootUnit, Long>> sortFunctionSupplier)
 	{
 		this.assignment = assignment;
 		this.changeListener = changeListener;
@@ -42,7 +42,7 @@ public class GroupListPresenter implements RecordInteractionHandler
 		this.view = new GroupListPanel(assignment, record, config, itemManager, sortFunctionSupplier.get(), this);
 	}
 
-	public void update(Function<? super RecordListPanel, Long> sortFunction)
+	public void update(BiFunction<Record, SlayerTrackerConfig.LootUnit, Long> sortFunction)
 	{
 		view.update(sortFunction);
 	}
